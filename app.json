@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "MiApp",
-    "slug": "MiApp",
+    "slug": "century21",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,6 +24,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d34372cc-5926-4b50-8f4a-1b0a29d49f6c"
+      }
+    },
+    "owner": "juancruzcaceres"
   }
 }
