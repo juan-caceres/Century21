@@ -3,6 +3,7 @@
     "name": "MiApp",
     "slug": "century21",
     "version": "1.0.0",
+    "scheme": "century21",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

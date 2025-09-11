@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Button, Modal, FlatList, Alert, Platform } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { 
+  View, 
+  Text, 
+  Button, 
+  Modal, 
+  FlatList, 
+  Alert, 
+  Platform 
+} from "react-native";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import * as Calendar from "expo-calendar";
 
 const salasDisponibles = ["Sala 1", "Sala 2", "Sala 3", "Sala 4"];
@@ -12,7 +20,7 @@ export default function ReservarSala() {
   const [showPicker, setShowPicker] = useState(false);
   const [reservas, setReservas] = useState<any[]>([]);
 
-  // Pedir permisos de calendario al montar el componente
+  // ✅ Pedir permisos de calendario al iniciar
   useEffect(() => {
     (async () => {
       const { status } = await Calendar.requestCalendarPermissionsAsync();
@@ -22,17 +30,26 @@ export default function ReservarSala() {
     })();
   }, []);
 
-  // Función para seleccionar sala y abrir modal
+  // ✅ Seleccionar sala
   const seleccionarSala = (sala: string) => {
     setSalaSeleccionada(sala);
     setModalVisible(true);
   };
 
-  // Función para manejar la reserva
+  // ✅ Manejar selección de fecha/hora
+  const onChangeFecha = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === "android") {
+      setShowPicker(false); // cerrar el diálogo SOLO en Android
+    }
+    if (selectedDate) {
+      setFecha(selectedDate);
+    }
+  };
+
+  // ✅ Confirmar reserva
   const reservar = async () => {
     if (!salaSeleccionada) return;
 
-    // Validación simple: que no haya otra reserva a la misma hora en la misma sala
     const conflicto = reservas.find(
       r => r.sala === salaSeleccionada && r.fecha.toDateString() === fecha.toDateString()
     );
@@ -48,14 +65,15 @@ export default function ReservarSala() {
 
     Alert.alert("Éxito", `Reservaste ${salaSeleccionada} para ${fecha.toLocaleString()}`);
 
-    // Crear evento en calendario del dispositivo
+    // ✅ Crear evento en calendario
     const calendars = await Calendar.getCalendarsAsync();
     const defaultCalendar = calendars.find(cal => cal.allowsModifications);
+
     if (defaultCalendar) {
       await Calendar.createEventAsync(defaultCalendar.id, {
         title: `Reserva ${salaSeleccionada}`,
         startDate: fecha,
-        endDate: new Date(fecha.getTime() + 60 * 60 * 1000), // 1 hora
+        endDate: new Date(fecha.getTime() + 60 * 60 * 1000), // +1 hora
         location: "Oficina",
       });
       console.log("Evento agregado al calendario ✅");
@@ -81,17 +99,16 @@ export default function ReservarSala() {
         <View style={{ flex: 1, justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)" }}>
           <View style={{ margin: 20, backgroundColor: "white", padding: 20, borderRadius: 10 }}>
             <Text style={{ fontSize: 20, marginBottom: 20 }}>Selecciona fecha y hora</Text>
+            
             <Button title="Elegir fecha y hora" onPress={() => setShowPicker(true)} />
+
             {showPicker && (
               <DateTimePicker
                 value={fecha}
                 mode="datetime"
                 is24Hour={true}
-                display="default"
-                onChange={(event, selectedDate) => {
-                  setShowPicker(Platform.OS === "ios");
-                  if (selectedDate) setFecha(selectedDate);
-                }}
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={onChangeFecha}
               />
             )}
 
