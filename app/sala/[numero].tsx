@@ -3,6 +3,7 @@ import { View, Text, Button } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Calendar from "expo-calendar";
 import { Platform } from "react-native";
+import Calendario from "../componentes/calendario";
 
 export default function Sala() {
   const { numero } = useLocalSearchParams();
@@ -12,8 +13,9 @@ export default function Sala() {
   return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
       <Text style={{ fontSize: 22, marginBottom: 20 }}>Estás en la Sala {numero}</Text>
-      <Button title="Volver al Home" onPress={() => router.push("/home")} />
+      <Button title="Volver al Home" onPress={() => router.push("/home")}  />
 
+      <Calendario />
 
    
     </View>
