@@ -16,7 +16,7 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, padding: 20, justifyContent: "center" }}>
-      <Text style={{ fontSize: 24, marginBottom: 20 }}>Lista de Sala</Text>
+      <Text style={{ fontSize: 24, marginBottom: 20 }}>Lista de Salas</Text>
       <FlatList
         data={salas}
         keyExtractor={(item) => item}
