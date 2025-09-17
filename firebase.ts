@@ -15,7 +15,7 @@ const firebaseConfig = {
   appId: "1:423314868478:web:559cd38606fa7e7268bdaf",
   measurementId: "G-LMFH7QCEMV"
 };
-
+//es para hacer commit
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
