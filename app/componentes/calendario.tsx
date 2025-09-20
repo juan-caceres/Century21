@@ -14,7 +14,11 @@ LocaleConfig.locales["es"] = {
 };
 LocaleConfig.defaultLocale = "es";
 
-export default function Calendario() {
+type Props = {
+  onDaySelected: (date: string) => void;
+};
+
+export default function Calendario({ onDaySelected }: Props) {
   const [selected, setSelected] = useState("");
 
   return (
@@ -34,8 +38,14 @@ export default function Calendario() {
           arrowColor: "#d4af37",
         }}
         current={new Date().toISOString().split("T")[0]}
-        onDayPress={(day) => setSelected(day.dateString)}
-        markedDates={{ [selected]: { selected: true, selectedColor: "#d4af37" } }}
+        minDate={new Date().toISOString().split("T")[0]}
+        onDayPress={(day) => {
+          setSelected(day.dateString);
+          onDaySelected(day.dateString);
+        }}
+        markedDates={{
+          [selected]: { selected: true, selectedColor: "#d4af37" },
+        }}
       />
     </View>
   );

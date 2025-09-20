@@ -5,11 +5,11 @@ import Login from "./app/login";
 import Home from "./app/home";
 import Registro from "./app/registro";
 import Sala from "./app/sala";
+import olvidePassword from "./app/olvidePassword";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import React, { useEffect, useState, createContext, useContext } from "react";
 import { ActivityIndicator, View } from "react-native";
-import olvidePassword from "./app/olvidePassword";
 
 export type RootStackParamList = {
   Login: undefined;
@@ -20,7 +20,6 @@ export type RootStackParamList = {
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
-
 const AuthContext = createContext<{ user: any }>({ user: null });
 export const useAuth = () => useContext(AuthContext);
 
@@ -36,13 +35,11 @@ export default function App() {
     return unsub;
   }, []);
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
-        <ActivityIndicator size="large" color="#d4af37" />
-      </View>
-    );
-  }
+  if (loading) return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
+      <ActivityIndicator size="large" color="#d4af37" />
+    </View>
+  );
 
   return (
     <AuthContext.Provider value={{ user }}>
