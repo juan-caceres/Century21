@@ -1,74 +1,47 @@
-import {Calendar, CalendarList, Agenda, LocaleConfig} from 'react-native-calendars';
-import React, {useState} from 'react';
-import { View } from 'react-native';
+import { Calendar, LocaleConfig } from "react-native-calendars";
+import React, { useState } from "react";
+import { View, StyleSheet } from "react-native";
 
-//configuracion de dias,mes y año de calendario en espanol
-LocaleConfig.locales['es'] = {
+LocaleConfig.locales["es"] = {
   monthNames: [
-    'Enero',
-    'Febrero',
-    'Marzo',
-    'Abril',
-    'Mayo',
-    'Junio',
-    'Julio',
-    'Agosto',
-    'Septiembre',
-    'Octubre',
-    'Noviembre',
-    'Diciembre'
+    "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+    "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
   ],
-  monthNamesShort: ['Ene.', 'Feb.', 'Mar', 'Abr', 'May', 'Jun', 'Jul.', 'Ago', 'Sept.', 'Oct.', 'Nov.', 'Dic.'],
-  dayNames: ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'],
-  dayNamesShort: ['Dom.', 'Lun.', 'Mar.', 'Mie.', 'Jue.', 'Vie.', 'Sab.'],
+  monthNamesShort: ["Ene.","Feb.","Mar","Abr","May","Jun","Jul.","Ago","Sept.","Oct.","Nov.","Dic."],
+  dayNames: ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"],
+  dayNamesShort: ["Dom.","Lun.","Mar.","Mié.","Jue.","Vie.","Sáb."],
   today: "Hoy"
 };
-
-LocaleConfig.defaultLocale = 'es';
+LocaleConfig.defaultLocale = "es";
 
 export default function Calendario() {
-
-    const [selected, setSelected] = useState('');
+  const [selected, setSelected] = useState("");
 
   return (
-    <View>
-
+    <View style={styles.container}>
       <Calendar
-              // Customize the appearance of the calendar
-              style={{
-                borderWidth: 1,
-                borderColor: 'gray',
-                height: 350,
-                marginTop: 20
-              }}
-      
-              theme={{
-                backgroundColor: '#ffffff',
-                calendarBackground: '#ffffff',
-                textSectionTitleColor: '#b6c1cd',
-                selectedDayBackgroundColor: '#00adf5',
-                selectedDayTextColor: '#ffffff',
-                todayTextColor: '#00adf5',
-                dayTextColor: '#2d4150',
-                textDisabledColor: '#dd99ee'
-              }}
-      
-              // Specify the current date
-              current={'2025-09-12'}
-              // Callback that gets called when the user selects a day
-              onDayPress={day => {
-                console.log('selected day', day);
-              }}
-              // Mark specific dates as marked
-              markedDates={{
-                '2025-09-13': {selected: true, marked: true, selectedColor: 'blue'},
-                '2012-03-02': {marked: true},
-                '2012-03-03': {selected: true, marked: true, selectedColor: 'blue'}
-              }}
-            />
-      
-      
-      
+        style={styles.calendar}
+        theme={{
+          backgroundColor: "#000",
+          calendarBackground: "#000",
+          textSectionTitleColor: "#d4af37",
+          selectedDayBackgroundColor: "#d4af37",
+          selectedDayTextColor: "#000",
+          todayTextColor: "#d4af37",
+          dayTextColor: "#fff",
+          textDisabledColor: "#555",
+          monthTextColor: "#d4af37",
+          arrowColor: "#d4af37",
+        }}
+        current={new Date().toISOString().split("T")[0]}
+        onDayPress={(day) => setSelected(day.dateString)}
+        markedDates={{ [selected]: { selected: true, selectedColor: "#d4af37" } }}
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { marginTop: 20 },
+  calendar: { borderWidth: 1, borderColor: "#d4af37", borderRadius: 10 },
+});

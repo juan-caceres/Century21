@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { getAuth } from "firebase/auth";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -10,12 +10,12 @@ const firebaseConfig = {
   apiKey: "AIzaSyDXMZ1-8JHRmrSr1KYgSIsScadsoxhlZXM",
   authDomain: "century21-60277.firebaseapp.com",
   projectId: "century21-60277",
-  storageBucket: "century21-60277.firebasestorage.app",
+  storageBucket: "century21-60277.appspot.com",
   messagingSenderId: "423314868478",
   appId: "1:423314868478:web:559cd38606fa7e7268bdaf",
   measurementId: "G-LMFH7QCEMV"
 };
 //es para hacer commit
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+const appFirebase = initializeApp(firebaseConfig);
+export const auth = getAuth(appFirebase);
