@@ -100,14 +100,33 @@ export default function Sala({ navigation, route }: Props) {
     return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
   };
 
-  // Trae reservas de la sala y fecha seleccionada
+  // versión segura para normalizar (evita crash si el dato no es string)
+  const normalizeTimeSafe = (t: any) => {
+    if (!t || typeof t !== "string") return "";
+    const parts = t.split(":");
+    if (parts.length < 2) return t;
+    const [h, m] = parts;
+    return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
+  };
+
+  // Trae reservas de la sala y fecha seleccionada (normaliza horas)
   const fetchReservasForDay = async (fecha: string) => {
     setLoadingReservas(true);
     try {
       const reservasRef = collection(db, "reservas");
       const q = query(reservasRef, where("sala", "==", numero), where("fecha", "==", fecha));
       const snap = await getDocs(q);
-      const arr: Reserva[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+
+      const arr: Reserva[] = snap.docs.map((d) => {
+        const data = d.data() as any;
+        return {
+          id: d.id,
+          ...data,
+          horaInicio: normalizeTimeSafe(data.horaInicio),
+          horaFin: normalizeTimeSafe(data.horaFin),
+        };
+      });
+
       arr.sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
       setReservasDia(arr);
     } catch (err) {
@@ -153,9 +172,17 @@ export default function Sala({ navigation, route }: Props) {
       return;
     }
 
+    // bloqueo: no permitir reservas en días pasados
+    const hoy = new Date().toISOString().split("T")[0];
+    if (selectedDay < hoy) {
+      Alert.alert("Error", "No se pueden crear reservas en días pasados.");
+      return;
+    }
+
     try {
       // refrescar reservas antes de intentar crear/editar
       await fetchReservasForDay(selectedDay);
+
       if (haySolapamientoLocal(horaInicio, horaFin, editingReservaId ?? undefined)) {
         Alert.alert("Horario ocupado", "Ya existe una reserva en ese rango para esta sala.");
         return;
@@ -189,13 +216,13 @@ export default function Sala({ navigation, route }: Props) {
         Alert.alert("Reserva creada", `Sala ${numero} reservada el ${selectedDay} de ${normalizeTime(horaInicio)} a ${normalizeTime(horaFin)}.`);
       }
 
-      // limpiar y recargar
+      // limpiar y recargar (recarga directa, sin setTimeout)
       setModalVisible(false);
       setHoraInicio("");
       setHoraFin("");
       setMotivo("");
       setEditingReservaId(null);
-      setTimeout(() => fetchReservasForDay(selectedDay!), 300);
+      if (selectedDay) await fetchReservasForDay(selectedDay);
     } catch (err) {
       console.log("Error creando/actualizando reserva:", err);
       Alert.alert("Error", "No se pudo guardar la reserva. Intenta de nuevo.");
@@ -221,7 +248,7 @@ export default function Sala({ navigation, route }: Props) {
             try {
               await deleteDoc(doc(db, "reservas", reserva.id!));
               Alert.alert("Reserva cancelada", "La reserva fue cancelada correctamente.");
-              fetchReservasForDay(selectedDay!);
+              if (selectedDay) await fetchReservasForDay(selectedDay);
             } catch (err) {
               console.log("Error al eliminar:", err);
               Alert.alert("Error", "No se pudo cancelar la reserva.");
@@ -245,16 +272,15 @@ export default function Sala({ navigation, route }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.leftHeader}>
-          <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.iconButton}>
-            <Text style={{ fontWeight: "700" }}>Home</Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
+            <Text style={styles.navButtonText}>🏠 Home</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => goToSala(numero - 1)}
-            style={[styles.iconButton, numero === 1 && styles.disabledButton]}
-            disabled={numero === 1}
-          >
-            <Text style={{ fontWeight: "700" }}>◀</Text>
+            style={[styles.navButton, numero === 1 && styles.disabledButton]}
+            disabled={numero === 1}>
+            <Text style={styles.navButtonText}>◀</Text>
           </TouchableOpacity>
         </View>
 
@@ -265,8 +291,8 @@ export default function Sala({ navigation, route }: Props) {
         </View>
 
         <View style={styles.rightHeader}>
-          <TouchableOpacity onPress={() => goToSala(numero + 1)} style={styles.iconButton}>
-            <Text style={{ fontWeight: "700" }}>▶</Text>
+          <TouchableOpacity onPress={() => goToSala(numero + 1)} style={[styles.navButton, numero === MAX_SALAS && styles.disabledButton]} disabled={numero === MAX_SALAS}>
+            <Text style={styles.navButtonText}>▶</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -398,7 +424,7 @@ const styles = StyleSheet.create({
   },
   leftHeader: { flexDirection: "row", alignItems: "center" },
   rightHeader: { flexDirection: "row", alignItems: "center" },
-  centerHeader: { position: "absolute", left: 0, right: 0, alignItems: "center" },
+  centerHeader: { flex: 1, justifyContent: "center", alignItems: "center" },
   logo: { width: 120, height: 48 },
   headerTitle: { color: "#d4af37", fontSize: 18, fontWeight: "700" },
   salaMeta: { color: "#fff", fontSize: 11 },
@@ -422,4 +448,16 @@ const styles = StyleSheet.create({
   reservaMotivo: { color: "#ddd", fontSize: 12 },
   reservaUsuario: { color: "#aaa", fontSize: 11 },
   eliminarText: { color: "#ff6961", fontWeight: "700" },
+  navButton: {
+    backgroundColor: "#d4af37",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    marginHorizontal: 6,
+  },
+  navButtonText: {
+    color: "#000",
+    fontWeight: "700",
+    fontSize: 14,
+  },
 });
