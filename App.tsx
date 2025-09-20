@@ -9,10 +9,12 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import React, { useEffect, useState, createContext, useContext } from "react";
 import { ActivityIndicator, View } from "react-native";
+import olvidePassword from "./app/olvidePassword";
 
 export type RootStackParamList = {
   Login: undefined;
   Registro: undefined;
+  OlvidePassword: undefined;
   Home: undefined;
   Sala: { numero: number };
 };
@@ -55,6 +57,7 @@ export default function App() {
             <>
               <Stack.Screen name="Login" component={Login} />
               <Stack.Screen name="Registro" component={Registro} />
+              <Stack.Screen name="OlvidePassword" component={olvidePassword} />
             </>
           )}
         </Stack.Navigator>

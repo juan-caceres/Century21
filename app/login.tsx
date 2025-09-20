@@ -82,6 +82,10 @@ export default function Login({ navigation }: Props) {
         <Text style={styles.buttonText}>Iniciar Sesión</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity onPress={() => navigation.navigate("OlvidePassword")}>
+        <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={() => navigation.navigate("Registro")}>
         <Text style={styles.link}>Crear cuenta</Text>
       </TouchableOpacity>
