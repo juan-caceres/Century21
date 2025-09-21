@@ -44,6 +44,7 @@ export default function Home({ navigation }: Props) {
   );
 }
 
+// Estilos (siguiendo colores del logo c21)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000", padding: 20 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },

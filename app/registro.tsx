@@ -104,6 +104,7 @@ export default function Registro({ navigation }: Props) {
   );
 }
 
+// Estilos (colores logo c21)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center", padding: 20 },
   logo: { width: 180, height: 80, marginBottom: 20 },

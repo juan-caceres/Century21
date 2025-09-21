@@ -17,9 +17,8 @@ export default function Calendario({ onDaySelected }: Props) {
   const [selected, setSelected] = useState("");
   const { width: screenWidth } = useWindowDimensions();
 
-  // ancho 90% pantalla, max 500px
   const calendarWidth = Math.min(screenWidth * 0.9, 500);
-  const calendarHeight = calendarWidth * 0.9; // altura proporcional
+  const calendarHeight = calendarWidth * 0.9;
 
   return (
     <View style={styles.container}>
@@ -49,6 +48,7 @@ export default function Calendario({ onDaySelected }: Props) {
   );
 }
 
+// Estilos (siguiendo colores del logo c21)
 const styles = StyleSheet.create({
   container: { marginTop: 20, width: "100%", alignItems: "center" },
   calendar: {

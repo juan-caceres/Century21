@@ -1,19 +1,12 @@
-// app/sala.tsx
 import React, { useState, useEffect } from "react";
-import {
-  View, Text, TouchableOpacity, StyleSheet, Alert, Modal,
-  TextInput, FlatList
-} from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Modal, TextInput, FlatList } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../App";
 import Calendario from "./componentes/calendario";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
-import {
-  collection, addDoc, query, where, getDocs,
-  serverTimestamp, deleteDoc, doc, updateDoc, getDoc
-} from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc, updateDoc, getDoc } from "firebase/firestore";
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
@@ -31,7 +24,7 @@ type Reserva = {
   creado?: any;
 };
 
-const MAX_SALAS = 7; // ajustar si cambian la cantidad de salas
+const MAX_SALAS = 7; // ajustar dependiendo de la cantidad de salas
 
 export default function Sala({ navigation, route }: Props) {
   const { numero } = route.params;
@@ -128,7 +121,7 @@ export default function Sala({ navigation, route }: Props) {
     }
   };
 
-  // 🔹 Chequea solapamiento en Firestore en tiempo real
+  //  Chequeo de que no haya reservas a la misma hora
   const existeSolapamientoEnFirestore = async (
     fecha: string,
     sala: number,
@@ -173,7 +166,7 @@ const handleCreateOrUpdateReserva = async () => {
     return;
   }
 
-  // 🔹 Validar solapamiento en Firestore
+  // Chequear que no haya reservar a la misma hora en la bdd
   const solapa = await existeSolapamientoEnFirestore(
     selectedDay, numero, horaInicio, horaFin, editingReservaId ?? undefined
   );
@@ -261,7 +254,7 @@ const handleCreateOrUpdateReserva = async () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header (botones y titulos)*/}
       <View style={styles.header}>
         <View style={styles.leftHeader}>
           <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
@@ -348,7 +341,7 @@ const handleCreateOrUpdateReserva = async () => {
               />
             )}
 
-            {/* Formulario */}
+            {/* Formulario para agregar reserva*/}
             <TextInput
               style={styles.input}
               placeholder="Hora inicio (ej: 10:30)"
@@ -389,6 +382,7 @@ const handleCreateOrUpdateReserva = async () => {
   );
 }
 
+// Estilos (siguiendo los colores del logo c21)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
   header: {
