@@ -1,7 +1,7 @@
 // app/sala.tsx
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, TouchableOpacity, Image, StyleSheet, Alert, Modal,
+  View, Text, TouchableOpacity, StyleSheet, Alert, Modal,
   TextInput, FlatList
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -11,8 +11,8 @@ import Calendario from "./componentes/calendario";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
 import {
-  collection, addDoc, query, where, getDocs, serverTimestamp,
-  deleteDoc, doc, updateDoc, getDoc
+  collection, addDoc, query, where, getDocs,
+  serverTimestamp, deleteDoc, doc, updateDoc, getDoc
 } from "firebase/firestore";
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
@@ -46,20 +46,15 @@ export default function Sala({ navigation, route }: Props) {
   const [loadingReservas, setLoadingReservas] = useState(false);
   const [editingReservaId, setEditingReservaId] = useState<string | null>(null);
 
-  // opcional: metadata de la sala si la guardan en Firestore (nombre/capacidad/tv)
   const [salaInfo, setSalaInfo] = useState<any>(null);
 
   useEffect(() => {
-    // cada vez que param "numero" cambie, intento cargar metadata (opcional)
     fetchSalaInfo();
   }, [numero]);
 
   useEffect(() => {
-    if (selectedDay) {
-      fetchReservasForDay(selectedDay);
-    } else {
-      setReservasDia([]);
-    }
+    if (selectedDay) fetchReservasForDay(selectedDay);
+    else setReservasDia([]);
   }, [selectedDay]);
 
   const fetchSalaInfo = async () => {
@@ -78,8 +73,7 @@ export default function Sala({ navigation, route }: Props) {
       await signOut(auth);
       navigation.replace("Login");
     } catch (err: any) {
-      console.log("Error signOut:", err);
-      Alert.alert("Error", "No se pudo cerrar sesión. Intenta de nuevo.");
+      Alert.alert("Error", "No se pudo cerrar sesión.");
     }
   };
 
@@ -100,7 +94,6 @@ export default function Sala({ navigation, route }: Props) {
     return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
   };
 
-  // versión segura para normalizar (evita crash si el dato no es string)
   const normalizeTimeSafe = (t: any) => {
     if (!t || typeof t !== "string") return "";
     const parts = t.split(":");
@@ -109,7 +102,6 @@ export default function Sala({ navigation, route }: Props) {
     return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
   };
 
-  // Trae reservas de la sala y fecha seleccionada (normaliza horas)
   const fetchReservasForDay = async (fecha: string) => {
     setLoadingReservas(true);
     try {
@@ -130,136 +122,135 @@ export default function Sala({ navigation, route }: Props) {
       arr.sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
       setReservasDia(arr);
     } catch (err) {
-      console.log("Error fetch reservas:", err);
-      Alert.alert("Error", "No se pudieron cargar las reservas del día.");
+      Alert.alert("Error", "No se pudieron cargar las reservas.");
     } finally {
       setLoadingReservas(false);
     }
   };
 
-  const haySolapamientoLocal = (inicio: string, fin: string, excepcionId?: string) => {
-    const sNew = timeToMinutes(inicio);
-    const eNew = timeToMinutes(fin);
-    for (const r of reservasDia) {
-      if (excepcionId && r.id === excepcionId) continue;
-      const sExist = timeToMinutes(r.horaInicio);
-      const eExist = timeToMinutes(r.horaFin);
+  // 🔹 Chequea solapamiento en Firestore en tiempo real
+  const existeSolapamientoEnFirestore = async (
+    fecha: string,
+    sala: number,
+    inicio: string,
+    fin: string,
+    excepcionId?: string
+  ) => {
+    const reservasRef = collection(db, "reservas");
+    const q = query(reservasRef, where("sala", "==", sala), where("fecha", "==", fecha));
+    const snap = await getDocs(q);
+
+    const sNew = timeToMinutes(normalizeTime(inicio));
+    const eNew = timeToMinutes(normalizeTime(fin));
+
+    for (const d of snap.docs) {
+      if (excepcionId && d.id === excepcionId) continue;
+      const data = d.data() as any;
+      const sExist = timeToMinutes(normalizeTimeSafe(data.horaInicio));
+      const eExist = timeToMinutes(normalizeTimeSafe(data.horaFin));
       if (sNew < eExist && sExist < eNew) return true;
     }
     return false;
   };
 
-  const handleCreateOrUpdateReserva = async () => {
-    if (!horaInicio || !horaFin || !motivo.trim()) {
-      Alert.alert("Error", "Completa todos los campos.");
+const handleCreateOrUpdateReserva = async () => {
+  if (!horaInicio || !horaFin || !motivo.trim()) {
+    Alert.alert("Error", "Completa todos los campos.");
+    return;
+  }
+  if (!validarFormatoHora(horaInicio) || !validarFormatoHora(horaFin)) {
+    Alert.alert("Error", "Formato de hora incorrecto. Usa HH:MM.");
+    return;
+  }
+  const sNew = timeToMinutes(horaInicio);
+  const eNew = timeToMinutes(horaFin);
+  if (sNew >= eNew) {
+    Alert.alert("Error", "La hora de inicio debe ser menor que la de fin.");
+    return;
+  }
+  if (!selectedDay) {
+    Alert.alert("Error", "Selecciona una fecha.");
+    return;
+  }
+
+  // 🔹 Validar solapamiento en Firestore
+  const solapa = await existeSolapamientoEnFirestore(
+    selectedDay, numero, horaInicio, horaFin, editingReservaId ?? undefined
+  );
+  if (solapa) {
+    Alert.alert("Horario ocupado", "Ya existe una reserva en ese rango.");
+    return;
+  }
+
+  try {
+    const usuarioEmail = auth.currentUser?.email ?? null;
+    const usuarioId = auth.currentUser?.uid ?? null;
+
+    console.log("Intentando guardar reserva. UID:", usuarioId, "Email:", usuarioEmail);
+
+    if (!usuarioId) {
+      Alert.alert("Error", "No se detectó usuario logueado.");
       return;
     }
 
-    if (!validarFormatoHora(horaInicio) || !validarFormatoHora(horaFin)) {
-      Alert.alert("Error", "Formato de hora incorrecto. Usa HH:MM (ej. 09:30).");
-      return;
+    if (editingReservaId) {
+      console.log("Actualizando reserva:", editingReservaId);
+      await updateDoc(doc(db, "reservas", editingReservaId), {
+        horaInicio: normalizeTime(horaInicio),
+        horaFin: normalizeTime(horaFin),
+        motivo: motivo.trim(),
+        usuarioEmail,
+        usuarioId,
+      });
+      Alert.alert("Reserva actualizada", `Sala ${numero} actualizada.`);
+    } else {
+      console.log("Creando nueva reserva...");
+      const docRef = await addDoc(collection(db, "reservas"), {
+        sala: numero,
+        fecha: selectedDay,
+        horaInicio: normalizeTime(horaInicio),
+        horaFin: normalizeTime(horaFin),
+        motivo: motivo.trim(),
+        usuarioId,
+        usuarioEmail,
+        creado: serverTimestamp(),
+      });
+      console.log("Reserva creada con ID:", docRef.id);
+      Alert.alert("Reserva creada", `Sala ${numero} reservada el ${selectedDay}.`);
     }
 
-    const sNew = timeToMinutes(horaInicio);
-    const eNew = timeToMinutes(horaFin);
-    if (sNew >= eNew) {
-      Alert.alert("Error", "La hora de inicio debe ser menor que la de fin.");
-      return;
-    }
+    setModalVisible(false);
+    setHoraInicio(""); setHoraFin(""); setMotivo(""); setEditingReservaId(null);
+    await fetchReservasForDay(selectedDay);
 
-    if (!selectedDay) {
-      Alert.alert("Error", "Selecciona una fecha.");
-      return;
-    }
-
-    // bloqueo: no permitir reservas en días pasados
-    const hoy = new Date().toISOString().split("T")[0];
-    if (selectedDay < hoy) {
-      Alert.alert("Error", "No se pueden crear reservas en días pasados.");
-      return;
-    }
-
-    try {
-      // refrescar reservas antes de intentar crear/editar
-      await fetchReservasForDay(selectedDay);
-
-      if (haySolapamientoLocal(horaInicio, horaFin, editingReservaId ?? undefined)) {
-        Alert.alert("Horario ocupado", "Ya existe una reserva en ese rango para esta sala.");
-        return;
-      }
-
-      const usuarioEmail = auth.currentUser?.email ?? null;
-      const usuarioId = auth.currentUser?.uid ?? null;
-
-      if (editingReservaId) {
-        // actualizar
-        await updateDoc(doc(db, "reservas", editingReservaId), {
-          horaInicio: normalizeTime(horaInicio),
-          horaFin: normalizeTime(horaFin),
-          motivo: motivo.trim(),
-          usuarioEmail,
-          usuarioId,
-        });
-        Alert.alert("Reserva actualizada", `Sala ${numero} actualizada.`);
-      } else {
-        // crear nueva
-        await addDoc(collection(db, "reservas"), {
-          sala: numero,
-          fecha: selectedDay,
-          horaInicio: normalizeTime(horaInicio),
-          horaFin: normalizeTime(horaFin),
-          motivo: motivo.trim(),
-          usuarioId,
-          usuarioEmail,
-          creado: serverTimestamp(),
-        });
-        Alert.alert("Reserva creada", `Sala ${numero} reservada el ${selectedDay} de ${normalizeTime(horaInicio)} a ${normalizeTime(horaFin)}.`);
-      }
-
-      // limpiar y recargar (recarga directa, sin setTimeout)
-      setModalVisible(false);
-      setHoraInicio("");
-      setHoraFin("");
-      setMotivo("");
-      setEditingReservaId(null);
-      if (selectedDay) await fetchReservasForDay(selectedDay);
-    } catch (err) {
-      console.log("Error creando/actualizando reserva:", err);
-      Alert.alert("Error", "No se pudo guardar la reserva. Intenta de nuevo.");
-    }
-  };
+  } catch (err: any) {
+    console.error("Error al guardar reserva:", err);
+    Alert.alert("Error", "No se pudo guardar la reserva: " + err.message);
+  }
+};
 
   const handleEliminarReserva = async (reserva: Reserva) => {
     if (!reserva.id) return;
     if (reserva.usuarioId !== auth.currentUser?.uid) {
-      Alert.alert("No permitido", "Sólo el usuario que creó la reserva puede eliminarla.");
+      Alert.alert("No permitido", "Solo el creador puede eliminar la reserva.");
       return;
     }
-
-    Alert.alert(
-      "Confirmar",
-      "¿Deseas cancelar esta reserva?",
-      [
-        { text: "No", style: "cancel" },
-        {
-          text: "Si, cancelar",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteDoc(doc(db, "reservas", reserva.id!));
-              Alert.alert("Reserva cancelada", "La reserva fue cancelada correctamente.");
-              if (selectedDay) await fetchReservasForDay(selectedDay);
-            } catch (err) {
-              console.log("Error al eliminar:", err);
-              Alert.alert("Error", "No se pudo cancelar la reserva.");
-            }
+    Alert.alert("Confirmar", "¿Cancelar esta reserva?", [
+      { text: "No", style: "cancel" },
+      {
+        text: "Sí, cancelar", style: "destructive", onPress: async () => {
+          try {
+            await deleteDoc(doc(db, "reservas", reserva.id!));
+            Alert.alert("Reserva cancelada");
+            if (selectedDay) await fetchReservasForDay(selectedDay);
+          } catch {
+            Alert.alert("Error", "No se pudo cancelar.");
           }
         }
-      ]
-    );
+      }
+    ]);
   };
 
-  // navegación entre salas sin apilar pantallas
   const goToSala = (newNum: number) => {
     if (newNum < 1 || newNum > MAX_SALAS) {
       Alert.alert("No existe", "No hay más salas.");
@@ -270,12 +261,12 @@ export default function Sala({ navigation, route }: Props) {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.leftHeader}>
           <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
             <Text style={styles.navButtonText}>🏠 Home</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             onPress={() => goToSala(numero - 1)}
             style={[styles.navButton, numero === 1 && styles.disabledButton]}
@@ -283,53 +274,47 @@ export default function Sala({ navigation, route }: Props) {
             <Text style={styles.navButtonText}>◀</Text>
           </TouchableOpacity>
         </View>
-
         <View style={styles.centerHeader}>
-          <Text style={styles.headerTitle}>{salaInfo?.nombre ? `${salaInfo.nombre}` : `Sala ${numero}`}</Text>
-          {salaInfo?.capacidad ? <Text style={styles.salaMeta}>Capacidad: {salaInfo.capacidad}</Text> : null}
-          {salaInfo?.tv ? <Text style={styles.salaMeta}>Televisor: Sí</Text> : null}
+          <Text style={styles.headerTitle}>{salaInfo?.nombre ?? `Sala ${numero}`}</Text>
+          {salaInfo?.capacidad && <Text style={styles.salaMeta}>Capacidad: {salaInfo.capacidad}</Text>}
+          {salaInfo?.tv && <Text style={styles.salaMeta}>Televisor: Sí</Text>}
         </View>
-
         <View style={styles.rightHeader}>
-          <TouchableOpacity onPress={() => goToSala(numero + 1)} style={[styles.navButton, numero === MAX_SALAS && styles.disabledButton]} disabled={numero === MAX_SALAS}>
+          <TouchableOpacity
+            onPress={() => goToSala(numero + 1)}
+            style={[styles.navButton, numero === MAX_SALAS && styles.disabledButton]}
+            disabled={numero === MAX_SALAS}>
             <Text style={styles.navButtonText}>▶</Text>
           </TouchableOpacity>
-
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Cerrar</Text>
+            <Text style={styles.logoutText}>Cerrar Sesión</Text>
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Calendario */}
       <View style={styles.content}>
         <Text style={styles.title}>Estás en {salaInfo?.nombre ?? `Sala ${numero}`}</Text>
-
         <Calendario
-          onDaySelected={(date) => {
+          onDaySelected={async (date) => {
             setSelectedDay(date);
-            // abrimos modal al seleccionar día
+            await fetchReservasForDay(date);
             setModalVisible(true);
           }}
         />
       </View>
 
-      {/* Modal de reserva */}
+      {/* Modal */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Reserva - {selectedDay}</Text>
 
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={styles.sectionTitle}>Reservas del día</Text>
-              <TouchableOpacity onPress={() => selectedDay && fetchReservasForDay(selectedDay)}>
-                <Text style={{ color: "#d4af37", fontWeight: "700" }}>Actualizar</Text>
-              </TouchableOpacity>
-            </View>
-
+            {/* Lista de reservas */}
             {loadingReservas ? (
-              <Text style={{ color: "#fff", marginBottom: 8 }}>Cargando reservas...</Text>
+              <Text style={{ color: "#fff" }}>Cargando...</Text>
             ) : reservasDia.length === 0 ? (
-              <Text style={{ color: "#fff", marginBottom: 8 }}>No hay reservas para este día.</Text>
+              <Text style={{ color: "#fff" }}>No hay reservas.</Text>
             ) : (
               <FlatList
                 data={reservasDia}
@@ -339,42 +324,37 @@ export default function Sala({ navigation, route }: Props) {
                   <TouchableOpacity
                     style={styles.reservaRow}
                     onPress={() => {
-                      // si sos dueño, abrimos para editar; si no show detalles
                       if (item.usuarioId === auth.currentUser?.uid) {
                         setHoraInicio(item.horaInicio);
                         setHoraFin(item.horaFin);
                         setMotivo(item.motivo);
                         setEditingReservaId(item.id ?? null);
-                        // dejamos modal abierto (ya lo está)
                       } else {
                         Alert.alert("Reserva", `${item.horaInicio} - ${item.horaFin}\n${item.motivo}\n${item.usuarioEmail ?? "Usuario"}`);
                       }
-                    }}
-                  >
+                    }}>
                     <View>
                       <Text style={styles.reservaText}>{item.horaInicio} - {item.horaFin}</Text>
-                      <Text style={styles.reservaMotivo} numberOfLines={1}>{item.motivo}</Text>
+                      <Text style={styles.reservaMotivo}>{item.motivo}</Text>
                       <Text style={styles.reservaUsuario}>{item.usuarioEmail ?? "Usuario"}</Text>
                     </View>
-                    <View>
-                      {item.usuarioId === auth.currentUser?.uid ? (
-                        <TouchableOpacity onPress={() => handleEliminarReserva(item)}>
-                          <Text style={styles.eliminarText}>Cancelar</Text>
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
+                    {item.usuarioId === auth.currentUser?.uid && (
+                      <TouchableOpacity onPress={() => handleEliminarReserva(item)}>
+                        <Text style={styles.eliminarText}>Cancelar</Text>
+                      </TouchableOpacity>
+                    )}
                   </TouchableOpacity>
                 )}
               />
             )}
 
+            {/* Formulario */}
             <TextInput
               style={styles.input}
               placeholder="Hora inicio (ej: 10:30)"
               placeholderTextColor="#888"
               value={horaInicio}
               onChangeText={setHoraInicio}
-              keyboardType="default"
             />
             <TextInput
               style={styles.input}
@@ -382,7 +362,6 @@ export default function Sala({ navigation, route }: Props) {
               placeholderTextColor="#888"
               value={horaFin}
               onChangeText={setHoraFin}
-              keyboardType="default"
             />
             <TextInput
               style={styles.input}
@@ -393,19 +372,14 @@ export default function Sala({ navigation, route }: Props) {
             />
 
             <TouchableOpacity style={styles.saveButton} onPress={handleCreateOrUpdateReserva}>
-              <Text style={styles.saveText}>{editingReservaId ? "Actualizar Reserva" : "Guardar Reserva"}</Text>
+              <Text style={styles.saveText}>{editingReservaId ? "Actualizar" : "Guardar"}</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.cancelButton, { marginTop: 8 }]}
               onPress={() => {
                 setModalVisible(false);
-                setHoraInicio("");
-                setHoraFin("");
-                setMotivo("");
-                setEditingReservaId(null);
-              }}
-            >
+                setHoraInicio(""); setHoraFin(""); setMotivo(""); setEditingReservaId(null);
+              }}>
               <Text style={styles.cancelText}>Cerrar</Text>
             </TouchableOpacity>
           </View>
@@ -425,10 +399,8 @@ const styles = StyleSheet.create({
   leftHeader: { flexDirection: "row", alignItems: "center" },
   rightHeader: { flexDirection: "row", alignItems: "center" },
   centerHeader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  logo: { width: 120, height: 48 },
   headerTitle: { color: "#d4af37", fontSize: 18, fontWeight: "700" },
   salaMeta: { color: "#fff", fontSize: 11 },
-  iconButton: { padding: 8, marginHorizontal: 6, backgroundColor: "#1c1c1c", borderRadius: 6 },
   disabledButton: { opacity: 0.4 },
   logoutButton: { backgroundColor: "#d4af37", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginLeft: 8 },
   logoutText: { color: "#000", fontWeight: "700", fontSize: 14 },
@@ -437,7 +409,6 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
   modalContent: { backgroundColor: "#1c1c1c", padding: 20, borderRadius: 10, width: "90%" },
   modalTitle: { color: "#d4af37", fontSize: 18, marginBottom: 10, textAlign: "center" },
-  sectionTitle: { color: "#d4af37", fontSize: 14, marginBottom: 6, fontWeight: "700" },
   input: { backgroundColor: "#000", borderColor: "#d4af37", borderWidth: 1, borderRadius: 8, color: "#fff", padding: 10, marginBottom: 12 },
   saveButton: { backgroundColor: "#d4af37", padding: 12, borderRadius: 8, marginTop: 6 },
   saveText: { color: "#000", fontWeight: "700", textAlign: "center" },
@@ -448,16 +419,6 @@ const styles = StyleSheet.create({
   reservaMotivo: { color: "#ddd", fontSize: 12 },
   reservaUsuario: { color: "#aaa", fontSize: 11 },
   eliminarText: { color: "#ff6961", fontWeight: "700" },
-  navButton: {
-    backgroundColor: "#d4af37",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    marginHorizontal: 6,
-  },
-  navButtonText: {
-    color: "#000",
-    fontWeight: "700",
-    fontSize: 14,
-  },
+  navButton: { backgroundColor: "#d4af37", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6 },
+  navButtonText: { color: "#000", fontWeight: "700", fontSize: 14 },
 });
