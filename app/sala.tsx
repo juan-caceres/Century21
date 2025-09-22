@@ -1,4 +1,3 @@
-//sala.tsx
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -218,7 +217,6 @@ const handleCreateOrUpdateReserva = async () => {
 
 const handleEliminarReserva = async (reserva: Reserva) => {
   if (!reserva.id || reserva.usuarioId !== auth.currentUser?.uid) return;
-  // Eliminación directa sin alert para que funcione en web y móvil
   try {
     await deleteDoc(doc(db, "reservas", reserva.id));
     showMessage("Reserva cancelada correctamente.", "success");
@@ -239,7 +237,7 @@ return (
     <View style={styles.header}>
       <View style={styles.leftHeader}>
         <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
-          <Text style={styles.navButtonText}>🏠 Home</Text>
+          <Text style={styles.navButtonText}>🏠 Pantalla Principal</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => goToSala(numero - 1)}

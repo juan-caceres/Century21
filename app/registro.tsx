@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth } from "../firebase";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../App";
@@ -10,49 +10,68 @@ type RegistroScreenNavigationProp = StackNavigationProp<RootStackParamList, "Reg
 type Props = { navigation: RegistroScreenNavigationProp };
 
 export default function Registro({ navigation }: Props) {
+  // Estados para inputs
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
+  // Estados para mensajes de error
   const [errorEmail, setErrorEmail] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
   const [errorConfirm, setErrorConfirm] = useState("");
 
+  // Función de validación de datos
   const validarCampos = () => {
     let valid = true;
     setErrorEmail(""); setErrorPassword(""); setErrorConfirm("");
 
+    // Validar correo
     if (!email.includes("@")) {
       setErrorEmail("Correo inválido.");
       valid = false;
     }
+
+    // Validar contraseña: mínimo 8 caracteres, 1 mayúscula, 1 minúscula y 1 número
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(password)) {
       setErrorPassword("Contraseña debe tener mínimo 8 caracteres, 1 mayúscula, 1 minúscula y 1 número.");
       valid = false;
     }
+
+    // Validar confirmación de contraseña
     if (password !== confirm) {
       setErrorConfirm("Las contraseñas no coinciden.");
       valid = false;
     }
+
     return valid;
   };
 
   const handleRegister = async () => {
-    if (!validarCampos()) return;
+    if (!validarCampos()) return; 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      // Crear usuario en Firebase
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Enviar correo de verificación al usuario registrado
+      await sendEmailVerification(user);
+
+      alert("Cuenta creada. Revisa tu correo y confirma tu dirección antes de recuperar contraseña.");
+      navigation.navigate("Login"); 
     } catch (error: any) {
       if (error.code === "auth/email-already-in-use") setErrorEmail("Este correo ya está registrado.");
       else setErrorEmail("Error al crear la cuenta.");
     }
   };
 
+  // Interfaz usuario
   return (
     <View style={styles.container}>
       <Image source={require("../assets/century21-logo.png")} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>Crear Cuenta</Text>
 
+      {/* Correo */}
       <View style={[styles.inputContainer, errorEmail ? styles.inputError : null]}>
         <Icon name="email-outline" size={20} color="#d4af37" style={{ marginRight: 8 }} />
         <TextInput
@@ -67,6 +86,7 @@ export default function Registro({ navigation }: Props) {
       </View>
       {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}
 
+      {/* Contraseña */}
       <View style={[styles.inputContainer, errorPassword ? styles.inputError : null]}>
         <Icon name="lock-outline" size={20} color="#d4af37" style={{ marginRight: 8 }} />
         <TextInput
@@ -80,6 +100,7 @@ export default function Registro({ navigation }: Props) {
       </View>
       {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
 
+      {/* Confirmar contraseña */}
       <View style={[styles.inputContainer, errorConfirm ? styles.inputError : null]}>
         <Icon name="lock-outline" size={20} color="#d4af37" style={{ marginRight: 8 }} />
         <TextInput
@@ -93,10 +114,12 @@ export default function Registro({ navigation }: Props) {
       </View>
       {errorConfirm ? <Text style={styles.errorText}>{errorConfirm}</Text> : null}
 
+      {/* Botón registro */}
       <TouchableOpacity style={styles.button} onPress={handleRegister} activeOpacity={0.7}>
         <Text style={styles.buttonText}>Registrarse</Text>
       </TouchableOpacity>
 
+      {/* Link a login */}
       <TouchableOpacity onPress={() => navigation.navigate("Login")}>
         <Text style={styles.link}>Ya tengo cuenta</Text>
       </TouchableOpacity>
@@ -104,7 +127,7 @@ export default function Registro({ navigation }: Props) {
   );
 }
 
-// Estilos (colores logo c21)
+// Estilos: colores de C21 (negro + dorado)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center", padding: 20 },
   logo: { width: 180, height: 80, marginBottom: 20 },
