@@ -285,9 +285,9 @@ return (
     {feedbackMessage && (
       <View style={[
         styles.feedbackContainer,
-        { backgroundColor: feedbackMessage.type === "success" ? "#d4af37" : "#ff6961" }
+        { backgroundColor: feedbackMessage.type === "success" ? "#BEAF87" : "#ff6961" }
       ]}>
-        <Text style={{ color: feedbackMessage.type === "success" ? "#000" : "#fff", textAlign: "center" }}>
+        <Text style={{ color: feedbackMessage.type === "success" ? "#ffffffff" : "#252526", textAlign: "center" }}>
           {feedbackMessage.text}
         </Text>
       </View>
@@ -333,9 +333,9 @@ return (
 
           {/* Lista de reservas */}
           {loadingReservas ? (
-            <Text style={{ color: "#fff" }}>Cargando...</Text>
+            <Text style={{ color: "#252526" }}>Cargando...</Text>
           ) : reservasDia.length === 0 ? (
-            <Text style={{ color: "#fff" }}>No hay reservas.</Text>
+            <Text style={{ color: "#252526" }}>No hay reservas.</Text>
           ) : (
             <FlatList
               data={reservasDia}
@@ -461,36 +461,36 @@ return (
 
 // Estilos (siguiendo los colores del logo c21)
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
+  container: { flex: 1, backgroundColor: "#ffffffff" },
   header: {
     height: 90, paddingHorizontal: 10, flexDirection: "row",
     alignItems: "center", justifyContent: "space-between",
-    borderBottomWidth: 1, borderBottomColor: "#141414", backgroundColor: "#000",
+    borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff",
   },
   leftHeader: { flexDirection: "row", alignItems: "center" },
   rightHeader: { flexDirection: "row", alignItems: "center" },
   centerHeader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  headerTitle: { color: "#d4af37", fontSize: 18, fontWeight: "700" },
+  headerTitle: { color: "#BEAF87", fontSize: 18, fontWeight: "700" },
   salaMeta: { color: "#fff", fontSize: 11 },
   disabledButton: { opacity: 0.4 },
-  logoutButton: { backgroundColor: "#d4af37", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginLeft: 8 },
-  logoutText: { color: "#000", fontWeight: "700", fontSize: 14 },
+  logoutButton: { backgroundColor: "#BEAF87", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginLeft: 8 },
+  logoutText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
   content: { flex: 1, padding: 20, alignItems: "center" },
-  title: { color: "#fff", fontSize: 22, marginBottom: 12, fontWeight: "600" },
+  title: { color: "#252526", fontSize: 22, marginBottom: 12, fontWeight: "600" },
   modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
   modalContent: { backgroundColor: "#1c1c1c", padding: 20, borderRadius: 10, width: "90%" },
-  modalTitle: { color: "#d4af37", fontSize: 18, marginBottom: 10, textAlign: "center" },
-  input: { backgroundColor: "#000", borderColor: "#d4af37", borderWidth: 1, borderRadius: 8, color: "#fff", padding: 10, marginBottom: 12 },
-  saveButton: { backgroundColor: "#d4af37", padding: 12, borderRadius: 8, marginTop: 6 },
+  modalTitle: { color: "#BEAF87", fontSize: 18, marginBottom: 10, textAlign: "center" },
+  input: { backgroundColor: "#ffffffff", borderColor: "#BEAF87", borderWidth: 1, borderRadius: 8, color: "#fff", padding: 10, marginBottom: 12 },
+  saveButton: { backgroundColor: "#BEAF87", padding: 12, borderRadius: 8, marginTop: 6 },
   saveText: { color: "#000", fontWeight: "700", textAlign: "center" },
-  cancelButton: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#d4af37" },
-  cancelText: { color: "#d4af37", textAlign: "center" },
+  cancelButton: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#BEAF87" },
+  cancelText: { color: "#BEAF87", textAlign: "center" },
   reservaRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#2a2a2a" },
   reservaText: { color: "#fff", fontWeight: "700" },
   reservaMotivo: { color: "#ddd", fontSize: 12 },
   reservaUsuario: { color: "#aaa", fontSize: 11 },
   eliminarText: { color: "#ff6961", fontWeight: "700" },
-  navButton: { backgroundColor: "#d4af37", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6 },
-  navButtonText: { color: "#000", fontWeight: "700", fontSize: 14 },
+  navButton: { backgroundColor: "#BEAF87", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6 },
+  navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
   feedbackContainer: { padding: 8, borderRadius: 6, marginBottom: 8,},
 });
