@@ -19,7 +19,7 @@ export default function Home({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Image source={require("../assets/century21-logo.png")} style={styles.logo} resizeMode="contain" />
+        <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Cerrar Sesión</Text>
         </TouchableOpacity>
@@ -46,15 +46,15 @@ export default function Home({ navigation }: Props) {
 
 // Estilos (siguiendo colores del logo c21)
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000", padding: 20 },
+  container: { flex: 1, backgroundColor: "#ffffffff", padding: 20 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   logo: { width: 120, height: 50 },
-  logoutButton: { backgroundColor: "#d4af37", padding: 8, borderRadius: 5 },
-  logoutText: { color: "#000", fontWeight: "bold" },
-  title: { fontSize: 22, fontWeight: "bold", color: "#d4af37", marginBottom: 15 },
+  logoutButton: { backgroundColor: "#BEAF87", padding: 8, borderRadius: 5 },
+  logoutText: { color: "#ffffffff", fontWeight: "bold" },
+  title: { fontSize: 22, fontWeight: "bold", color: "#BEAF87", marginBottom: 15 },
   salaButton: {
-    padding: 15, backgroundColor: "#1c1c1c", borderRadius: 8,
-    marginVertical: 8, borderWidth: 1, borderColor: "#d4af37",
+    padding: 15, backgroundColor: "#252526", borderRadius: 8,
+    marginVertical: 8, borderWidth: 1, borderColor: "#BEAF87",
   },
-  salaText: { color: "#fff", fontSize: 18 },
+  salaText: { color: "#aaa", fontSize: 18 },
 });

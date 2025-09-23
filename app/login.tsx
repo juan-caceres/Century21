@@ -47,12 +47,12 @@ export default function Login({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <Image source={require("../assets/century21-logo.png")} style={styles.logo} resizeMode="contain" />
+      <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>Bienvenido</Text>
       <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
 
       <View style={[styles.inputContainer, errorEmail ? styles.inputError : null]}>
-        <Icon name="email-outline" size={20} color="#d4af37" style={{ marginRight: 8 }} />
+        <Icon name="email-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
         <TextInput
           placeholder="Correo"
           value={email}
@@ -66,7 +66,7 @@ export default function Login({ navigation }: Props) {
       {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}
 
       <View style={[styles.inputContainer, errorPassword ? styles.inputError : null]}>
-        <Icon name="lock-outline" size={20} color="#d4af37" style={{ marginRight: 8 }} />
+        <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
         <TextInput
           placeholder="Contraseña"
           value={password}
@@ -95,20 +95,20 @@ export default function Login({ navigation }: Props) {
 
 // Estilos (siguiendo colores del logo c21)
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center", padding: 20 },
-  logo: { width: 180, height: 80, marginBottom: 20 },
-  title: { fontSize: 26, fontWeight: "bold", color: "#d4af37", marginBottom: 5 },
+  container: { flex: 1, backgroundColor: "#ffffffff", justifyContent: "center", alignItems: "center", padding: 20 },
+  logo: { width: 220, height: 120, marginBottom: 20 },
+  title: { fontSize: 26, fontWeight: "bold", color: "#BEAF87", marginBottom: 5 },
   subtitle: { fontSize: 16, color: "#fff", marginBottom: 25 },
   inputContainer: {
     flexDirection: "row", alignItems: "center",
-    width: "90%", borderWidth: 1, borderColor: "#d4af37",
-    backgroundColor: "#1a1a1a", borderRadius: 8, paddingHorizontal: 10,
+    width: "90%", borderWidth: 1, borderColor: "#BEAF87",
+    backgroundColor: "#252526", borderRadius: 8, paddingHorizontal: 10,
     marginBottom: 10,
   },
   input: { flex: 1, color: "#fff", height: 48, fontSize: 16 },
   inputError: { borderColor: "red" },
   errorText: { color: "red", alignSelf: "flex-start", marginLeft: "5%", marginBottom: 5 },
-  button: { backgroundColor: "#d4af37", padding: 15, borderRadius: 8, width: "90%", marginTop: 10 },
-  buttonText: { color: "#000", textAlign: "center", fontSize: 18, fontWeight: "bold" },
-  link: { marginTop: 20, color: "#d4af37", fontSize: 16, fontWeight: "600" },
+  button: { backgroundColor: "#BEAF87", padding: 15, borderRadius: 8, width: "90%", marginTop: 10 },
+  buttonText: { color: "#252526", textAlign: "center", fontSize: 18, fontWeight: "bold" },
+  link: { marginTop: 20, color: "#252526", fontSize: 16, fontWeight: "600" },
 });
