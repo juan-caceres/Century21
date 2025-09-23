@@ -1,74 +1,60 @@
-import {Calendar, CalendarList, Agenda, LocaleConfig} from 'react-native-calendars';
-import React, {useState} from 'react';
-import { View } from 'react-native';
+import { Calendar, LocaleConfig } from "react-native-calendars";
+import React, { useState } from "react";
+import { View, StyleSheet, useWindowDimensions } from "react-native";
 
-//configuracion de dias,mes y año de calendario en espanol
-LocaleConfig.locales['es'] = {
-  monthNames: [
-    'Enero',
-    'Febrero',
-    'Marzo',
-    'Abril',
-    'Mayo',
-    'Junio',
-    'Julio',
-    'Agosto',
-    'Septiembre',
-    'Octubre',
-    'Noviembre',
-    'Diciembre'
-  ],
-  monthNamesShort: ['Ene.', 'Feb.', 'Mar', 'Abr', 'May', 'Jun', 'Jul.', 'Ago', 'Sept.', 'Oct.', 'Nov.', 'Dic.'],
-  dayNames: ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'],
-  dayNamesShort: ['Dom.', 'Lun.', 'Mar.', 'Mie.', 'Jue.', 'Vie.', 'Sab.'],
+LocaleConfig.locales["es"] = {
+  monthNames: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"],
+  monthNamesShort: ["Ene.","Feb.","Mar.","Abr","May","Jun","Jul.","Ago","Sept.","Oct.","Nov.","Dic."],
+  dayNames: ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"],
+  dayNamesShort: ["Dom.","Lun.","Mar.","Mié.","Jue.","Vie.","Sáb."],
   today: "Hoy"
 };
+LocaleConfig.defaultLocale = "es";
 
-LocaleConfig.defaultLocale = 'es';
+type Props = { onDaySelected: (date: string) => void };
 
-export default function Calendario() {
+export default function Calendario({ onDaySelected }: Props) {
+  const [selected, setSelected] = useState("");
+  const { width: screenWidth } = useWindowDimensions();
 
-    const [selected, setSelected] = useState('');
+  const calendarWidth = Math.min(screenWidth * 0.9, 500);
+  const calendarHeight = calendarWidth * 0.9;
 
   return (
-    <View>
-
+    <View style={styles.container}>
       <Calendar
-              // Customize the appearance of the calendar
-              style={{
-                borderWidth: 1,
-                borderColor: 'gray',
-                height: 350,
-                marginTop: 20
-              }}
-      
-              theme={{
-                backgroundColor: '#ffffff',
-                calendarBackground: '#ffffff',
-                textSectionTitleColor: '#b6c1cd',
-                selectedDayBackgroundColor: '#00adf5',
-                selectedDayTextColor: '#ffffff',
-                todayTextColor: '#00adf5',
-                dayTextColor: '#2d4150',
-                textDisabledColor: '#dd99ee'
-              }}
-      
-              // Specify the current date
-              current={'2025-09-12'}
-              // Callback that gets called when the user selects a day
-              onDayPress={day => {
-                console.log('selected day', day);
-              }}
-              // Mark specific dates as marked
-              markedDates={{
-                '2025-09-13': {selected: true, marked: true, selectedColor: 'blue'},
-                '2012-03-02': {marked: true},
-                '2012-03-03': {selected: true, marked: true, selectedColor: 'blue'}
-              }}
-            />
-      
-      
-      
+        style={[styles.calendar, { width: calendarWidth, height: calendarHeight }]}
+        theme={{
+          backgroundColor: "#000",
+          calendarBackground: "#000",
+          textSectionTitleColor: "#d4af37",
+          selectedDayBackgroundColor: "#d4af37",
+          selectedDayTextColor: "#000",
+          todayTextColor: "#d4af37",
+          dayTextColor: "#fff",
+          textDisabledColor: "#555",
+          monthTextColor: "#d4af37",
+          arrowColor: "#d4af37",
+        }}
+        current={new Date().toISOString().split("T")[0]}
+        minDate={new Date().toISOString().split("T")[0]}
+        onDayPress={(day) => {
+          setSelected(day.dateString);
+          onDaySelected(day.dateString);
+        }}
+        markedDates={{ [selected]: { selected: true, selectedColor: "#d4af37" } }}
+      />
     </View>
   );
 }
+
+// Estilos (siguiendo colores del logo c21)
+const styles = StyleSheet.create({
+  container: { marginTop: 20, width: "100%", alignItems: "center" },
+  calendar: {
+    borderWidth: 1,
+    borderColor: "#d4af37",
+    borderRadius: 12,
+    padding: 10,
+  },
+});
