@@ -14,10 +14,15 @@ type Props = {
   alSeleccionarHorario: (fecha: Date) => void;
 };
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const HORAS_INICIO = 9;
 const HORAS_FIN = 19;
-const ALTURA_HORA = 60;
+// Altura más responsive basada en el tamaño de pantalla
+const ALTURA_HORA = width < 400 ? 30 : Math.max(35, Math.min(50, height / 18));
+// Ancho de columna de horas responsive
+const ANCHO_COLUMNA_HORAS = width < 400 ? 35 : width < 600 ? 45 : 55;
+// Ancho mínimo de columna de día responsive
+const ANCHO_MIN_DIA = width < 400 ? 45 : width < 600 ? 65 : 80;
 
 export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
   const [semanaActual, setSemanaActual] = useState(new Date());
@@ -55,7 +60,9 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
   const generarHoras = () => {
     const horas = [];
     for (let i = HORAS_INICIO; i <= HORAS_FIN; i++) { 
-      horas.push(`${i.toString().padStart(2, '0')}:00`);
+      // En pantallas muy pequeñas, mostrar solo la hora sin :00
+      const formato = width < 400 ? `${i}` : `${i.toString().padStart(2, '0')}:00`;
+      horas.push(formato);
     }
     return horas;
   };
@@ -84,9 +91,13 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
 
   // Formatear fecha para mostrar
   const formatearFecha = (fecha: Date) => {
+    const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
+    // En pantallas pequeñas, usar versiones más cortas
+    const diaCorto = width < 400 ? diaSemana.substring(0, 2) : diaSemana;
+    
     return {
       dia: fecha.getDate(),
-      diaSemana: fecha.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase(),
+      diaSemana: diaCorto,
       mes: fecha.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase()
     };
   };
@@ -126,11 +137,11 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
           styles.evento,
           {
             top: topPosition,
-            height: Math.max(duration, 20),
+            height: Math.max(duration, 18),
           }
         ]}
       >
-        <Text style={styles.eventoTexto} numberOfLines={2}>
+        <Text style={styles.eventoTexto} numberOfLines={width < 400 ? 1 : 2}>
           {reserva.titulo}
         </Text>
         <Text style={styles.eventoHora}>
@@ -140,7 +151,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     );
   };
 
-  // 🔥 FUNCIÓN MEJORADA PARA MANEJAR EL TOQUE EN LAS CELDAS
+  // FUNCIÓN PARA MANEJAR EL TOQUE EN LAS CELDAS
   const manejarToqueCelda = (dia: Date, horaIndex: number) => {
     console.log('=== DEBUG TOQUE CELDA ===');
     console.log('Día:', dia.toDateString());
@@ -165,97 +176,131 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     alSeleccionarHorario(fechaHora);
   };
 
+  // Calcular si necesitamos scroll horizontal
+  const anchoTotalNecesario = ANCHO_COLUMNA_HORAS + (ANCHO_MIN_DIA * 6);
+  const necesitaScrollHorizontal = anchoTotalNecesario > width;
+
   return (
     <View style={styles.contenedor}>
-      {/* Header con navegación */}
+      {/* Header con navegación - Responsive */}
       <View style={styles.headerNavegacion}>
         <TouchableOpacity 
           style={styles.botonNavegacion} 
           onPress={() => cambiarSemana('anterior')}
         >
-          <Text style={styles.textoNavegacion}>← Semana Anterior</Text>
+          <Text style={styles.textoNavegacion}>‹</Text>
         </TouchableOpacity>
         
-        <Text style={styles.tituloSemana}>
-          {formatearTituloSemana()}
-        </Text>
+        <View style={styles.tituloContainer}>
+          <Text style={styles.tituloSemana}>
+            {formatearTituloSemana()}
+          </Text>
+        </View>
         
         <TouchableOpacity 
           style={styles.botonNavegacion} 
           onPress={() => cambiarSemana('siguiente')}
         >
-          <Text style={styles.textoNavegacion}>Siguiente Semana →</Text>
+          <Text style={styles.textoNavegacion}>›</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Header con días de la semana */}
-      <View style={styles.headerDias}>
-        <View style={styles.columnaHoras} />
-        {diasSemana.map((dia, index) => {
-          const fechaFormateada = formatearFecha(dia);
-          const esPasado = esDiaPasado(dia);
-          
-          return (
-            <View key={index} style={styles.columnaDia}>
-              <Text style={[
-                styles.diaSemanaTexto,
-                esPasado && styles.diaPasadoTexto
-              ]}>
-                {fechaFormateada.diaSemana}
-              </Text>
-              <Text style={[
-                styles.diaNumeroTexto,
-                esPasado && styles.diaPasadoTexto
-              ]}>
-                {fechaFormateada.dia}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-
-      {/* Calendario principal */}
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.calendarioContainer}>
-          {/* Columna de horas */}
-          <View style={styles.columnaHoras}>
-            {horas.map((hora, index) => (
-              <View key={index} style={styles.filaHora}>
-                <Text style={styles.horaTexto}>{hora}</Text>
-              </View>
-            ))}
+      {/* Contenedor con scroll horizontal condicional */}
+      <ScrollView 
+        horizontal={necesitaScrollHorizontal}
+        showsHorizontalScrollIndicator={necesitaScrollHorizontal}
+        bounces={false}
+        contentContainerStyle={!necesitaScrollHorizontal ? { flex: 1 } : {}}
+      >
+        <View style={[
+          styles.calendarioWrapper,
+          { minWidth: necesitaScrollHorizontal ? anchoTotalNecesario : '100%' }
+        ]}>
+          {/* Header con días de la semana */}
+          <View style={styles.headerDias}>
+            <View style={[styles.columnaHoras, { width: ANCHO_COLUMNA_HORAS }]} />
+            {diasSemana.map((dia, index) => {
+              const fechaFormateada = formatearFecha(dia);
+              const esPasado = esDiaPasado(dia);
+              
+              return (
+                <View key={index} style={[
+                  styles.columnaDia,
+                  necesitaScrollHorizontal 
+                    ? { width: ANCHO_MIN_DIA }
+                    : { flex: 1 }
+                ]}>
+                  <Text style={[
+                    styles.diaSemanaTexto,
+                    esPasado && styles.diaPasadoTexto
+                  ]}>
+                    {fechaFormateada.diaSemana}
+                  </Text>
+                  <Text style={[
+                    styles.diaNumeroTexto,
+                    esPasado && styles.diaPasadoTexto
+                  ]}>
+                    {fechaFormateada.dia}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
 
-          {/* Columnas de días */}
-          {diasSemana.map((dia, diaIndex) => {
-            const reservasDelDia = obtenerReservasDelDia(dia);
-            const esPasado = esDiaPasado(dia);
-            
-            return (
-              <View key={diaIndex} style={styles.columnaDia}>
-                {/* 🔥 CELDAS MEJORADAS - Crear celdas para cada hora (9:00 a 19:00) */}
-                {Array.from({ length: 11 }, (_, horaIndex) => (
-                  <TouchableOpacity
-                    key={`celda-${diaIndex}-${horaIndex}`}
-                    style={[
-                      styles.celdaHora,
-                      esPasado && styles.celdaPasada
-                    ]}
-                    onPress={() => manejarToqueCelda(dia, horaIndex)}
-                    disabled={esPasado}
-                    activeOpacity={esPasado ? 1 : 0.3}
-                  >
-                    <View style={styles.lineaDivision} />
-                  </TouchableOpacity>
+          {/* Calendario principal - Con scroll vertical */}
+          <ScrollView 
+            style={styles.scrollContainer} 
+            showsVerticalScrollIndicator={true}
+            bounces={true}
+          >
+            <View style={styles.calendarioContainer}>
+              {/* Columna de horas */}
+              <View style={[styles.columnaHoras, { width: ANCHO_COLUMNA_HORAS }]}>
+                {horas.map((hora, index) => (
+                  <View key={index} style={[styles.filaHora, { height: ALTURA_HORA }]}>
+                    <Text style={styles.horaTexto}>{hora}</Text>
+                  </View>
                 ))}
-                
-                {/* Renderizar eventos del día */}
-                <View style={styles.eventosContainer} pointerEvents="none">
-                  {reservasDelDia.map(reserva => renderizarEvento(reserva, dia))}
-                </View>
               </View>
-            );
-          })}
+
+              {/* Columnas de días */}
+              {diasSemana.map((dia, diaIndex) => {
+                const reservasDelDia = obtenerReservasDelDia(dia);
+                const esPasado = esDiaPasado(dia);
+                
+                return (
+                  <View key={diaIndex} style={[
+                    styles.columnaDia,
+                    necesitaScrollHorizontal 
+                      ? { width: ANCHO_MIN_DIA }
+                      : { flex: 1 }
+                  ]}>
+                    {/* Crear celdas para cada hora (9:00 a 19:00) - 11 celdas */}
+                    {Array.from({ length: 11 }, (_, horaIndex) => (
+                      <TouchableOpacity
+                        key={`celda-${diaIndex}-${horaIndex}`}
+                        style={[
+                          styles.celdaHora,
+                          { height: ALTURA_HORA },
+                          esPasado && styles.celdaPasada
+                        ]}
+                        onPress={() => manejarToqueCelda(dia, horaIndex)}
+                        disabled={esPasado}
+                        activeOpacity={esPasado ? 1 : 0.3}
+                      >
+                        <View style={styles.lineaDivision} />
+                      </TouchableOpacity>
+                    ))}
+                    
+                    {/* Renderizar eventos del día */}
+                    <View style={styles.eventosContainer} pointerEvents="none">
+                      {reservasDelDia.map(reserva => renderizarEvento(reserva, dia))}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
         </View>
       </ScrollView>
     </View>
@@ -271,55 +316,66 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: width < 400 ? 4 : 8,
+    paddingVertical: width < 400 ? 4 : 6,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    minHeight: width < 400 ? 35 : 40,
   },
   botonNavegacion: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    width: width < 400 ? 28 : 32,
+    height: width < 400 ? 28 : 32,
     backgroundColor: '#BEAF87',
-    borderRadius: 8,
-    minWidth: 120,
+    borderRadius: width < 400 ? 14 : 16,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   textoNavegacion: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: width < 400 ? 14 : 16,
     fontWeight: 'bold',
   },
+  tituloContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
   tituloSemana: {
-    fontSize: 18,
+    fontSize: width < 400 ? 12 : 14,
     fontWeight: 'bold',
     color: '#252526',
     textTransform: 'capitalize',
+    textAlign: 'center',
+  },
+  calendarioWrapper: {
+    flex: 1,
   },
   headerDias: {
     flexDirection: 'row',
     backgroundColor: '#f5f5f5',
-    paddingVertical: 10,
+    paddingVertical: width < 400 ? 4 : 6,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    minHeight: width < 400 ? 32 : 40,
   },
   columnaHoras: {
-    width: 60,
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
   columnaDia: {
-    flex: 1,
     alignItems: 'center',
     position: 'relative',
   },
   diaSemanaTexto: {
-    fontSize: 12,
+    fontSize: width < 400 ? 8 : 9,
     color: '#BEAF87',
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   diaNumeroTexto: {
-    fontSize: 16,
+    fontSize: width < 400 ? 10 : 12,
     color: '#252526',
     fontWeight: 'bold',
   },
@@ -328,33 +384,27 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-    maxHeight: '100%', // 🔥 AÑADIDO: Asegurar que use toda la altura disponible
   },
   calendarioContainer: {
     flexDirection: 'row',
-    height: 11 * ALTURA_HORA, // 🔥 CORREGIDO: 11 horas (9:00 a 19:00) en lugar de 10
-    minHeight: 11 * ALTURA_HORA, // 🔥 AÑADIDO: altura mínima para garantizar scroll
+    minHeight: 11 * ALTURA_HORA,
   },
   filaHora: {
-    height: ALTURA_HORA,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingRight: 8,
+    paddingRight: width < 400 ? 1 : 3,
   },
   horaTexto: {
-    fontSize: 12,
+    fontSize: width < 400 ? 7 : 9,
     color: '#666666',
     fontWeight: '500',
   },
   celdaHora: {
-    height: ALTURA_HORA,
     borderBottomWidth: 0.5,
     borderBottomColor: '#e8e8e8',
     borderRightWidth: 0.5,
     borderRightColor: '#e8e8e8',
     position: 'relative',
-    // 🔥 MEJORA: Asegurar que las celdas sean realmente tocables
-    minHeight: ALTURA_HORA,
     width: '100%',
   },
   celdaPasada: {
@@ -375,27 +425,26 @@ const styles = StyleSheet.create({
     left: 2,
     right: 2,
     bottom: 0,
-    // 🔥 CLAVE: pointerEvents="none" para que los eventos no bloqueen los toques
   },
   evento: {
     position: 'absolute',
     left: 0,
     right: 0,
     backgroundColor: '#BEAF87',
-    borderRadius: 4,
-    padding: 4,
-    borderLeftWidth: 3,
+    borderRadius: width < 400 ? 2 : 3,
+    padding: width < 400 ? 2 : 3,
+    borderLeftWidth: 2,
     borderLeftColor: '#9A8F6A',
   },
   eventoTexto: {
     color: '#ffffff',
-    fontSize: 11,
+    fontSize: width < 400 ? 7 : 9,
     fontWeight: 'bold',
     marginBottom: 1,
   },
   eventoHora: {
     color: '#ffffff',
-    fontSize: 10,
+    fontSize: width < 400 ? 6 : 8,
     opacity: 0.9,
   },
 });
