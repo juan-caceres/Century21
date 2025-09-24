@@ -1,3 +1,4 @@
+//app/componentes/calendario.jsx
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Dimensions } from "react-native";
 
