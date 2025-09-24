@@ -1,5 +1,6 @@
+//app/sala.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, Alert } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../App";
@@ -35,6 +36,8 @@ export default function Sala({ navigation, route }: Props) {
   const [horaFin, setHoraFin] = useState("");
   const [motivo, setMotivo] = useState("");
 
+  // Cambiamos reservasDia para que contenga todas las reservas de la semana actual
+  const [reservasSemana, setReservasSemana] = useState<Reserva[]>([]);
   const [reservasDia, setReservasDia] = useState<Reserva[]>([]);
   const [loadingReservas, setLoadingReservas] = useState(false);
   const [editingReservaId, setEditingReservaId] = useState<string | null>(null);
@@ -45,6 +48,7 @@ export default function Sala({ navigation, route }: Props) {
 
   useEffect(() => {
     fetchSalaInfo();
+    fetchReservasSemana(); // Cargar reservas de toda la semana al inicio
   }, [numero]);
 
   useEffect(() => {
@@ -97,6 +101,57 @@ export default function Sala({ navigation, route }: Props) {
     return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
   };
 
+  // Nueva función para obtener las fechas de la semana actual
+  const obtenerFechasSemana = () => {
+    const hoy = new Date();
+    const diaDeLaSemana = hoy.getDay();
+    const diasParaRestar = diaDeLaSemana === 0 ? 6 : diaDeLaSemana - 1;
+    const inicioSemana = new Date(hoy);
+    inicioSemana.setDate(hoy.getDate() - diasParaRestar);
+    
+    const fechas = [];
+    for (let i = 0; i < 6; i++) { // Solo lunes a sábado
+      const fecha = new Date(inicioSemana);
+      fecha.setDate(inicioSemana.getDate() + i);
+      fechas.push(fecha.toISOString().split('T')[0]);
+    }
+    return fechas;
+  };
+
+  // Nueva función para cargar reservas de toda la semana
+  const fetchReservasSemana = async () => {
+    setLoadingReservas(true);
+    try {
+      const fechasSemana = obtenerFechasSemana();
+      const reservasRef = collection(db, "reservas");
+      const promises = fechasSemana.map(fecha => 
+        getDocs(query(reservasRef, where("sala", "==", numero), where("fecha", "==", fecha)))
+      );
+      
+      const snapshots = await Promise.all(promises);
+      const todasLasReservas: Reserva[] = [];
+      
+      snapshots.forEach(snap => {
+        snap.docs.forEach(d => {
+          const data = d.data() as any;
+          todasLasReservas.push({
+            id: d.id,
+            ...data,
+            horaInicio: normalizeTimeSafe(data.horaInicio),
+            horaFin: normalizeTimeSafe(data.horaFin),
+          });
+        });
+      });
+
+      todasLasReservas.sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
+      setReservasSemana(todasLasReservas);
+    } catch (err) {
+      console.log("Error cargar reservas semana:", err);
+    } finally {
+      setLoadingReservas(false);
+    }
+  };
+
   const fetchReservasForDay = async (fecha: string) => {
     setLoadingReservas(true);
     try {
@@ -121,6 +176,16 @@ export default function Sala({ navigation, route }: Props) {
     } finally {
       setLoadingReservas(false);
     }
+  };
+
+  // Función para convertir reservas al formato del calendario
+  const convertirReservasParaCalendario = () => {
+    return reservasSemana.map(reserva => ({
+      id: reserva.id,
+      titulo: reserva.motivo,
+      inicio: new Date(`${reserva.fecha}T${reserva.horaInicio}:00`),
+      fin: new Date(`${reserva.fecha}T${reserva.horaFin}:00`),
+    }));
   };
 
   //  Chequeo de que no haya reservas a la misma hora
@@ -164,6 +229,13 @@ const handleCreateOrUpdateReserva = async () => {
   }
   const sNew = timeToMinutes(horaInicio);
   const eNew = timeToMinutes(horaFin);
+
+  // límite de 9 a 19
+  if (sNew < 9 * 60 || eNew > 19 * 60) {
+    showMessage("Las reservas deben estar entre 09:00 y 19:00.", "error");
+    return;
+  }
+
   if (sNew >= eNew) {
     showMessage("La hora de inicio debe ser menor a la hora de fin.", "error");
     return;
@@ -208,7 +280,13 @@ const handleCreateOrUpdateReserva = async () => {
     }
 
     setHoraInicio(""); setHoraFin(""); setMotivo(""); setEditingReservaId(null);
-    if (selectedDay) await fetchReservasForDay(selectedDay);
+    
+    // Recargar reservas tanto del día como de toda la semana
+    await fetchReservasSemana(); // Esto actualizará el calendario
+    if (selectedDay) await fetchReservasForDay(selectedDay); // Esto actualizará la lista del modal
+    
+    // Cerrar el modal después de crear la reserva
+    setModalVisible(false);
 
   } catch (err: any) {
     console.error("Error guardar reserva:", err);
@@ -220,7 +298,10 @@ const handleEliminarReserva = async (reserva: Reserva) => {
   try {
     await deleteDoc(doc(db, "reservas", reserva.id));
     showMessage("Reserva cancelada correctamente.", "success");
-    if (selectedDay) await fetchReservasForDay(selectedDay);
+    
+    // Recargar reservas tanto del día como de toda la semana
+    await fetchReservasSemana(); // Esto actualizará el calendario
+    if (selectedDay) await fetchReservasForDay(selectedDay); // Esto actualizará la lista del modal
   } catch (err) {
     showMessage("Error al cancelar la reserva.", "error");
   }
@@ -229,6 +310,41 @@ const handleEliminarReserva = async (reserva: Reserva) => {
 const goToSala = (newNum: number) => {
   if (newNum < 1 || newNum > MAX_SALAS) return;
   navigation.replace("Sala", { numero: newNum });
+};
+
+const handleSeleccionarHorario = async (fecha: Date) => {
+  // Verificar si es día pasado
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const fechaSeleccionada = new Date(fecha);
+  fechaSeleccionada.setHours(0, 0, 0, 0);
+  
+  if (fechaSeleccionada < hoy) {
+    Alert.alert("Fecha inválida", "No se pueden seleccionar días anteriores.");
+    return;
+  }
+
+  // Verificar si es domingo
+  if (fecha.getDay() === 0) {
+    Alert.alert("Día no disponible", "Los domingos no están disponibles para reservas.");
+    return;
+  }
+
+  const diaStr = fecha.toISOString().split("T")[0];
+  setSelectedDay(diaStr);
+  
+  // Cargar reservas del día seleccionado
+  await fetchReservasForDay(diaStr);
+  
+  // NO PRECARGAR HORAS - dejar vacío
+  setHoraInicio("");
+  setHoraFin("");
+  
+  // Limpiar campos de edición
+  setEditingReservaId(null);
+  setMotivo("");
+  
+  setModalVisible(true);
 };
 
 return (
@@ -266,13 +382,12 @@ return (
 
     {/* Calendario */}
     <View style={styles.content}>
-      <Text style={styles.title}>Estás en {salaInfo?.nombre ?? `Sala ${numero}`}</Text>
+      <Text style={styles.title}>
+        Estás en {salaInfo?.nombre ?? `Sala ${numero}`}
+      </Text>
       <Calendario
-        onDaySelected={async (date) => {
-          setSelectedDay(date);
-          await fetchReservasForDay(date);
-          setModalVisible(true);
-        }}
+        reservas={convertirReservasParaCalendario()}
+        alSeleccionarHorario={handleSeleccionarHorario}
       />
     </View>
 
@@ -300,6 +415,12 @@ return (
           if (!selectedDay) return;
           const prev = new Date(selectedDay);
           prev.setDate(prev.getDate() - 1);
+          
+          // Saltar domingo si vamos hacia atrás
+          if (prev.getDay() === 0) {
+            prev.setDate(prev.getDate() - 1);
+          }
+          
           const prevStr = prev.toISOString().split("T")[0];
           setSelectedDay(prevStr);
           setEditingReservaId(null);
@@ -318,6 +439,12 @@ return (
           if (!selectedDay) return;
           const next = new Date(selectedDay);
           next.setDate(next.getDate() + 1);
+          
+          // Saltar domingo si vamos hacia adelante
+          if (next.getDay() === 0) {
+            next.setDate(next.getDate() + 1);
+          }
+          
           const nextStr = next.toISOString().split("T")[0];
           setSelectedDay(nextStr);
           setEditingReservaId(null);
@@ -471,7 +598,7 @@ const styles = StyleSheet.create({
   rightHeader: { flexDirection: "row", alignItems: "center" },
   centerHeader: { flex: 1, justifyContent: "center", alignItems: "center" },
   headerTitle: { color: "#BEAF87", fontSize: 18, fontWeight: "700" },
-  salaMeta: { color: "#fff", fontSize: 11 },
+  salaMeta: { color: "#666", fontSize: 11 },
   disabledButton: { opacity: 0.4 },
   logoutButton: { backgroundColor: "#BEAF87", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginLeft: 8 },
   logoutText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
@@ -480,15 +607,15 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
   modalContent: { backgroundColor: "#1c1c1c", padding: 20, borderRadius: 10, width: "90%" },
   modalTitle: { color: "#BEAF87", fontSize: 18, marginBottom: 10, textAlign: "center" },
-  input: { backgroundColor: "#ffffffff", borderColor: "#BEAF87", borderWidth: 1, borderRadius: 8, color: "#fff", padding: 10, marginBottom: 12 },
-  saveButton: { backgroundColor: "#BEAF87", padding: 12, borderRadius: 8, marginTop: 6 },
-  saveText: { color: "#000", fontWeight: "700", textAlign: "center" },
-  cancelButton: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#BEAF87" },
+  input: { backgroundColor: "#1e1e1e", borderColor: "#BEAF87", borderWidth: 1, borderRadius: 8, color: "#fff", padding: 10, marginBottom: 10 },
+  saveButton: { backgroundColor: "#BEAF87", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, alignItems: "center", },
+  saveText: { color: "#252526", fontWeight: "bold", },
+  cancelButton: { backgroundColor: '#252526', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: "#BEAF87" },
   cancelText: { color: "#BEAF87", textAlign: "center" },
-  reservaRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#2a2a2a" },
-  reservaText: { color: "#fff", fontWeight: "700" },
-  reservaMotivo: { color: "#ddd", fontSize: 12 },
-  reservaUsuario: { color: "#aaa", fontSize: 11 },
+  reservaRow: { padding: 8, marginBottom: 6, borderRadius: 6, backgroundColor: "#2e2e2e", },
+  reservaText: { color: "#BEAF87", fontWeight: "bold" },
+  reservaMotivo: { color: "#fff", },
+  reservaUsuario: { color: "#ccc", fontSize: 12 },
   eliminarText: { color: "#ff6961", fontWeight: "700" },
   navButton: { backgroundColor: "#BEAF87", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6 },
   navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
