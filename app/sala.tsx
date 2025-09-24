@@ -1,4 +1,3 @@
-//app/sala.tsx
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, Alert } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -36,7 +35,6 @@ export default function Sala({ navigation, route }: Props) {
   const [horaFin, setHoraFin] = useState("");
   const [motivo, setMotivo] = useState("");
 
-  // Cambiamos reservasDia para que contenga todas las reservas de la semana actual
   const [reservasSemana, setReservasSemana] = useState<Reserva[]>([]);
   const [reservasDia, setReservasDia] = useState<Reserva[]>([]);
   const [loadingReservas, setLoadingReservas] = useState(false);
@@ -48,7 +46,7 @@ export default function Sala({ navigation, route }: Props) {
 
   useEffect(() => {
     fetchSalaInfo();
-    fetchReservasSemana(); // Cargar reservas de toda la semana al inicio
+    fetchReservasSemana();
   }, [numero]);
 
   useEffect(() => {
@@ -101,7 +99,6 @@ export default function Sala({ navigation, route }: Props) {
     return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
   };
 
-  // Nueva función para obtener las fechas de la semana actual
   const obtenerFechasSemana = () => {
     const hoy = new Date();
     const diaDeLaSemana = hoy.getDay();
@@ -118,7 +115,6 @@ export default function Sala({ navigation, route }: Props) {
     return fechas;
   };
 
-  // Nueva función para cargar reservas de toda la semana
   const fetchReservasSemana = async () => {
     setLoadingReservas(true);
     try {
@@ -281,11 +277,9 @@ const handleCreateOrUpdateReserva = async () => {
 
     setHoraInicio(""); setHoraFin(""); setMotivo(""); setEditingReservaId(null);
     
-    // Recargar reservas tanto del día como de toda la semana
-    await fetchReservasSemana(); // Esto actualizará el calendario
-    if (selectedDay) await fetchReservasForDay(selectedDay); // Esto actualizará la lista del modal
+    await fetchReservasSemana(); 
+    if (selectedDay) await fetchReservasForDay(selectedDay); 
     
-    // Cerrar el modal después de crear la reserva
     setModalVisible(false);
 
   } catch (err: any) {
@@ -299,9 +293,8 @@ const handleEliminarReserva = async (reserva: Reserva) => {
     await deleteDoc(doc(db, "reservas", reserva.id));
     showMessage("Reserva cancelada correctamente.", "success");
     
-    // Recargar reservas tanto del día como de toda la semana
-    await fetchReservasSemana(); // Esto actualizará el calendario
-    if (selectedDay) await fetchReservasForDay(selectedDay); // Esto actualizará la lista del modal
+    await fetchReservasSemana(); 
+    if (selectedDay) await fetchReservasForDay(selectedDay);
   } catch (err) {
     showMessage("Error al cancelar la reserva.", "error");
   }
@@ -313,7 +306,6 @@ const goToSala = (newNum: number) => {
 };
 
 const handleSeleccionarHorario = async (fecha: Date) => {
-  // Verificar si es día pasado
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
   const fechaSeleccionada = new Date(fecha);
@@ -324,7 +316,6 @@ const handleSeleccionarHorario = async (fecha: Date) => {
     return;
   }
 
-  // Verificar si es domingo
   if (fecha.getDay() === 0) {
     Alert.alert("Día no disponible", "Los domingos no están disponibles para reservas.");
     return;
@@ -333,14 +324,11 @@ const handleSeleccionarHorario = async (fecha: Date) => {
   const diaStr = fecha.toISOString().split("T")[0];
   setSelectedDay(diaStr);
   
-  // Cargar reservas del día seleccionado
   await fetchReservasForDay(diaStr);
   
-  // NO PRECARGAR HORAS - dejar vacío
   setHoraInicio("");
   setHoraFin("");
   
-  // Limpiar campos de edición
   setEditingReservaId(null);
   setMotivo("");
   
@@ -416,7 +404,7 @@ return (
           const prev = new Date(selectedDay);
           prev.setDate(prev.getDate() - 1);
           
-          // Saltar domingo si vamos hacia atrás
+          // Saltar domingo
           if (prev.getDay() === 0) {
             prev.setDate(prev.getDate() - 1);
           }
@@ -440,7 +428,7 @@ return (
           const next = new Date(selectedDay);
           next.setDate(next.getDate() + 1);
           
-          // Saltar domingo si vamos hacia adelante
+          // Saltar domingo
           if (next.getDay() === 0) {
             next.setDate(next.getDate() + 1);
           }

@@ -1,4 +1,3 @@
-//app/componentes/calendario.jsx
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Dimensions } from "react-native";
 
@@ -17,11 +16,8 @@ type Props = {
 const { width, height } = Dimensions.get('window');
 const HORAS_INICIO = 9;
 const HORAS_FIN = 19;
-// Altura más responsive basada en el tamaño de pantalla
 const ALTURA_HORA = width < 400 ? 30 : Math.max(35, Math.min(50, height / 18));
-// Ancho de columna de horas responsive
 const ANCHO_COLUMNA_HORAS = width < 400 ? 35 : width < 600 ? 45 : 55;
-// Ancho mínimo de columna de día responsive
 const ANCHO_MIN_DIA = width < 400 ? 45 : width < 600 ? 65 : 80;
 
 export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
@@ -32,12 +28,11 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     const inicioSemana = new Date(fecha);
     const diaDeLaSemana = inicioSemana.getDay();
     
-    // Ajustar al lunes más cercano
     const diasParaRestar = diaDeLaSemana === 0 ? 6 : diaDeLaSemana - 1;
     inicioSemana.setDate(inicioSemana.getDate() - diasParaRestar);
     
     const dias = [];
-    for (let i = 0; i < 6; i++) { // Solo 6 días (Lunes a Sábado)
+    for (let i = 0; i < 6; i++) { // (Lunes a Sábado)
       const dia = new Date(inicioSemana);
       dia.setDate(inicioSemana.getDate() + i);
       dias.push(dia);
@@ -47,7 +42,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
 
   const diasSemana = obtenerDiasDeLaSemana(semanaActual);
   
-  // Verificar si un día es pasado
+  // Verificar día pasado
   const esDiaPasado = (fecha: Date) => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -56,11 +51,10 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     return fechaComparar < hoy;
   };
 
-  // Generar horas del día (solo para mostrar en la columna lateral)
   const generarHoras = () => {
     const horas = [];
     for (let i = HORAS_INICIO; i <= HORAS_FIN; i++) { 
-      // En pantallas muy pequeñas, mostrar solo la hora sin :00
+      // En pantallas pequeñas -> mostrar solo la hora sin :00
       const formato = width < 400 ? `${i}` : `${i.toString().padStart(2, '0')}:00`;
       horas.push(formato);
     }
@@ -80,7 +74,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     setSemanaActual(nuevaFecha);
   };
 
-  // Obtener reservas para un día específico
+  // Reservas para un día específico
   const obtenerReservasDelDia = (fecha: Date) => {
     const fechaString = fecha.toISOString().split('T')[0];
     return reservas.filter(reserva => {
@@ -89,10 +83,9 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     });
   };
 
-  // Formatear fecha para mostrar
   const formatearFecha = (fecha: Date) => {
     const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
-    // En pantallas pequeñas, usar versiones más cortas
+    // En pantallas pequeñas -> versiones más cortas
     const diaCorto = width < 400 ? diaSemana.substring(0, 2) : diaSemana;
     
     return {
@@ -102,7 +95,6 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     };
   };
 
-  // Formatear título de la semana con rango de fechas
   const formatearTituloSemana = () => {
     const primerDia = diasSemana[0];
     const ultimoDia = diasSemana[diasSemana.length - 1];
@@ -120,7 +112,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     }
   };
 
-  // Renderizar evento en el calendario
+  // Render de evento en el calendario
   const renderizarEvento = (reserva: Reserva, fecha: Date) => {
     const horaInicio = reserva.inicio.getHours();
     const minutosInicio = reserva.inicio.getMinutes();
@@ -165,14 +157,12 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
       return;
     }
 
-    // Crear fecha SIN hora específica - solo el día
     const fechaHora = new Date(dia);
-    fechaHora.setHours(0, 0, 0, 0); // Sin hora precargada
+    fechaHora.setHours(0, 0, 0, 0);
     
     console.log('Fecha seleccionada:', fechaHora.toISOString());
     console.log('Llamando a alSeleccionarHorario...');
     
-    // Llamar al callback
     alSeleccionarHorario(fechaHora);
   };
 
@@ -182,7 +172,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
 
   return (
     <View style={styles.contenedor}>
-      {/* Header con navegación - Responsive */}
+      {/* Header con navegación */}
       <View style={styles.headerNavegacion}>
         <TouchableOpacity 
           style={styles.botonNavegacion} 
@@ -205,7 +195,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
         </TouchableOpacity>
       </View>
 
-      {/* Contenedor con scroll horizontal condicional */}
+      {/* Contenedor con scroll horizontal */}
       <ScrollView 
         horizontal={necesitaScrollHorizontal}
         showsHorizontalScrollIndicator={necesitaScrollHorizontal}
@@ -247,7 +237,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
             })}
           </View>
 
-          {/* Calendario principal - Con scroll vertical */}
+          {/* Calendario principal */}
           <ScrollView 
             style={styles.scrollContainer} 
             showsVerticalScrollIndicator={true}
@@ -275,7 +265,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
                       ? { width: ANCHO_MIN_DIA }
                       : { flex: 1 }
                   ]}>
-                    {/* Crear celdas para cada hora (9:00 a 19:00) - 11 celdas */}
+                    {/* Celdas para cada hora (9:00 a 19:00) - 11 celdas */}
                     {Array.from({ length: 11 }, (_, horaIndex) => (
                       <TouchableOpacity
                         key={`celda-${diaIndex}-${horaIndex}`}
@@ -292,7 +282,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
                       </TouchableOpacity>
                     ))}
                     
-                    {/* Renderizar eventos del día */}
+                    {/* Render de eventos del día */}
                     <View style={styles.eventosContainer} pointerEvents="none">
                       {reservasDelDia.map(reserva => renderizarEvento(reserva, dia))}
                     </View>
