@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification} from "firebase/auth";
 import { auth } from "../firebase";
+import {doc,setDoc} from "firebase/firestore";
+import {db} from "../firebase"
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../App";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -54,6 +56,13 @@ export default function Registro({ navigation }: Props) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      //guardar datos del usuario en firestore para manejar los roles
+      await setDoc(doc(db,"users",user.uid),{
+        email:user.email,
+        role:"user", //por defecto es un usuario normal
+        createdAt: new Date(),
+      });
+
       // Enviar correo de verificación al usuario registrado
       await sendEmailVerification(user);
 
@@ -64,6 +73,9 @@ export default function Registro({ navigation }: Props) {
       else setErrorEmail("Error al crear la cuenta.");
     }
   };
+
+
+  
 
   // Interfaz usuario
   return (
