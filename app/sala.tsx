@@ -547,7 +547,7 @@ return (
         </View>
       </Modal>
 
-      {/* Formulario para agregar reserva - AHORA CON TIMEPICKERS */}
+      {/* Formulario para agregar reserva - CON TIMEPICKERS */}
       <View style={styles.formSection}>
         <Text style={styles.formSectionTitle}>
           {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
@@ -613,22 +613,14 @@ const { width,height } = Dimensions.get("window");
 const styles = StyleSheet.create({
  
   container: { 
-    
-  
-  
-  
     flex: 1, 
     backgroundColor: "#ffffffff",
     padding: width > 600 ? 40 : 20, 
-    
-  
-  
   },
   header: {
     height: 90, paddingHorizontal: 10, flexDirection: "row",
     alignItems: "center", justifyContent: "space-between",
     borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff",
-
   },
   superiorSalas:{
     height: 40, paddingHorizontal: 10, flexDirection: "row",
@@ -644,9 +636,9 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.4 },
   headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between", // separa a los extremos
+    justifyContent: "space-between", 
     alignItems: "center",
-    width: "100%", // ocupa todo el ancho
+    width: "100%",
     paddingHorizontal: 10,
   },
 
