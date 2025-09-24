@@ -48,7 +48,12 @@ export default function App() {
           {user ? (
             <>
               <Stack.Screen name="Home" component={Home} />
-              <Stack.Screen name="Sala" component={Sala} />
+              <Stack.Screen name="Sala" component={Sala} options={{animation:'fade_from_right',
+                transitionSpec:{
+                  open: {animation: 'timing', config: {duration: 300}},
+                  close: {animation: 'timing', config: {duration: 200}},
+                },
+              }} />
             </>
           ) : (
             <>

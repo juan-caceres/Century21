@@ -7,6 +7,8 @@ import Calendario from "./componentes/calendario";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc, updateDoc, getDoc } from "firebase/firestore";
+import {Dimensions} from "react-native";
+import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
@@ -234,39 +236,50 @@ const goToSala = (newNum: number) => {
 return (
   <View style={styles.container}>
     {/* Header (botones y titulos)*/}
-    <View style={styles.header}>
-      <View style={styles.leftHeader}>
+    <View style={styles.superiorSalas}>
+      <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
-          <Text style={styles.navButtonText}>🏠 Pantalla Principal</Text>
+          <Text style={styles.navButtonText}>🏠 Inicio</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => goToSala(numero - 1)}
-          style={[styles.navButton, numero === 1 && styles.disabledButton]}
-          disabled={numero === 1}>
-          <Text style={styles.navButtonText}>◀</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.centerHeader}>
-        <Text style={styles.headerTitle}>{salaInfo?.nombre ?? `Sala ${numero}`}</Text>
-        {salaInfo?.capacidad && <Text style={styles.salaMeta}>Capacidad: {salaInfo.capacidad}</Text>}
-        {salaInfo?.tv && <Text style={styles.salaMeta}>Televisor: Sí</Text>}
-      </View>
-      <View style={styles.rightHeader}>
-        <TouchableOpacity
-          onPress={() => goToSala(numero + 1)}
-          style={[styles.navButton, numero === MAX_SALAS && styles.disabledButton]}
-          disabled={numero === MAX_SALAS}>
-          <Text style={styles.navButtonText}>▶</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Cerrar Sesión</Text>
-        </TouchableOpacity>
+
+        <BtnCerrarSesion />
+
       </View>
     </View>
 
     {/* Calendario */}
     <View style={styles.content}>
-      <Text style={styles.title}>Estás en {salaInfo?.nombre ?? `Sala ${numero}`}</Text>
+
+      
+      <View style={styles.header}>
+        <View style={styles.leftHeader}>
+          
+          <TouchableOpacity
+            onPress={() => goToSala(numero - 1)}
+            style={[styles.navButton, numero === 1 && styles.disabledButton]}
+            disabled={numero === 1}>
+            <Text style={styles.navButtonText}>◀</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.centerHeader}>
+          <Text style={styles.headerTitle}>{salaInfo?.nombre ?? `Estás en Sala ${numero}`}</Text>
+          {salaInfo?.capacidad && <Text style={styles.salaMeta}>Capacidad: {salaInfo.capacidad}</Text>}
+          {salaInfo?.tv && <Text style={styles.salaMeta}>Televisor: Sí</Text>}
+        </View>
+
+        <View style={styles.rightHeader}>
+          <TouchableOpacity
+            onPress={() => goToSala(numero + 1)}
+            style={[styles.navButton, numero === MAX_SALAS && styles.disabledButton]}
+            disabled={numero === MAX_SALAS}>
+            <Text style={styles.navButtonText}>▶</Text>
+          </TouchableOpacity>
+    
+        </View>
+    </View>
+
+  
       <Calendario
         onDaySelected={async (date) => {
           setSelectedDay(date);
@@ -460,23 +473,49 @@ return (
 )};
 
 // Estilos (siguiendo los colores del logo c21)
+const { width,height } = Dimensions.get("window");
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffffff" },
+ 
+  container: { 
+    
+  
+  
+  
+    flex: 1, 
+    backgroundColor: "#ffffffff",
+    padding: width > 600 ? 40 : 20, 
+    
+  
+  
+  },
   header: {
     height: 90, paddingHorizontal: 10, flexDirection: "row",
     alignItems: "center", justifyContent: "space-between",
     borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff",
+
+  },
+  superiorSalas:{
+    height: 90, paddingHorizontal: 10, flexDirection: "row",
+    alignItems: "center", justifyContent:"center",
+    borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff",
+    marginTop: height > 700 ? 50 : 20
   },
   leftHeader: { flexDirection: "row", alignItems: "center" },
   rightHeader: { flexDirection: "row", alignItems: "center" },
   centerHeader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  headerTitle: { color: "#BEAF87", fontSize: 18, fontWeight: "700" },
+  headerTitle: { color: "#252526", fontSize: 18, fontWeight: "700" },
   salaMeta: { color: "#fff", fontSize: 11 },
   disabledButton: { opacity: 0.4 },
-  logoutButton: { backgroundColor: "#BEAF87", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginLeft: 8 },
-  logoutText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between", // separa a los extremos
+    alignItems: "center",
+    width: "100%", // ocupa todo el ancho
+    paddingHorizontal: 10,
+  },
+
   content: { flex: 1, padding: 20, alignItems: "center" },
-  title: { color: "#252526", fontSize: 22, marginBottom: 12, fontWeight: "600" },
   modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
   modalContent: { backgroundColor: "#1c1c1c", padding: 20, borderRadius: 10, width: "90%" },
   modalTitle: { color: "#BEAF87", fontSize: 18, marginBottom: 10, textAlign: "center" },
