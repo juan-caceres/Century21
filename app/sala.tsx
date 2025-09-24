@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
 
   },
   superiorSalas:{
-    height: 90, paddingHorizontal: 10, flexDirection: "row",
+    height: 40, paddingHorizontal: 10, flexDirection: "row",
     alignItems: "center", justifyContent:"center",
     borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff",
     marginTop: height > 700 ? 50 : 20
