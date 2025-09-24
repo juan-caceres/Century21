@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useEffect,useState } from "react";
 import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image,Alert } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../App";
 import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import { auth,db } from "../firebase";
+import {doc,getDoc} from "firebase/firestore";
 import {Dimensions} from "react-native";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 
@@ -12,6 +13,40 @@ type Props = { navigation: HomeScreenNavigationProp };
 
 export default function Home({ navigation }: Props) {
   
+  const [role,setRole] = useState<string | null>(null);
+  const [loading,setLoading]= useState(true);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      const user=auth.currentUser;
+      if (!user) {
+        setRole(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          setRole(userDoc.data().role);
+        } else {
+          setRole(null);
+        }
+      } catch (error) {
+        console.log("error al obtener rol:", error);
+        setRole(null);
+      }
+
+      setLoading(false);
+    };
+
+    fetchUserRole();
+
+  },[]);
+  
+
+
+
 
   const salas = Array.from({ length: 7 }, (_, i) => `Sala ${i + 1}`);
 
@@ -21,6 +56,13 @@ export default function Home({ navigation }: Props) {
         <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
         <BtnCerrarSesion />
       </View>
+
+      {role === "admin" ? (<Text style={{color:"blak", fontWeight:"bold"}}>- usuario: administrador </Text>
+      ):(
+        <Text style={{color:"blak", fontWeight:"bold"}}>- usuario: empleado </Text>
+      )
+      
+      } 
 
       <Text style={styles.title}>Lista de Salas</Text>
 
