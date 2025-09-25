@@ -10,6 +10,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import React, { useEffect, useState, createContext, useContext } from "react";
 import { ActivityIndicator, View } from "react-native";
+import { useFonts } from 'expo-font';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -23,9 +24,14 @@ const Stack = createStackNavigator<RootStackParamList>();
 const AuthContext = createContext<{ user: any }>({ user: null });
 export const useAuth = () => useContext(AuthContext);
 
+
+
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [fontsLoaded] = useFonts({
+    Typold: require('./assets/Typold-Bold.ttf'),
+  });
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (usuario) => {
@@ -37,7 +43,7 @@ export default function App() {
 
   if (loading) return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
-      <ActivityIndicator size="large" color="#d4af37" />
+      <ActivityIndicator size="large" color="#BEAF87" />
     </View>
   );
 
@@ -61,5 +67,6 @@ export default function App() {
         <StatusBar style="light" />
       </NavigationContainer>
     </AuthContext.Provider>
+
   );
 }

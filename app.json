@@ -31,6 +31,9 @@
         "projectId": "d34372cc-5926-4b50-8f4a-1b0a29d49f6c"
       }
     },
-    "owner": "juancruzcaceres"
+    "owner": "juancruzcaceres",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
