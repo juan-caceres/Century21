@@ -1,3 +1,4 @@
+//app/registro.tsx
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { createUserWithEmailAndPassword, sendEmailVerification} from "firebase/auth";

@@ -1,3 +1,4 @@
+//app/home.tsx
 import React from "react";
 import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, Dimensions } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -9,8 +10,17 @@ type Props = { navigation: HomeScreenNavigationProp };
 
 export default function Home({ navigation }: Props) {
   const { role } = useAuth(); 
+  console.log("Role actual:", role);
+  console.log("Tipo de role:", typeof role);
+  console.log("Es superuser?", role === "superuser");
 
   const salas = Array.from({ length: 7 }, (_, i) => `Sala ${i + 1}`);
+
+  const getRoleText = () => {
+    if (role === "admin") return "- usuario: administrador";
+    if (role === "superuser") return "- usuario: superusuario";
+    return null; // No mostrar texto para usuarios comunes
+  };
 
   return (
     <View style={styles.container}>
@@ -19,28 +29,29 @@ export default function Home({ navigation }: Props) {
         <BtnCerrarSesion />
       </View>
 
-      {role === "superuser" && (
-        <TouchableOpacity
-          style={{
-            backgroundColor: "#d4af37",
-            padding: 12,
-            borderRadius: 8,
-            marginBottom: 15,
-          }}
-          onPress={() => navigation.navigate("Usuarios")}
-        >
-          <Text style={{ color: "#000", fontWeight: "bold", textAlign: "center" }}>
-            Gestionar Usuarios
-          </Text>
-        </TouchableOpacity>
-      )}
+      {/* Botones de gestión para superusuario y admin */}
+      <View style={styles.adminButtons}>
+        {role === "superuser" && (
+          <TouchableOpacity
+            style={styles.adminButton}
+            onPress={() => navigation.navigate("Usuarios")}
+          >
+            <Text style={styles.adminButtonText}>Gestionar Usuarios</Text>
+          </TouchableOpacity>
+        )}
 
-      {role === "admin" ? (
-        <Text style={{ color: "black", fontWeight: "bold" }}>- usuario: administrador</Text>
-      ) : role === "superuser" ? (
-        <Text style={{ color: "black", fontWeight: "bold" }}>- usuario: superusuario</Text>
-      ) : (
-        <Text style={{ color: "black", fontWeight: "bold" }}>- usuario: empleado</Text>
+        {(role === "admin" || role === "superuser") && (
+          <TouchableOpacity
+            style={styles.adminButton}
+          >
+            <Text style={styles.adminButtonText}>Próximamente: Gestionar Salas</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Mostrar rol solo para admin y superusuario */}
+      {getRoleText() && (
+        <Text style={styles.roleText}>{getRoleText()}</Text>
       )}
 
       <Text style={styles.title}>Lista de Salas</Text>
@@ -75,6 +86,28 @@ const styles = StyleSheet.create({
     marginTop: height > 700 ? 50 : 20,
   },
   logo: { width: 120, height: 50 },
+  adminButtons: {
+    marginBottom: 15,
+    gap: 10,
+  },
+  adminButton: {
+    backgroundColor: "#d4af37",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  adminButtonText: {
+    color: "#000",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  roleText: {
+    color: "#BEAF87",
+    fontWeight: "bold",
+    fontSize: 14,
+    marginBottom: 15,
+    textAlign: "center",
+  },
   title: { fontSize: 22, fontWeight: "bold", color: "#BEAF87", marginBottom: 15 },
   salaButton: {
     padding: 15,

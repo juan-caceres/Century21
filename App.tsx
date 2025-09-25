@@ -1,3 +1,4 @@
+//App.tsx
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -47,12 +48,22 @@ export default function App() {
       setUser(usuario);
 
       if (usuario) {
-        // traer el rol desde Firestore
-        const userDoc = await getDoc(doc(db, "users", usuario.uid));
-        if (userDoc.exists()) {
-          setRole(userDoc.data().role?.toLowerCase() ?? null);
-        } else {
-          setRole(null);
+        try {
+          // traer el rol desde Firestore
+          const userDoc = await getDoc(doc(db, "users", usuario.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const userRole = userData.role?.toLowerCase()?.trim() ?? "user";
+            console.log("Datos del usuario desde Firestore:", userData);
+            console.log("Rol procesado:", userRole);
+            setRole(userRole);
+          } else {
+            console.log("Documento de usuario no existe en Firestore");
+            setRole("user"); // rol por defecto si no existe el documento
+          }
+        } catch (error) {
+          console.error("Error al obtener rol del usuario:", error);
+          setRole("user");
         }
       } else {
         setRole(null);
