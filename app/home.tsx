@@ -1,5 +1,5 @@
 import React, { useEffect,useState } from "react";
-import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image,Alert } from "react-native";
+import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image,Alert,Button } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../App";
 import { signOut } from "firebase/auth";
@@ -7,13 +7,14 @@ import { auth,db } from "../firebase";
 import {doc,getDoc} from "firebase/firestore";
 import {Dimensions} from "react-native";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
+import * as Notifications from "expo-notifications";
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, "Home">;
 type Props = { navigation: HomeScreenNavigationProp };
 
 export default function Home({ navigation }: Props) {
   
-  const [role,setRole] = useState<string | null>(null);
+  const [role,setRole] = useState<string | null>(null); //variable para almacenar el rol del usuario
   const [loading,setLoading]= useState(true);
 
   useEffect(() => {
@@ -43,6 +44,18 @@ export default function Home({ navigation }: Props) {
     fetchUserRole();
 
   },[]);
+
+  //Funcion para enviar notificacion local
+
+  const sendNotification = async () =>{
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Notificacion desde home",
+        body:"Esta es una notificacion de prueba",
+      },
+      trigger: null, //null se dispara inmediatamente
+    });
+  };
   
 
 
@@ -79,7 +92,10 @@ export default function Home({ navigation }: Props) {
           </TouchableOpacity>
         )}
       />
-    </View>
+
+       {/* 🔔 Botón para lanzar notificación */}
+      <Button title="Enviar Notificación" onPress={sendNotification} />
+    </View>                                     
   );
 }
 
