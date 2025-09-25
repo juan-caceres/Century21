@@ -1,8 +1,7 @@
 import React, { useEffect,useState } from "react";
-import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image,Alert } from "react-native";
+import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../App";
-import { signOut } from "firebase/auth";
 import { auth,db } from "../firebase";
 import {doc,getDoc} from "firebase/firestore";
 import {Dimensions} from "react-native";
@@ -44,10 +43,6 @@ export default function Home({ navigation }: Props) {
 
   },[]);
   
-
-
-
-
   const salas = Array.from({ length: 7 }, (_, i) => `Sala ${i + 1}`);
 
   return (
@@ -84,7 +79,6 @@ export default function Home({ navigation }: Props) {
 }
 
 // Estilos (siguiendo colores del logo c21)
-
 const { width, height } = Dimensions.get("window"); //para maneajar responsive
 
 const styles = StyleSheet.create({
@@ -94,8 +88,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20, 
-    marginTop: height > 700 ? 50 : 20, //ajustar margen superior en pantallas altas
-    
+    marginTop: height > 700 ? 50 : 20,
   },
   logo: { width: 120, height: 50 },
 

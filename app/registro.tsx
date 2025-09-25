@@ -74,9 +74,6 @@ export default function Registro({ navigation }: Props) {
     }
   };
 
-
-  
-
   // Interfaz usuario
   return (
     <View style={styles.container}>
