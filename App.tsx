@@ -5,11 +5,14 @@ import Login from "./app/login";
 import Home from "./app/home";
 import Registro from "./app/registro";
 import Sala from "./app/sala";
+import Usuarios from "./app/usuarios";
 import olvidePassword from "./app/olvidePassword";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import React, { useEffect, useState, createContext, useContext } from "react";
 import { ActivityIndicator, View } from "react-native";
+import { getDoc, doc } from "firebase/firestore";
+import { db } from "./firebase";
 
 export type RootStackParamList = {
   Login: undefined;
@@ -17,21 +20,47 @@ export type RootStackParamList = {
   OlvidePassword: undefined;
   Home: undefined;
   Sala: { numero: number };
+  Usuarios: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
-const AuthContext = createContext<{ user: any }>({ user: null });
+const AuthContext = createContext<{
+  user: any;
+  setUser: React.Dispatch<React.SetStateAction<any>>;
+  role: string | null;
+  setRole: React.Dispatch<React.SetStateAction<string | null>>;
+}>({
+  user: null,
+  setUser: () => {},
+  role: null,
+  setRole: () => {},
+});
 export const useAuth = () => useContext(AuthContext);
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (usuario) => {
+    const unsub = onAuthStateChanged(auth, async (usuario) => {
       setUser(usuario);
+
+      if (usuario) {
+        // traer el rol desde Firestore
+        const userDoc = await getDoc(doc(db, "users", usuario.uid));
+        if (userDoc.exists()) {
+          setRole(userDoc.data().role?.toLowerCase() ?? null);
+        } else {
+          setRole(null);
+        }
+      } else {
+        setRole(null);
+      }
+
       setLoading(false);
     });
+
     return unsub;
   }, []);
 
@@ -42,12 +71,13 @@ export default function App() {
   );
 
   return (
-    <AuthContext.Provider value={{ user }}>
+    <AuthContext.Provider value={{ user, setUser, role, setRole }}>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (
             <>
               <Stack.Screen name="Home" component={Home} />
+              <Stack.Screen name="Usuarios" component={Usuarios} />
               <Stack.Screen name="Sala" component={Sala} options={{animation:'fade_from_right',
                 transitionSpec:{
                   open: {animation: 'timing', config: {duration: 300}},

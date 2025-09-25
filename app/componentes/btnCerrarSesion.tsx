@@ -3,10 +3,12 @@ import { View, StyleSheet, TouchableOpacity, Text, Modal, Pressable, Animated } 
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { useAuth } from "../../App";
 
 type RootStackParamList = {
-  login: undefined;
+  Login: undefined;
 };
+
 
 export default function BtnCerrarSesion() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -26,10 +28,12 @@ export default function BtnCerrarSesion() {
     }
   }, [modalVisible]);
 
+  const { setUser } = useAuth();
+
   const handleLogout = async () => {
     await signOut(auth);
+    setUser(null);
     setModalVisible(false);
-    navigation.navigate("login");
   };
 
   return (
