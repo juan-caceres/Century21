@@ -1,3 +1,4 @@
+//app/sala.tsx
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, Alert } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -9,6 +10,7 @@ import { auth, db } from "../firebase";
 import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc, updateDoc, getDoc } from "firebase/firestore";
 import {Dimensions} from "react-native";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
+import TimePicker from "./componentes/TimePicker";
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
@@ -390,198 +392,218 @@ return (
       />
     </View>
 
-    {/* Modal */}
-    <Modal visible={modalVisible} transparent animationType="slide">
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Reserva - {selectedDay}</Text>
+{/* Modal */}
+<Modal visible={modalVisible} transparent animationType="slide">
+  <View style={styles.modalContainer}>
+    <View style={styles.modalContent}>
+      <Text style={styles.modalTitle}>Reserva - {selectedDay}</Text>
 
-    {feedbackMessage && (
-      <View style={[
-        styles.feedbackContainer,
-        { backgroundColor: feedbackMessage.type === "success" ? "#BEAF87" : "#ff6961" }
-      ]}>
-        <Text style={{ color: feedbackMessage.type === "success" ? "#ffffffff" : "#252526", textAlign: "center" }}>
-          {feedbackMessage.text}
-        </Text>
-      </View>
-    )}
+      {feedbackMessage && (
+        <View style={[
+          styles.feedbackContainer,
+          { backgroundColor: feedbackMessage.type === "success" ? "#BEAF87" : "#ff6961" }
+        ]}>
+          <Text style={{ color: feedbackMessage.type === "success" ? "#ffffffff" : "#252526", textAlign: "center" }}>
+            {feedbackMessage.text}
+          </Text>
+        </View>
+      )}
 
-    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-      <TouchableOpacity
-        style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8 }]}
-        onPress={() => {
-          if (!selectedDay) return;
-          const prev = new Date(selectedDay);
-          prev.setDate(prev.getDate() - 1);
-          
-          // Saltar domingo
-          if (prev.getDay() === 0) {
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+        <TouchableOpacity
+          style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8 }]}
+          onPress={() => {
+            if (!selectedDay) return;
+            const prev = new Date(selectedDay);
             prev.setDate(prev.getDate() - 1);
-          }
-          
-          const prevStr = prev.toISOString().split("T")[0];
-          setSelectedDay(prevStr);
-          setEditingReservaId(null);
-          setHoraInicio("");
-          setHoraFin("");
-          setMotivo("");
-          fetchReservasForDay(prevStr);
-        }}
-      >
-        <Text style={styles.navButtonText}>◀ Día anterior</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8 }]}
-        onPress={() => {
-          if (!selectedDay) return;
-          const next = new Date(selectedDay);
-          next.setDate(next.getDate() + 1);
-          
-          // Saltar domingo
-          if (next.getDay() === 0) {
+            
+            // Saltar domingo
+            if (prev.getDay() === 0) {
+              prev.setDate(prev.getDate() - 1);
+            }
+            
+            const prevStr = prev.toISOString().split("T")[0];
+            setSelectedDay(prevStr);
+            setEditingReservaId(null);
+            setHoraInicio("");
+            setHoraFin("");
+            setMotivo("");
+            fetchReservasForDay(prevStr);
+          }}
+        >
+          <Text style={styles.navButtonText}>◀ Día anterior</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8 }]}
+          onPress={() => {
+            if (!selectedDay) return;
+            const next = new Date(selectedDay);
             next.setDate(next.getDate() + 1);
-          }
-          
-          const nextStr = next.toISOString().split("T")[0];
-          setSelectedDay(nextStr);
-          setEditingReservaId(null);
-          setHoraInicio("");
-          setHoraFin("");
-          setMotivo("");
-          fetchReservasForDay(nextStr);
-        }}
-      >
-        <Text style={styles.navButtonText}>Día siguiente ▶</Text>
-      </TouchableOpacity>
-    </View>
+            
+            // Saltar domingo
+            if (next.getDay() === 0) {
+              next.setDate(next.getDate() + 1);
+            }
+            
+            const nextStr = next.toISOString().split("T")[0];
+            setSelectedDay(nextStr);
+            setEditingReservaId(null);
+            setHoraInicio("");
+            setHoraFin("");
+            setMotivo("");
+            fetchReservasForDay(nextStr);
+          }}
+        >
+          <Text style={styles.navButtonText}>Día siguiente ▶</Text>
+        </TouchableOpacity>
+      </View>
 
-          {/* Lista de reservas */}
-          {loadingReservas ? (
-            <Text style={{ color: "#252526" }}>Cargando...</Text>
-          ) : reservasDia.length === 0 ? (
-            <Text style={{ color: "#252526" }}>No hay reservas.</Text>
-          ) : (
-            <FlatList
-              data={reservasDia}
-              keyExtractor={(item) => item.id ?? `${item.horaInicio}-${item.horaFin}`}
-              style={{ maxHeight: 140, marginBottom: 8 }}
-              renderItem={({ item }) => (
-                <View style={[styles.reservaRow, { flexDirection: "row" }]}>
-                  <TouchableOpacity
-                    style={{ flex: 1 }}
-                    onPress={() => {
-                      if (item.usuarioId === auth.currentUser?.uid) {
-                        setHoraInicio(item.horaInicio);
-                        setHoraFin(item.horaFin);
-                        setMotivo(item.motivo);
-                        setEditingReservaId(item.id ?? null);
-                      }
-                    }}
-                  >
-                    <Text style={styles.reservaText}>
-                      {item.horaInicio} - {item.horaFin}
-                    </Text>
-                    <Text style={styles.reservaMotivo}>{item.motivo}</Text>
-                    <Text style={styles.reservaUsuario}>
-                      {item.usuarioEmail ?? "Usuario"}
-                    </Text>
-                  </TouchableOpacity>
+      {/* Lista de reservas */}
+      {loadingReservas ? (
+        <Text style={{ color: "#252526" }}>Cargando...</Text>
+      ) : reservasDia.length === 0 ? (
+        <Text style={{ color: "#252526" }}>No hay reservas para este día.</Text>
+      ) : (
+        <FlatList
+          data={reservasDia}
+          keyExtractor={(item) => item.id ?? `${item.horaInicio}-${item.horaFin}`}
+          style={{ maxHeight: 140, marginBottom: 8 }}
+          renderItem={({ item }) => (
+            <View style={[styles.reservaRow, { flexDirection: "row" }]}>
+              <TouchableOpacity
+                style={{ flex: 1 }}
+                onPress={() => {
+                  if (item.usuarioId === auth.currentUser?.uid) {
+                    setHoraInicio(item.horaInicio);
+                    setHoraFin(item.horaFin);
+                    setMotivo(item.motivo);
+                    setEditingReservaId(item.id ?? null);
+                  }
+                }}
+              >
+                <Text style={styles.reservaText}>
+                  {item.horaInicio} - {item.horaFin}
+                </Text>
+                <Text style={styles.reservaMotivo}>{item.motivo}</Text>
+                <Text style={styles.reservaUsuario}>
+                  {item.usuarioEmail ?? "Usuario"}
+                </Text>
+              </TouchableOpacity>
 
-                  {/* Botón cancelar */}
-                  {item.usuarioId === auth.currentUser?.uid && (
-                    <TouchableOpacity
-                      style={{
-                        paddingHorizontal: 10,
-                        paddingVertical: 4,
-                        flexShrink: 0,
-                        marginLeft: 8,
-                        borderRadius: 6,
-                        borderWidth: 1,
-                        borderColor: "#ff6961",
-                      }}
-                      onPress={() => setReservaParaEliminar(item)}
-                    >
-                      <Text style={styles.eliminarText}>Cancelar Reserva</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+              {/* Botón cancelar */}
+              {item.usuarioId === auth.currentUser?.uid && (
+                <TouchableOpacity
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    flexShrink: 0,
+                    marginLeft: 8,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: "#ff6961",
+                  }}
+                  onPress={() => setReservaParaEliminar(item)}
+                >
+                  <Text style={styles.eliminarText}>Cancelar</Text>
+                </TouchableOpacity>
               )}
-            />
-          )}
-
-          {/* Modal confirmación eliminar */}
-          <Modal visible={!!reservaParaEliminar} transparent animationType="fade">
-            <View style={styles.modalContainer}>
-              <View style={[styles.modalContent, { alignItems: "center" }]}>
-                <Text style={[styles.modalTitle, { marginBottom: 12 }]}>
-                  ¿Cancelar esta reserva?
-                </Text>
-                <Text style={{ color: "#fff", marginBottom: 16, textAlign: "center" }}>
-                  {reservaParaEliminar?.horaInicio} - {reservaParaEliminar?.horaFin}{"\n"}
-                  {reservaParaEliminar?.motivo}
-                </Text>
-                <View style={{ flexDirection: "row" }}>
-                  <TouchableOpacity
-                    style={[styles.cancelButton, { marginRight: 10 }]}
-                    onPress={() => setReservaParaEliminar(null)}
-                  >
-                    <Text style={styles.cancelText}>No</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={async () => {
-                      if (reservaParaEliminar) {
-                        await handleEliminarReserva(reservaParaEliminar);
-                        setReservaParaEliminar(null);
-                      }
-                    }}
-                  >
-                    <Text style={styles.saveText}>Sí, cancelar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
             </View>
-          </Modal>
+          )}
+        />
+      )}
 
-          {/* Formulario para agregar reserva*/}
-          <TextInput
-            style={styles.input}
-            placeholder="Hora inicio (ej: 10:30)"
-            placeholderTextColor="#888"
-            value={horaInicio}
-            onChangeText={setHoraInicio}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Hora fin (ej: 11:30)"
-            placeholderTextColor="#888"
-            value={horaFin}
-            onChangeText={setHoraFin}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Motivo"
-            placeholderTextColor="#888"
-            value={motivo}
-            onChangeText={setMotivo}
-          />
+      {/* Modal confirmación eliminar */}
+      <Modal visible={!!reservaParaEliminar} transparent animationType="fade">
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { alignItems: "center" }]}>
+            <Text style={[styles.modalTitle, { marginBottom: 12 }]}>
+              ¿Cancelar esta reserva?
+            </Text>
+            <Text style={{ color: "#fff", marginBottom: 16, textAlign: "center" }}>
+              {reservaParaEliminar?.horaInicio} - {reservaParaEliminar?.horaFin}{"\n"}
+              {reservaParaEliminar?.motivo}
+            </Text>
+            <View style={{ flexDirection: "row" }}>
+              <TouchableOpacity
+                style={[styles.cancelButton, { marginRight: 10 }]}
+                onPress={() => setReservaParaEliminar(null)}
+              >
+                <Text style={styles.cancelText}>No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={async () => {
+                  if (reservaParaEliminar) {
+                    await handleEliminarReserva(reservaParaEliminar);
+                    setReservaParaEliminar(null);
+                  }
+                }}
+              >
+                <Text style={styles.saveText}>Sí, cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleCreateOrUpdateReserva}>
-            <Text style={styles.saveText}>{editingReservaId ? "Actualizar" : "Guardar"}</Text>
+      {/* Formulario para agregar reserva - CON TIMEPICKERS */}
+      <View style={styles.formSection}>
+        <Text style={styles.formSectionTitle}>
+          {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
+        </Text>
+        
+        <TimePicker
+          label="Hora de inicio"
+          value={horaInicio}
+          onChange={setHoraInicio}
+          placeholder="Seleccionar hora de inicio"
+        />
+        
+        <TimePicker
+          label="Hora de fin"
+          value={horaFin}
+          onChange={setHoraFin}
+          placeholder="Seleccionar hora de fin"
+        />
+        
+        <TextInput
+          style={styles.input}
+          placeholder="Motivo de la reserva"
+          placeholderTextColor="#888"
+          value={motivo}
+          onChangeText={setMotivo}
+          multiline={true}
+          numberOfLines={2}
+        />
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity 
+            style={styles.saveButton} 
+            onPress={handleCreateOrUpdateReserva}
+          >
+            <Text style={styles.saveText}>
+              {editingReservaId ? "Actualizar" : "Guardar Reserva"}
+            </Text>
           </TouchableOpacity>
+          
           <TouchableOpacity
             style={[styles.cancelButton, { marginTop: 8 }]}
             onPress={() => {
               setModalVisible(false);
-              setHoraInicio(""); setHoraFin(""); setMotivo(""); setEditingReservaId(null);
-            }}>
+              setHoraInicio(""); 
+              setHoraFin(""); 
+              setMotivo(""); 
+              setEditingReservaId(null);
+            }}
+          >
             <Text style={styles.cancelText}>Cerrar</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </View>
+  </View>
+</Modal>
   </View>
 )};
 
@@ -591,22 +613,14 @@ const { width,height } = Dimensions.get("window");
 const styles = StyleSheet.create({
  
   container: { 
-    
-  
-  
-  
     flex: 1, 
     backgroundColor: "#ffffffff",
     padding: width > 600 ? 40 : 20, 
-    
-  
-  
   },
   header: {
     height: 90, paddingHorizontal: 10, flexDirection: "row",
     alignItems: "center", justifyContent: "space-between",
     borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff",
-
   },
   superiorSalas:{
     height: 40, paddingHorizontal: 10, flexDirection: "row",
@@ -622,9 +636,9 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.4 },
   headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between", // separa a los extremos
+    justifyContent: "space-between", 
     alignItems: "center",
-    width: "100%", // ocupa todo el ancho
+    width: "100%",
     paddingHorizontal: 10,
   },
 
@@ -645,4 +659,7 @@ const styles = StyleSheet.create({
   navButton: { backgroundColor: "#BEAF87", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6 },
   navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
   feedbackContainer: { padding: 8, borderRadius: 6, marginBottom: 8,},
+  formSection: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#333', },
+  formSectionTitle: { color: '#BEAF87', fontSize: 16, fontWeight: '600', marginBottom: 12, textAlign: 'center', },
+  buttonContainer: { marginTop: 10,},
 });

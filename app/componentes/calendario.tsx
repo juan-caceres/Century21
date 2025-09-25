@@ -54,7 +54,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
   const generarHoras = () => {
     const horas = [];
     for (let i = HORAS_INICIO; i <= HORAS_FIN; i++) { 
-      // En pantallas pequeñas -> mostrar solo la hora sin :00
+      // En pantallas chicas -> mostrar solo la hora sin :00
       const formato = width < 400 ? `${i}` : `${i.toString().padStart(2, '0')}:00`;
       horas.push(formato);
     }
@@ -85,7 +85,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
 
   const formatearFecha = (fecha: Date) => {
     const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
-    // En pantallas pequeñas -> versiones más cortas
+    // En pantallas chicas -> versiones más cortas
     const diaCorto = width < 400 ? diaSemana.substring(0, 2) : diaSemana;
     
     return {
