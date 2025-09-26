@@ -3,6 +3,8 @@ import { Text, StyleSheet, View, TextInput, TouchableOpacity, Image, ActivityInd
 import { useFonts } from "expo-font";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
+
+
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../App";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -11,10 +13,12 @@ type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login"
 type Props = { navigation: LoginScreenNavigationProp };
 
 export default function Login({ navigation }: Props) {
+  //declaracion de estados
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorEmail, setErrorEmail] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
+
 
   // Carga de fuente personalizada
   const [fontsLoaded] = useFonts({
@@ -29,7 +33,10 @@ export default function Login({ navigation }: Props) {
     );
   }
 
-  const validarCampos = () => {
+
+  //FUNCIONES
+
+  const validarCampos = () => { //funcion para validar campos
     let valid = true;
     setErrorEmail("");
     setErrorPassword("");
@@ -45,7 +52,7 @@ export default function Login({ navigation }: Props) {
     return valid;
   };
 
-  const logueo = async () => {
+  const logueo = async () => { //funcion para loguear
     if (!validarCampos()) return;
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -58,6 +65,9 @@ export default function Login({ navigation }: Props) {
       }
     }
   };
+
+
+  
 
   return (
     <View style={styles.container}>
