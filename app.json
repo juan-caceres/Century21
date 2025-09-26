@@ -24,6 +24,12 @@
       "edgeToEdgeEnabled": true,
       "package": "com.juancruzcaceres.century21"
     },
+     "notification": {
+      "icon": "./assets/century21-logo.png",  
+      "color": "#d4af37",                       
+      "androidMode": "default",
+      "androidCollapsedTitle": "Nuevas notificaciones"
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
