@@ -5,6 +5,7 @@ import { db } from "../firebase";
 import { collection, getDocs, updateDoc, doc, DocumentData, deleteDoc } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList, useAuth } from "../App";
+import { getAuth, deleteUser } from "firebase/auth";
 
 type UsuariosScreenNavigationProp = StackNavigationProp<RootStackParamList, "Usuarios">;
 type Props = { navigation: UsuariosScreenNavigationProp };
@@ -82,8 +83,14 @@ const handleAction = async () => {
         break;
       case 'delete':
         console.log("Eliminando usuario con ID:", selectedUser.id);  // Log de depuración
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+        if (currentUser && currentUser.uid !== selectedUser.id) {
         await deleteDoc(doc(db, "users", selectedUser.id));
         showMessage("Usuario eliminado correctamente", "success");
+        } else {
+          showMessage("No puedes eliminar tu propia cuenta", "error");
+        }
         break;
     }
     fetchUsuarios();

@@ -66,7 +66,6 @@ export default function Registro({ navigation }: Props) {
 
       // Enviar correo de verificación al usuario registrado
       await sendEmailVerification(user);
-
       alert("Cuenta creada. Revisa tu correo y confirma tu dirección antes de recuperar contraseña.");
       navigation.navigate("Login"); 
     } catch (error: any) {
