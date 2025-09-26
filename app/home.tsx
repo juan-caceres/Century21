@@ -3,12 +3,12 @@
 //app/home.tsx
 import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, Dimensions,Button,ActivityIndicator } from "react-native";
 import { useFonts } from "expo-font";
-import React, { useEffect,useState } from "react";
+import React, { use, useEffect,useState } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList,useAuth } from "../App";
 import { signOut } from "firebase/auth";
 import { auth,db } from "../firebase";
-import {doc,getDoc} from "firebase/firestore";
+import {doc,getDocs,collection,onSnapshot,QueryDocumentSnapshot, DocumentData} from "firebase/firestore";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import * as Notifications from "expo-notifications";
 
@@ -20,6 +20,22 @@ export default function Home({ navigation }: Props) {
   console.log("Role actual:", role);
   console.log("Tipo de role:", typeof role);
   console.log("Es superuser?", role === "superuser");
+
+  const [salas,setSalas]=useState<any[]>([]);
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    const salasRef=collection(db,'salas');
+    const unsubscribe=onSnapshot(salasRef,(querySnapshot)=>{
+      const data = querySnapshot.docs.map((doc:QueryDocumentSnapshot<DocumentData>) => ({
+        id:doc.id,
+        ...doc.data()
+      }));
+      setSalas(data);
+      setLoading(false);
+    });
+    return unsubscribe;
+  },[]);
 
 
   // Carga de fuente personalizada
@@ -47,8 +63,6 @@ export default function Home({ navigation }: Props) {
       trigger: null, //null se dispara inmediatamente
     });
   };
-
-  const salas = Array.from({ length: 7 }, (_, i) => `Sala ${i + 1}`);
 
   const getRoleText = () => {
     if (role === "admin") return "- usuario: administrador";
@@ -80,6 +94,7 @@ export default function Home({ navigation }: Props) {
         {(role === "admin" || role === "superuser") && (
           <TouchableOpacity
             style={styles.adminButton}
+            onPress={() => navigation.navigate("GestionSalas")}
           >
             <Text style={styles.adminButtonText}>Próximamente: Gestionar Salas</Text>
           </TouchableOpacity>
@@ -93,20 +108,24 @@ export default function Home({ navigation }: Props) {
 
       <Text style={styles.title}>Lista de Salas</Text>
 
-
-      <FlatList
-        data={salas}
-        keyExtractor={(item) => item}
-        renderItem={({ item, index }) => (
-          <TouchableOpacity
-            style={[styles.salaButton]}
-            onPress={() => navigation.navigate("Sala", { numero: index + 1 })}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.salaText, styles.fontTypold]}>{item}</Text>
-          </TouchableOpacity>
+        {loading ? (
+          <ActivityIndicator size="large" color="#BEAF87" />
+        )
+        
+        :(<FlatList
+          data={salas}
+          keyExtractor={(item) => item}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.salaButton]}
+              onPress={() => navigation.navigate("Sala", { numero: item.id })}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.salaText, styles.fontTypold]}>{item.nombre}</Text>
+            </TouchableOpacity>
+          )}
+        />
         )}
-      />
 
        {/* 🔔 Botón para lanzar notificación */}
       <Button title="Enviar Notificación" onPress={sendNotification} />

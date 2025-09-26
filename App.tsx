@@ -19,6 +19,7 @@ import { useFonts } from 'expo-font';
 
 import { getDoc, doc } from "firebase/firestore";
 import { db } from "./firebase";
+import GestionSalas from "./app/gestionSalas";
 
 export type RootStackParamList = {
   Login: undefined;
@@ -27,6 +28,7 @@ export type RootStackParamList = {
   Home: undefined;
   Sala: { numero: number };
   Usuarios: undefined;
+  GestionSalas: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -116,6 +118,7 @@ export default function App() {
           {user ? (
             <>
               <Stack.Screen name="Home" component={Home} />
+              <Stack.Screen name="GestionSalas" component={GestionSalas} />
               <Stack.Screen name="Usuarios" component={Usuarios} />
               <Stack.Screen name="Sala" component={Sala} options={{animation:'fade_from_right',
                 transitionSpec:{
