@@ -1,6 +1,8 @@
 
+
 //app/home.tsx
-import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, Dimensions,Button } from "react-native";
+import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, Dimensions,Button,ActivityIndicator } from "react-native";
+import { useFonts } from "expo-font";
 import React, { useEffect,useState } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList,useAuth } from "../App";
@@ -19,6 +21,21 @@ export default function Home({ navigation }: Props) {
   console.log("Tipo de role:", typeof role);
   console.log("Es superuser?", role === "superuser");
 
+
+  // Carga de fuente personalizada
+  const [fontsLoaded] = useFonts({
+    Typold: require("../assets/Typold-Bold.ttf"),
+  });
+  
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#BEAF87" />
+      </View>
+    );
+  }
+
+
     //Funcion para enviar notificacion local
 
   const sendNotification = async () =>{
@@ -30,6 +47,7 @@ export default function Home({ navigation }: Props) {
       trigger: null, //null se dispara inmediatamente
     });
   };
+
   const salas = Array.from({ length: 7 }, (_, i) => `Sala ${i + 1}`);
 
   const getRoleText = () => {
@@ -42,6 +60,14 @@ export default function Home({ navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={[styles.logoutText, styles.fontTypold]}>Cerrar Sesión</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={[styles.title, styles.fontTypold]}>Lista de Salas</Text>
+
         <BtnCerrarSesion />
       </View>
 
@@ -72,16 +98,17 @@ export default function Home({ navigation }: Props) {
 
       <Text style={styles.title}>Lista de Salas</Text>
 
+
       <FlatList
         data={salas}
         keyExtractor={(item) => item}
         renderItem={({ item, index }) => (
           <TouchableOpacity
-            style={styles.salaButton}
+            style={[styles.salaButton]}
             onPress={() => navigation.navigate("Sala", { numero: index + 1 })}
             activeOpacity={0.7}
           >
-            <Text style={styles.salaText}>{item}</Text>
+            <Text style={[styles.salaText, styles.fontTypold]}>{item}</Text>
           </TouchableOpacity>
         )}
       />
@@ -96,6 +123,9 @@ export default function Home({ navigation }: Props) {
 const { height } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
+
+  fontTypold: { fontFamily: 'Typold' },
+
   container: { flex: 1, backgroundColor: "#ffffffff", padding: 20, alignItems: "stretch" },
   header: {
     flexDirection: "row",
@@ -104,6 +134,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: height > 700 ? 50 : 20,
   },
+
   logo: { width: 120, height: 50 },
   adminButtons: {
     marginBottom: 15,

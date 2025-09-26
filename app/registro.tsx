@@ -1,7 +1,8 @@
 //app/registro.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
-import { createUserWithEmailAndPassword, sendEmailVerification} from "firebase/auth";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator  } from "react-native";
+import { useFonts } from "expo-font";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth } from "../firebase";
 import {doc,setDoc} from "firebase/firestore";
 import {db} from "../firebase"
@@ -17,11 +18,26 @@ export default function Registro({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  
+
 
   // Estados para mensajes de error
   const [errorEmail, setErrorEmail] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
   const [errorConfirm, setErrorConfirm] = useState("");
+  
+  // Carga de fuente personalizada
+  const [fontsLoaded] = useFonts({
+    Typold: require("../assets/Typold-Bold.ttf"),
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#BEAF87" />
+      </View>
+    );
+  }
 
   // Función de validación de datos
   const validarCampos = () => {
@@ -77,12 +93,12 @@ export default function Registro({ navigation }: Props) {
   // Interfaz usuario
   return (
     <View style={styles.container}>
-      <Image source={require("../assets/century21-logo.png")} style={styles.logo} resizeMode="contain" />
+      <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>Crear Cuenta</Text>
 
       {/* Correo */}
       <View style={[styles.inputContainer, errorEmail ? styles.inputError : null]}>
-        <Icon name="email-outline" size={20} color="#d4af37" style={{ marginRight: 8 }} />
+        <Icon name="email-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
         <TextInput
           placeholder="Correo"
           value={email}
@@ -97,7 +113,7 @@ export default function Registro({ navigation }: Props) {
 
       {/* Contraseña */}
       <View style={[styles.inputContainer, errorPassword ? styles.inputError : null]}>
-        <Icon name="lock-outline" size={20} color="#d4af37" style={{ marginRight: 8 }} />
+        <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
         <TextInput
           placeholder="Contraseña"
           value={password}
@@ -111,7 +127,7 @@ export default function Registro({ navigation }: Props) {
 
       {/* Confirmar contraseña */}
       <View style={[styles.inputContainer, errorConfirm ? styles.inputError : null]}>
-        <Icon name="lock-outline" size={20} color="#d4af37" style={{ marginRight: 8 }} />
+        <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
         <TextInput
           placeholder="Confirmar Contraseña"
           value={confirm}
@@ -138,19 +154,20 @@ export default function Registro({ navigation }: Props) {
 
 // Estilos: colores de C21 (negro + dorado)
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center", padding: 20 },
-  logo: { width: 180, height: 80, marginBottom: 20 },
-  title: { fontSize: 26, fontWeight: "bold", color: "#d4af37", marginBottom: 20 },
+  fontTypold: { fontFamily: 'Typold' },
+  container: { flex: 1, backgroundColor: "#fff", justifyContent: "center", alignItems: "center", padding: 20 },
+  logo: { width: 220, height: 120, marginBottom: 20 },
+  title: { fontSize: 26, fontWeight: "bold", color: "#BEAF87", marginBottom: 20 },
   inputContainer: {
     flexDirection: "row", alignItems: "center",
-    width: "90%", borderWidth: 1, borderColor: "#d4af37",
+    width: "90%", borderWidth: 1, borderColor: "#BEAF87",
     backgroundColor: "#1a1a1a", borderRadius: 8, paddingHorizontal: 10,
     marginBottom: 10,
   },
   input: { flex: 1, color: "#fff", height: 48, fontSize: 16 },
   inputError: { borderColor: "red" },
   errorText: { color: "red", alignSelf: "flex-start", marginLeft: "5%", marginBottom: 5 },
-  button: { backgroundColor: "#d4af37", padding: 15, borderRadius: 8, width: "90%", marginTop: 10 },
-  buttonText: { color: "#000", textAlign: "center", fontSize: 18, fontWeight: "bold" },
-  link: { marginTop: 20, color: "#d4af37", fontSize: 16, fontWeight: "600" },
+  button: { backgroundColor: "#BEAF87", padding: 15, borderRadius: 8, width: "90%", marginTop: 10 },
+  buttonText: { color: "#252526", textAlign: "center", fontSize: 18, fontWeight: "bold" },
+  link: { marginTop: 20, color: "#252526", fontSize: 16, fontWeight: "600" },
 });

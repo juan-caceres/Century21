@@ -1,6 +1,7 @@
 //app/sala.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, ActivityIndicator,Alert  } from "react-native";
+import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../App";
@@ -48,6 +49,19 @@ export default function Sala({ navigation, route }: Props) {
   const [reservaParaEliminar, setReservaParaEliminar] = useState<Reserva | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<{text: string; type: "success" | "error"} | null>(null);
 
+  // Carga de fuente personalizada
+  const [fontsLoaded] = useFonts({
+    Typold: require("../assets/Typold-Bold.ttf"),
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#BEAF87" />
+      </View>
+    );
+  }
+  
   useEffect(() => {
     fetchSalaInfo();
     fetchReservasSemana();

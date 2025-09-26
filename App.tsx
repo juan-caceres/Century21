@@ -15,6 +15,8 @@ import Usuarios from "./app/usuarios";
 import olvidePassword from "./app/olvidePassword";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
+import { useFonts } from 'expo-font';
+
 import { getDoc, doc } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -41,6 +43,9 @@ const AuthContext = createContext<{
 });
 export const useAuth = () => useContext(AuthContext);
 
+
+
+
 // Configuración de notificaciones
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -51,14 +56,17 @@ Notifications.setNotificationHandler({
   }),
 });
 
+
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fontsLoaded] = useFonts({Typold: require('./assets/Typold-Bold.ttf'),});
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<any>(false);
   const notificationListener = useRef<any>(null);
   const responseListener = useRef<any>(null);
+
 
   // Auth listener
   useEffect(() => {
@@ -93,13 +101,13 @@ export default function App() {
     return unsub;
   }, []);
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
-        <ActivityIndicator size="large" color="#d4af37" />
-      </View>
-    );
-  }
+
+  if (loading) return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
+      <ActivityIndicator size="large" color="#BEAF87" />
+    </View>
+  );
+
 
   return (
     <AuthContext.Provider value={{ user, setUser, role, setRole }}>
@@ -127,6 +135,7 @@ export default function App() {
         <StatusBar style="light" />
       </NavigationContainer>
     </AuthContext.Provider>
+
   );
 }
 

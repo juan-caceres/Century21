@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Text, StyleSheet, View, TextInput, TouchableOpacity, Image } from "react-native";
+import { Text, StyleSheet, View, TextInput, TouchableOpacity, Image, ActivityIndicator } from "react-native";
+import { useFonts } from "expo-font";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 
@@ -17,6 +18,21 @@ export default function Login({ navigation }: Props) {
   const [password, setPassword] = useState("");
   const [errorEmail, setErrorEmail] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
+
+
+  // Carga de fuente personalizada
+  const [fontsLoaded] = useFonts({
+    Typold: require("../assets/Typold-Regular.ttf"),
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#BEAF87" />
+      </View>
+    );
+  }
+
 
   //FUNCIONES
 
@@ -56,8 +72,8 @@ export default function Login({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
-      <Text style={styles.title}>Bienvenido</Text>
-      <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
+      <Text style={[styles.title, styles.fontTypold]}>Bienvenido</Text>
+      <Text style={[styles.subtitle, styles.fontTypold]}>Inicia sesión para continuar</Text>
 
       <View style={[styles.inputContainer, errorEmail ? styles.inputError : null]}>
         <Icon name="email-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
@@ -65,7 +81,7 @@ export default function Login({ navigation }: Props) {
           placeholder="Correo"
           value={email}
           onChangeText={setEmail}
-          style={styles.input}
+          style={[styles.input, styles.fontTypold]}
           placeholderTextColor="#aaa"
           keyboardType="email-address"
           autoCapitalize="none"
@@ -80,22 +96,22 @@ export default function Login({ navigation }: Props) {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={styles.input}
+          style={[styles.input, styles.fontTypold]}
           placeholderTextColor="#aaa"
         />
       </View>
       {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
 
       <TouchableOpacity style={styles.button} onPress={logueo} activeOpacity={0.7}>
-        <Text style={styles.buttonText}>Iniciar Sesión</Text>
+        <Text style={[styles.buttonText, styles.fontTypold]}>Iniciar Sesión</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("OlvidePassword")}>
-        <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
+        <Text style={[styles.link, styles.fontTypold]}>¿Olvidaste tu contraseña?</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("Registro")}>
-        <Text style={styles.link}>Crear cuenta</Text>
+        <Text style={[styles.link, styles.fontTypold]}>Crear cuenta</Text>
       </TouchableOpacity>
     </View>
   );
@@ -103,10 +119,11 @@ export default function Login({ navigation }: Props) {
 
 // Estilos (siguiendo colores del logo c21)
 const styles = StyleSheet.create({
+  fontTypold: { fontFamily: 'Typold' },
   container: { flex: 1, backgroundColor: "#ffffffff", justifyContent: "center", alignItems: "center", padding: 20 },
   logo: { width: 220, height: 120, marginBottom: 20 },
   title: { fontSize: 26, fontWeight: "bold", color: "#BEAF87", marginBottom: 5 },
-  subtitle: { fontSize: 16, color: "#fff", marginBottom: 25 },
+  subtitle: { fontSize: 16, color: "#fff", marginBottom: 25},
   inputContainer: {
     flexDirection: "row", alignItems: "center",
     width: "90%", borderWidth: 1, borderColor: "#BEAF87",
@@ -118,5 +135,5 @@ const styles = StyleSheet.create({
   errorText: { color: "red", alignSelf: "flex-start", marginLeft: "5%", marginBottom: 5 },
   button: { backgroundColor: "#BEAF87", padding: 15, borderRadius: 8, width: "90%", marginTop: 10 },
   buttonText: { color: "#252526", textAlign: "center", fontSize: 18, fontWeight: "bold" },
-  link: { marginTop: 20, color: "#252526", fontSize: 16, fontWeight: "600" },
+  link: { marginTop: 20, color: "#252526", fontSize: 16, fontWeight: "600"},
 });
