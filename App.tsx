@@ -1,3 +1,4 @@
+//App.tsx
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -10,9 +11,12 @@ import Login from "./app/login";
 import Home from "./app/home";
 import Registro from "./app/registro";
 import Sala from "./app/sala";
+import Usuarios from "./app/usuarios";
 import olvidePassword from "./app/olvidePassword";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
+import { getDoc, doc } from "firebase/firestore";
+import { db } from "./firebase";
 
 export type RootStackParamList = {
   Login: undefined;
@@ -20,10 +24,21 @@ export type RootStackParamList = {
   OlvidePassword: undefined;
   Home: undefined;
   Sala: { numero: number };
+  Usuarios: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
-const AuthContext = createContext<{ user: any }>({ user: null });
+const AuthContext = createContext<{
+  user: any;
+  setUser: React.Dispatch<React.SetStateAction<any>>;
+  role: string | null;
+  setRole: React.Dispatch<React.SetStateAction<string | null>>;
+}>({
+  user: null,
+  setUser: () => {},
+  role: null,
+  setRole: () => {},
+});
 export const useAuth = () => useContext(AuthContext);
 
 // Configuración de notificaciones
@@ -38,6 +53,7 @@ Notifications.setNotificationHandler({
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<any>(false);
@@ -46,34 +62,35 @@ export default function App() {
 
   // Auth listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (usuario) => {
+    const unsub = onAuthStateChanged(auth, async (usuario) => {
       setUser(usuario);
+
+      if (usuario) {
+        try {
+          // traer el rol desde Firestore
+          const userDoc = await getDoc(doc(db, "users", usuario.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const userRole = userData.role?.toLowerCase()?.trim() ?? "user";
+            console.log("Datos del usuario desde Firestore:", userData);
+            console.log("Rol procesado:", userRole);
+            setRole(userRole);
+          } else {
+            console.log("Documento de usuario no existe en Firestore");
+            setRole("user"); // rol por defecto si no existe el documento
+          }
+        } catch (error) {
+          console.error("Error al obtener rol del usuario:", error);
+          setRole("user");
+        }
+      } else {
+        setRole(null);
+      }
+
       setLoading(false);
     });
-    return unsubscribe;
-  }, []);
 
-  // Permisos y token push
-  useEffect(() => {
-    const registerPushNotifications = async () => {
-      try {
-        const token = await registerForPushNotificationsAsync();
-        if (token) setExpoPushToken(token);
-      } catch (err) {
-        console.log("Error obteniendo token push:", err);
-      }
-    };
-
-    registerPushNotifications();
-
-    // Listeners para notificaciones
-    notificationListener.current = Notifications.addNotificationReceivedListener(n => setNotification(n));
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(r => console.log(r));
-
-    return () => {
-      notificationListener.current?.remove();
-      responseListener.current?.remove();
-    };
+    return unsub;
   }, []);
 
   if (loading) {
@@ -85,23 +102,19 @@ export default function App() {
   }
 
   return (
-    <AuthContext.Provider value={{ user }}>
+    <AuthContext.Provider value={{ user, setUser, role, setRole }}>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (
             <>
               <Stack.Screen name="Home" component={Home} />
-              <Stack.Screen
-                name="Sala"
-                component={Sala}
-                options={{
-                  animation: "fade_from_right",
-                  transitionSpec: {
-                    open: { animation: "timing", config: { duration: 300 } },
-                    close: { animation: "timing", config: { duration: 200 } },
-                  },
-                }}
-              />
+              <Stack.Screen name="Usuarios" component={Usuarios} />
+              <Stack.Screen name="Sala" component={Sala} options={{animation:'fade_from_right',
+                transitionSpec:{
+                  open: {animation: 'timing', config: {duration: 300}},
+                  close: {animation: 'timing', config: {duration: 200}},
+                },
+              }} />
             </>
           ) : (
             <>
