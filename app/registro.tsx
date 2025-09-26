@@ -1,3 +1,4 @@
+//app/registro.tsx
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { createUserWithEmailAndPassword, sendEmailVerification} from "firebase/auth";
@@ -65,7 +66,6 @@ export default function Registro({ navigation }: Props) {
 
       // Enviar correo de verificación al usuario registrado
       await sendEmailVerification(user);
-
       alert("Cuenta creada. Revisa tu correo y confirma tu dirección antes de recuperar contraseña.");
       navigation.navigate("Login"); 
     } catch (error: any) {
@@ -73,9 +73,6 @@ export default function Registro({ navigation }: Props) {
       else setErrorEmail("Error al crear la cuenta.");
     }
   };
-
-
-  
 
   // Interfaz usuario
   return (
