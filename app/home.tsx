@@ -61,12 +61,7 @@ export default function Home({ navigation }: Props) {
       <View style={styles.header}>
         <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={[styles.logoutText, styles.fontTypold]}>Cerrar Sesión</Text>
-        </TouchableOpacity>
-      </View>
 
-      <Text style={[styles.title, styles.fontTypold]}>Lista de Salas</Text>
 
         <BtnCerrarSesion />
       </View>
@@ -116,7 +111,7 @@ export default function Home({ navigation }: Props) {
        {/* 🔔 Botón para lanzar notificación */}
       <Button title="Enviar Notificación" onPress={sendNotification} />
     </View>                                     
-  );
+);
 }
 
 // Estilos (siguiendo colores del logo c21)
