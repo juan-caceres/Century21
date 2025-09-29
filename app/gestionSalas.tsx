@@ -1,14 +1,13 @@
 import { db } from "../firebase";
 import React, {useEffect,useState} from "react";
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert,Button } from "react-native";
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from '@react-navigation/stack';
 
 
 type RootStackParamList = {
-    Home: undefined;
-    // add other screens here if needed
+    Home: undefined; // add other screens here if needed
 };
 
 export default function GestionSalas(){
@@ -24,12 +23,14 @@ export default function GestionSalas(){
 
     useEffect (() => {
         const salasRef = collection(db, "salas");
-        const unsubscribe = onSnapshot(salasRef,(snapshot) => {
+        const q = query(salasRef, orderBy("createdAt", "asc"));
+
+        const unsubscribe = onSnapshot(q,(snapshot) => {
             const data = snapshot.docs.map((d) => ({id:d.id, ...d.data()}));
             setSalas(data);
-
+            console.log("Salas snapshot:", data.map(d => d.id));
         });
-
+        return unsubscribe; // importante para limpiar el listener
     },[]);
 
     // Agregar sala
@@ -43,6 +44,7 @@ export default function GestionSalas(){
                 nombre,
                 capacidad: parseInt(capacidad),
                 tv,
+                createdAt: serverTimestamp(),
             });
 
             setNombre("");
@@ -53,7 +55,7 @@ export default function GestionSalas(){
         }
     };
 
-    // Edditar sala
+    // Editar sala
     const editarSala = async () => {
         if (!editId) return;
         try {
@@ -134,7 +136,7 @@ export default function GestionSalas(){
 
             <FlatList
                 data={salas}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item, index) => item.id || index.toString()}
                 renderItem={({ item }) => (
                 <View style={styles.salaItem}>
                     <Text style={styles.salaText}>
@@ -169,8 +171,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffffff", padding: 20 },
   title: { fontSize: 22, color: "#d4af37", marginBottom: 15, fontWeight: "bold" },
   input: {
-    backgroundColor: "#1a1a1a",
-    color: "#fff",
+    backgroundColor: "#333333ff",
+    color: "#ffffffff",
     padding: 10,
     marginBottom: 10,
     borderRadius: 8,
@@ -193,7 +195,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  addButtonText: { color: "#000", fontWeight: "bold" },
+  addButtonText: { color: "#000000ff", fontWeight: "bold" },
   salaItem: {
     backgroundColor: "#1a1a1a",
     padding: 12,

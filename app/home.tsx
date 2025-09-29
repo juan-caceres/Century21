@@ -5,7 +5,7 @@ import React, { useEffect,useState } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList,useAuth } from "../App";
 import { db } from "../firebase";
-import {collection,onSnapshot,QueryDocumentSnapshot, DocumentData} from "firebase/firestore";
+import {collection,onSnapshot,QueryDocumentSnapshot, DocumentData,query,orderBy} from "firebase/firestore";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import * as Notifications from "expo-notifications";
 
@@ -21,18 +21,21 @@ export default function Home({ navigation }: Props) {
   const [salas,setSalas]=useState<any[]>([]);
   const [loading,setLoading]=useState(true);
 
-  useEffect(()=>{
-    const salasRef=collection(db,'salas');
-    const unsubscribe=onSnapshot(salasRef,(querySnapshot)=>{
-      const data = querySnapshot.docs.map((doc:QueryDocumentSnapshot<DocumentData>) => ({
-        id:doc.id,
-        ...doc.data()
+  useEffect(() => {
+    const salasRef = collection(db, "salas");
+    const q = query(salasRef, orderBy("createdAt", "asc")); // ordenar por fecha de creación ascendente
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const data = querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
+        id: doc.id,
+        ...doc.data(),
       }));
       setSalas(data);
       setLoading(false);
     });
+
     return unsubscribe;
-  },[]);
+  }, []);
 
   // Carga de fuente personalizada
   const [fontsLoaded] = useFonts({
@@ -106,7 +109,7 @@ export default function Home({ navigation }: Props) {
         
         :(<FlatList
           data={salas}
-          keyExtractor={(item) => item}
+          keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.salaButton]}
