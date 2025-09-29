@@ -24,7 +24,7 @@ export type RootStackParamList = {
   Registro: undefined;
   OlvidePassword: undefined;
   Home: undefined;
-  Sala: { numero: number };
+  Sala: { numero: string };
   Usuarios: undefined;
   GestionSalas: undefined;
 };
