@@ -18,8 +18,6 @@ export default function Registro({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  
-
 
   // Estados para mensajes de error
   const [errorEmail, setErrorEmail] = useState("");
@@ -158,12 +156,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", justifyContent: "center", alignItems: "center", padding: 20 },
   logo: { width: 220, height: 120, marginBottom: 20 },
   title: { fontSize: 26, fontWeight: "bold", color: "#BEAF87", marginBottom: 20 },
-  inputContainer: {
-    flexDirection: "row", alignItems: "center",
-    width: "90%", borderWidth: 1, borderColor: "#BEAF87",
-    backgroundColor: "#1a1a1a", borderRadius: 8, paddingHorizontal: 10,
-    marginBottom: 10,
-  },
+  inputContainer: { flexDirection: "row", alignItems: "center", width: "90%", borderWidth: 1, borderColor: "#BEAF87", backgroundColor: "#1a1a1a", borderRadius: 8, paddingHorizontal: 10, marginBottom: 10, },
   input: { flex: 1, color: "#fff", height: 48, fontSize: 16 },
   inputError: { borderColor: "red" },
   errorText: { color: "red", alignSelf: "flex-start", marginLeft: "5%", marginBottom: 5 },
