@@ -1,9 +1,19 @@
 import { db } from "../firebase";
 import React, {useEffect,useState} from "react";
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert,Button } from "react-native";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "firebase/firestore";
+import { useNavigation } from "@react-navigation/native";
+import type { StackNavigationProp } from '@react-navigation/stack';
+
+
+type RootStackParamList = {
+    Home: undefined;
+    // add other screens here if needed
+};
+
 export default function GestionSalas(){
 
+    const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const [salas, setSalas] = useState<any[]>([]);
     const [nombre, setNombre] = useState("");
     const [capacidad, setCapacidad] = useState("");
@@ -80,7 +90,14 @@ export default function GestionSalas(){
 
     return (
         <View style ={styles.container}>
+            
+          
+            <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
+                <Text style={styles.navButtonText}>🏠 Inicio</Text>
+            </TouchableOpacity>
+
             <Text style={styles.title}>Gestión de Salas</Text>
+           
 
             {/* Formulario */}
             <TextInput
@@ -149,7 +166,7 @@ export default function GestionSalas(){
 
 // Estilos
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000", padding: 20 },
+  container: { flex: 1, backgroundColor: "#ffffffff", padding: 20 },
   title: { fontSize: 22, color: "#d4af37", marginBottom: 15, fontWeight: "bold" },
   input: {
     backgroundColor: "#1a1a1a",
@@ -185,6 +202,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#333",
   },
+  navButton: { backgroundColor: "#d4af37", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6, alignSelf: 'flex-start', marginBottom: 10 },
+  navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
   salaText: { color: "#fff", marginBottom: 5 },
   actions: { flexDirection: "row", justifyContent: "flex-end" },
   editButton: { marginRight: 10, padding: 5, backgroundColor: "#d4af37", borderRadius: 5 },
