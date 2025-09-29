@@ -6,7 +6,6 @@ import React, { useEffect, useState, createContext, useContext, useRef } from "r
 import { ActivityIndicator, View, Platform } from "react-native";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
-
 import Login from "./app/login";
 import Home from "./app/home";
 import Registro from "./app/registro";
@@ -16,7 +15,6 @@ import olvidePassword from "./app/olvidePassword";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import { useFonts } from 'expo-font';
-
 import { getDoc, doc } from "firebase/firestore";
 import { db } from "./firebase";
 import GestionSalas from "./app/gestionSalas";
@@ -37,16 +35,17 @@ const AuthContext = createContext<{
   setUser: React.Dispatch<React.SetStateAction<any>>;
   role: string | null;
   setRole: React.Dispatch<React.SetStateAction<string | null>>;
+  blockNavigation: boolean;
+  setBlockNavigation: React.Dispatch<React.SetStateAction<boolean>>;
 }>({
   user: null,
   setUser: () => {},
   role: null,
   setRole: () => {},
+  blockNavigation: false,
+  setBlockNavigation: () => {},
 });
 export const useAuth = () => useContext(AuthContext);
-
-
-
 
 // Configuración de notificaciones
 Notifications.setNotificationHandler({
@@ -58,36 +57,39 @@ Notifications.setNotificationHandler({
   }),
 });
 
-
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [blockNavigation, setBlockNavigation] = useState(false);
   const [fontsLoaded] = useFonts({Typold: require('./assets/Typold-Bold.ttf'),});
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<any>(false);
   const notificationListener = useRef<any>(null);
   const responseListener = useRef<any>(null);
 
-
   // Auth listener
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (usuario) => {
+      console.log("🔥 Auth state cambió:", usuario ? "Usuario logueado" : "Sin usuario");
+      
       setUser(usuario);
 
       if (usuario) {
         try {
           // traer el rol desde Firestore
           const userDoc = await getDoc(doc(db, "users", usuario.uid));
+          console.log("Documento existe:", userDoc.exists());
+          
           if (userDoc.exists()) {
             const userData = userDoc.data();
             const userRole = userData.role?.toLowerCase()?.trim() ?? "user";
-            console.log("Datos del usuario desde Firestore:", userData);
-            console.log("Rol procesado:", userRole);
+            console.log("Usuario válido - Rol:", userRole);
             setRole(userRole);
+            setBlockNavigation(false); 
           } else {
-            console.log("Documento de usuario no existe en Firestore");
-            setRole("user"); // rol por defecto si no existe el documento
+            console.log("Usuario no existe en Firestore - BLOQUEANDO NAVEGACIÓN");
+            setRole(null); 
           }
         } catch (error) {
           console.error("Error al obtener rol del usuario:", error);
@@ -95,6 +97,7 @@ export default function App() {
         }
       } else {
         setRole(null);
+        setBlockNavigation(false);
       }
 
       setLoading(false);
@@ -103,42 +106,44 @@ export default function App() {
     return unsub;
   }, []);
 
-
   if (loading) return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
       <ActivityIndicator size="large" color="#BEAF87" />
     </View>
   );
 
+  const shouldShowAuthScreens = !user || blockNavigation || !role;
 
   return (
-    <AuthContext.Provider value={{ user, setUser, role, setRole }}>
+    <AuthContext.Provider value={{ user, setUser, role, setRole, blockNavigation, setBlockNavigation }}>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {user ? (
+          {shouldShowAuthScreens ? (
+            // Pantallas de autenticación
+            <>
+              <Stack.Screen name="Login" component={Login} />
+              <Stack.Screen name="Registro" component={Registro} />
+              <Stack.Screen name="OlvidePassword" component={olvidePassword} />
+            </>
+          ) : (
+            // Pantallas principales (solo si usuario válido)
             <>
               <Stack.Screen name="Home" component={Home} />
               <Stack.Screen name="GestionSalas" component={GestionSalas} />
               <Stack.Screen name="Usuarios" component={Usuarios} />
-              <Stack.Screen name="Sala" component={Sala} options={{animation:'fade_from_right',
+              <Stack.Screen name="Sala" component={Sala} options={{
+                animation:'fade_from_right',
                 transitionSpec:{
                   open: {animation: 'timing', config: {duration: 300}},
                   close: {animation: 'timing', config: {duration: 200}},
                 },
               }} />
             </>
-          ) : (
-            <>
-              <Stack.Screen name="Login" component={Login} />
-              <Stack.Screen name="Registro" component={Registro} />
-              <Stack.Screen name="OlvidePassword" component={olvidePassword} />
-            </>
           )}
         </Stack.Navigator>
         <StatusBar style="light" />
       </NavigationContainer>
     </AuthContext.Provider>
-
   );
 }
 
@@ -170,7 +175,7 @@ async function registerForPushNotificationsAsync(): Promise<string | null> {
       name: "default",
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#FF231F7C",
+      lightColor: "#b838367c",
     });
   }
 
