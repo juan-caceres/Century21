@@ -12,6 +12,7 @@ import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, 
 import { Dimensions, Platform } from "react-native";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import TimePicker from "./componentes/TimePicker";
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
@@ -368,7 +369,10 @@ export default function Sala({ navigation, route }: Props) {
       return;
     }
 
-    const diaStr = fecha.toISOString().split("T")[0];
+    const dia = fecha.getDate().toString().padStart(2, "0");
+    const mes = (fecha.getMonth() + 1).toString().padStart(2, "0");
+    const anio = fecha.getFullYear();
+    const diaStr = `${dia}-${mes}-${anio}`;
     setSelectedDay(diaStr);
     
     setHoraInicio("");
@@ -386,7 +390,8 @@ export default function Sala({ navigation, route }: Props) {
       <View style={styles.superiorSalas}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
-            <Text style={styles.navButtonText}>🏠 Inicio</Text>
+            <Text style={styles.navButtonText}><Ionicons name="home" size={16} color="#ffffffff" style={{marginRight: 3}} />Inicio </Text>
+       
           </TouchableOpacity>
 
           <BtnCerrarSesion />
@@ -408,16 +413,7 @@ export default function Sala({ navigation, route }: Props) {
           <View style={styles.centerHeader}>
             <Text style={styles.headerTitle}>{salaInfo?.nombre ?? "Cargando..."}</Text>
             {/* Info de sala - ahora con validaciones y tamaños adaptativos */}
-            {salaInfo && (
-              <View style={styles.salaInfoContainer}>
-                {salaInfo.capacidad && typeof salaInfo.capacidad === 'number' && (
-                  <Text style={styles.salaMeta}>Capacidad: {salaInfo.capacidad}</Text>
-                )}
-                {salaInfo.tv !== undefined && (
-                  <Text style={styles.salaMeta}>TV: {salaInfo.tv ? 'Sí' : 'No'}</Text>
-                )}
-              </View>
-            )}
+         
           </View>
 
           <View style={styles.rightHeader}>
@@ -440,7 +436,7 @@ export default function Sala({ navigation, route }: Props) {
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Reserva - {selectedDay}</Text>
+            <Text style={styles.modalTitle}>Reservas  {selectedDay}</Text>
 
             {feedbackMessage && (
               <View style={[
@@ -507,7 +503,7 @@ export default function Sala({ navigation, route }: Props) {
             {loadingReservas ? (
               <Text style={{ color: "#252526" }}>Cargando...</Text>
             ) : reservasDia.length === 0 ? (
-              <Text style={{ color: "#252526" }}>No hay reservas para este día.</Text>
+              <Text style={{ color: "#929292ff" }}>No hay reservas para este día.</Text>
             ) : (
               <FlatList
                 data={reservasDia}
