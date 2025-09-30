@@ -62,8 +62,8 @@ export default function Home({ navigation }: Props) {
   };
 
   const getRoleText = () => {
-    if (role === "admin") return "- usuario: administrador";
-    if (role === "superuser") return "- usuario: superusuario";
+    if (role === "admin") return "Admin";
+    if (role === "superuser") return "Superusuario";
     return null; // No mostrar texto para usuarios comunes
   };
 
@@ -91,14 +91,16 @@ export default function Home({ navigation }: Props) {
             style={styles.adminButton}
             onPress={() => navigation.navigate("GestionSalas")}
           >
-            <Text style={styles.adminButtonText}>Próximamente: Gestionar Salas</Text>
+            <Text style={styles.adminButtonText}>Gestionar Salas</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* Mostrar rol solo para admin y superusuario */}
       {getRoleText() && (
-        <Text style={styles.roleText}>{getRoleText()}</Text>
+        <View style={styles.roleContainer}>
+          <Text style={[styles.roleText, styles.fontTypold]}>{getRoleText()}</Text>
+        </View>
       )}
 
       <Text style={styles.title}>Lista de Salas</Text>
@@ -113,8 +115,7 @@ export default function Home({ navigation }: Props) {
             <TouchableOpacity
               style={[styles.salaButton]}
               onPress={() => navigation.navigate("Sala", { numero: item.id })} 
-              activeOpacity={0.7}
-            >
+              activeOpacity={0.7}>
               <Text style={[styles.salaText, styles.fontTypold]}>{item.nombre}</Text>
             </TouchableOpacity>
           )}
@@ -138,7 +139,8 @@ const styles = StyleSheet.create({
   adminButtons: { marginBottom: 15, gap: 10 },
   adminButton: { backgroundColor: "#d4af37", padding: 12, borderRadius: 8, alignItems: "center" },
   adminButtonText: { color: "#000", fontWeight: "bold", fontSize: 16 },
-  roleText: { color: "#BEAF87", fontWeight: "bold", fontSize: 14, marginBottom: 15, textAlign: "center" },
+  roleContainer: { alignSelf: "center", backgroundColor: "#252526", paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1.5, borderColor: "#BEAF87", marginBottom: 20, shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5, },
+  roleText: { color: "#BEAF87", fontWeight: "bold", fontSize: 16, letterSpacing: 1, textTransform: "uppercase", },
   title: { fontSize: 22, fontWeight: "bold", color: "#BEAF87", marginBottom: 15 },
   salaButton: { padding: 15, backgroundColor: "#252526", borderRadius: 8, marginVertical: 8, borderWidth: 1, borderColor: "#BEAF87" },
   salaText: { color: "#aaa", fontSize: 18 },

@@ -1,5 +1,6 @@
+//app/componentes/calendario.tsx
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Dimensions } from "react-native";
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Dimensions, Platform } from "react-native";
 
 type Reserva = {
   id?: string;
@@ -14,11 +15,46 @@ type Props = {
 };
 
 const { width, height } = Dimensions.get('window');
+
+// Constantes adaptativas
+const isSmallDevice = width < 380;
+const isMediumDevice = width >= 380 && width < 600;
+const isLargeDevice = width >= 600;
+const isWeb = Platform.OS === 'web';
+
 const HORAS_INICIO = 9;
 const HORAS_FIN = 19;
-const ALTURA_HORA = width < 400 ? 30 : Math.max(35, Math.min(50, height / 18));
-const ANCHO_COLUMNA_HORAS = width < 400 ? 35 : width < 600 ? 45 : 55;
-const ANCHO_MIN_DIA = width < 400 ? 45 : width < 600 ? 65 : 80;
+
+// Altura de hora más adaptativa
+const getAlturaHora = () => {
+  if (isSmallDevice) return Math.max(40, height / 20); // Mínimo 40px en pantallas chicas
+  if (isMediumDevice) return Math.max(50, height / 18);
+  return Math.max(60, height / 16);
+};
+
+const ALTURA_HORA = getAlturaHora();
+
+// Ancho de columnas adaptativo
+const getAnchoColumnaHoras = () => {
+  if (isSmallDevice) return 40;
+  if (isMediumDevice) return 50;
+  return 60;
+};
+
+const ANCHO_COLUMNA_HORAS = getAnchoColumnaHoras();
+
+// Ancho mínimo para columnas de días
+const getAnchoMinDia = () => {
+  const espacioDisponible = width - ANCHO_COLUMNA_HORAS;
+  const anchoPorDia = espacioDisponible / 6; // 6 días (lunes a sábado)
+  
+  // Asegurar un mínimo razonable
+  if (isSmallDevice) return Math.max(50, anchoPorDia);
+  if (isMediumDevice) return Math.max(70, anchoPorDia);
+  return Math.max(90, anchoPorDia);
+};
+
+const ANCHO_MIN_DIA = getAnchoMinDia();
 
 export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
   const [semanaActual, setSemanaActual] = useState(new Date());
@@ -55,7 +91,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     const horas = [];
     for (let i = HORAS_INICIO; i <= HORAS_FIN; i++) { 
       // En pantallas chicas -> mostrar solo la hora sin :00
-      const formato = width < 400 ? `${i}` : `${i.toString().padStart(2, '0')}:00`;
+      const formato = isSmallDevice ? `${i}` : `${i.toString().padStart(2, '0')}:00`;
       horas.push(formato);
     }
     return horas;
@@ -86,7 +122,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
   const formatearFecha = (fecha: Date) => {
     const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
     // En pantallas chicas -> versiones más cortas
-    const diaCorto = width < 400 ? diaSemana.substring(0, 2) : diaSemana;
+    const diaCorto = isSmallDevice ? diaSemana.substring(0, 2) : diaSemana;
     
     return {
       dia: fecha.getDate(),
@@ -122,6 +158,10 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     const topPosition = ((horaInicio - HORAS_INICIO) + minutosInicio / 60) * ALTURA_HORA;
     const duration = ((horaFin - horaInicio) + (minutosFin - minutosInicio) / 60) * ALTURA_HORA;
     
+    // Tamaños de fuente adaptativos
+    const tituloFontSize = isSmallDevice ? 8 : isMediumDevice ? 9 : 10;
+    const horaFontSize = isSmallDevice ? 7 : isMediumDevice ? 8 : 9;
+    
     return (
       <View
         key={reserva.id}
@@ -129,14 +169,15 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
           styles.evento,
           {
             top: topPosition,
-            height: Math.max(duration, 18),
+            height: Math.max(duration, 20),
+            padding: isSmallDevice ? 3 : isMediumDevice ? 4 : 5,
           }
         ]}
       >
-        <Text style={styles.eventoTexto} numberOfLines={width < 400 ? 1 : 2}>
+        <Text style={[styles.eventoTexto, { fontSize: tituloFontSize }]} numberOfLines={isSmallDevice ? 1 : 2}>
           {reserva.titulo}
         </Text>
-        <Text style={styles.eventoHora}>
+        <Text style={[styles.eventoHora, { fontSize: horaFontSize }]}>
           {`${horaInicio.toString().padStart(2, '0')}:${minutosInicio.toString().padStart(2, '0')}`}
         </Text>
       </View>
@@ -168,30 +209,34 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
 
   // Calcular si necesitamos scroll horizontal
   const anchoTotalNecesario = ANCHO_COLUMNA_HORAS + (ANCHO_MIN_DIA * 6);
-  const necesitaScrollHorizontal = anchoTotalNecesario > width;
+  const necesitaScrollHorizontal = anchoTotalNecesario > width - 20; 
+
+  // Tamaños adaptativos para el header
+  const botonNavSize = isSmallDevice ? 32 : isMediumDevice ? 36 : 40;
+  const tituloFontSize = isSmallDevice ? 11 : isMediumDevice ? 13 : 15;
 
   return (
     <View style={styles.contenedor}>
       {/* Header con navegación */}
-      <View style={styles.headerNavegacion}>
+      <View style={[styles.headerNavegacion, { minHeight: isSmallDevice ? 40 : 48 }]}>
         <TouchableOpacity 
-          style={styles.botonNavegacion} 
+          style={[styles.botonNavegacion, { width: botonNavSize, height: botonNavSize }]} 
           onPress={() => cambiarSemana('anterior')}
         >
-          <Text style={styles.textoNavegacion}>‹</Text>
+          <Text style={[styles.textoNavegacion, { fontSize: isSmallDevice ? 16 : 18 }]}>‹</Text>
         </TouchableOpacity>
         
         <View style={styles.tituloContainer}>
-          <Text style={styles.tituloSemana}>
+          <Text style={[styles.tituloSemana, { fontSize: tituloFontSize }]}>
             {formatearTituloSemana()}
           </Text>
         </View>
         
         <TouchableOpacity 
-          style={styles.botonNavegacion} 
+          style={[styles.botonNavegacion, { width: botonNavSize, height: botonNavSize }]} 
           onPress={() => cambiarSemana('siguiente')}
         >
-          <Text style={styles.textoNavegacion}>›</Text>
+          <Text style={[styles.textoNavegacion, { fontSize: isSmallDevice ? 16 : 18 }]}>›</Text>
         </TouchableOpacity>
       </View>
 
@@ -207,7 +252,7 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
           { minWidth: necesitaScrollHorizontal ? anchoTotalNecesario : '100%' }
         ]}>
           {/* Header con días de la semana */}
-          <View style={styles.headerDias}>
+          <View style={[styles.headerDias, { minHeight: isSmallDevice ? 36 : 44 }]}>
             <View style={[styles.columnaHoras, { width: ANCHO_COLUMNA_HORAS }]} />
             {diasSemana.map((dia, index) => {
               const fechaFormateada = formatearFecha(dia);
@@ -222,12 +267,14 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
                 ]}>
                   <Text style={[
                     styles.diaSemanaTexto,
+                    { fontSize: isSmallDevice ? 8 : isMediumDevice ? 9 : 10 },
                     esPasado && styles.diaPasadoTexto
                   ]}>
                     {fechaFormateada.diaSemana}
                   </Text>
                   <Text style={[
                     styles.diaNumeroTexto,
+                    { fontSize: isSmallDevice ? 11 : isMediumDevice ? 13 : 14 },
                     esPasado && styles.diaPasadoTexto
                   ]}>
                     {fechaFormateada.dia}
@@ -248,7 +295,12 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
               <View style={[styles.columnaHoras, { width: ANCHO_COLUMNA_HORAS }]}>
                 {horas.map((hora, index) => (
                   <View key={index} style={[styles.filaHora, { height: ALTURA_HORA }]}>
-                    <Text style={styles.horaTexto}>{hora}</Text>
+                    <Text style={[
+                      styles.horaTexto,
+                      { fontSize: isSmallDevice ? 8 : isMediumDevice ? 9 : 10 }
+                    ]}>
+                      {hora}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -298,143 +350,28 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
 }
 
 const styles = StyleSheet.create({
-  contenedor: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  headerNavegacion: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: width < 400 ? 4 : 8,
-    paddingVertical: width < 400 ? 4 : 6,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    minHeight: width < 400 ? 35 : 40,
-  },
-  botonNavegacion: {
-    width: width < 400 ? 28 : 32,
-    height: width < 400 ? 28 : 32,
-    backgroundColor: '#BEAF87',
-    borderRadius: width < 400 ? 14 : 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textoNavegacion: {
-    color: '#ffffff',
-    fontSize: width < 400 ? 14 : 16,
-    fontWeight: 'bold',
-  },
-  tituloContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  tituloSemana: {
-    fontSize: width < 400 ? 12 : 14,
-    fontWeight: 'bold',
-    color: '#252526',
-    textTransform: 'capitalize',
-    textAlign: 'center',
-  },
-  calendarioWrapper: {
-    flex: 1,
-  },
-  headerDias: {
-    flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
-    paddingVertical: width < 400 ? 4 : 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    minHeight: width < 400 ? 32 : 40,
-  },
-  columnaHoras: {
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  columnaDia: {
-    alignItems: 'center',
-    position: 'relative',
-  },
-  diaSemanaTexto: {
-    fontSize: width < 400 ? 8 : 9,
-    color: '#BEAF87',
-    fontWeight: 'bold',
-    marginBottom: 1,
-  },
-  diaNumeroTexto: {
-    fontSize: width < 400 ? 10 : 12,
-    color: '#252526',
-    fontWeight: 'bold',
-  },
-  diaPasadoTexto: {
-    color: '#cccccc',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  calendarioContainer: {
-    flexDirection: 'row',
-    minHeight: 11 * ALTURA_HORA,
-  },
-  filaHora: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingRight: width < 400 ? 1 : 3,
-  },
-  horaTexto: {
-    fontSize: width < 400 ? 7 : 9,
-    color: '#666666',
-    fontWeight: '500',
-  },
-  celdaHora: {
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e8e8e8',
-    borderRightWidth: 0.5,
-    borderRightColor: '#e8e8e8',
-    position: 'relative',
-    width: '100%',
-  },
-  celdaPasada: {
-    backgroundColor: '#f8f8f8',
-    opacity: 0.5,
-  },
-  lineaDivision: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 0.5,
-    backgroundColor: '#e8e8e8',
-  },
-  eventosContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 2,
-    right: 2,
-    bottom: 0,
-  },
-  evento: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    backgroundColor: '#BEAF87',
-    borderRadius: width < 400 ? 2 : 3,
-    padding: width < 400 ? 2 : 3,
-    borderLeftWidth: 2,
-    borderLeftColor: '#9A8F6A',
-  },
-  eventoTexto: {
-    color: '#ffffff',
-    fontSize: width < 400 ? 7 : 9,
-    fontWeight: 'bold',
-    marginBottom: 1,
-  },
-  eventoHora: {
-    color: '#ffffff',
-    fontSize: width < 400 ? 6 : 8,
-    opacity: 0.9,
-  },
+  contenedor: { flex: 1, backgroundColor: '#ffffff', },
+  headerNavegacion: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: isSmallDevice ? 6 : isMediumDevice ? 8 : 10, paddingVertical: isSmallDevice ? 6 : 8, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#e0e0e0', },
+  botonNavegacion: { backgroundColor: '#BEAF87', borderRadius: 20, alignItems: 'center', justifyContent: 'center', },
+  textoNavegacion: { color: '#ffffff', fontWeight: 'bold', },
+  tituloContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, },
+  tituloSemana: { fontWeight: 'bold', color: '#252526', textTransform: 'capitalize', textAlign: 'center', },
+  calendarioWrapper: { flex: 1, },
+  headerDias: { flexDirection: 'row', backgroundColor: '#f5f5f5', paddingVertical: isSmallDevice ? 6 : 8, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', },
+  columnaHoras: { alignItems: 'center', backgroundColor: '#f5f5f5', },
+  columnaDia: { alignItems: 'center', position: 'relative', },
+  diaSemanaTexto: { color: '#BEAF87', fontWeight: 'bold', marginBottom: 2, },
+  diaNumeroTexto: { color: '#252526', fontWeight: 'bold', },
+  diaPasadoTexto: { color: '#cccccc', },
+  scrollContainer: { flex: 1, },
+  calendarioContainer: { flexDirection: 'row', minHeight: 11 * ALTURA_HORA, },
+  filaHora: { justifyContent: 'center', alignItems: 'center', paddingRight: isSmallDevice ? 2 : 4, },
+  horaTexto: { color: '#666666', fontWeight: '500', },
+  celdaHora: { borderBottomWidth: 0.5, borderBottomColor: '#e8e8e8', borderRightWidth: 0.5, borderRightColor: '#e8e8e8', position: 'relative', width: '100%', },
+  celdaPasada: { backgroundColor: '#f8f8f8', opacity: 0.5, },
+  lineaDivision: { position: 'absolute', top: 0, left: 0, right: 0, height: 0.5, backgroundColor: '#e8e8e8', },
+  eventosContainer: { position: 'absolute', top: 0, left: 2, right: 2, bottom: 0, },
+  evento: { position: 'absolute', left: 0, right: 0, backgroundColor: '#BEAF87', borderRadius: isSmallDevice ? 3 : 4, borderLeftWidth: 2, borderLeftColor: '#9A8F6A', },
+  eventoTexto: { color: '#ffffff', fontWeight: 'bold', marginBottom: 1, },
+  eventoHora: { color: '#ffffff', opacity: 0.9, },
 });
