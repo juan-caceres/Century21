@@ -8,7 +8,7 @@ import { RootStackParamList } from "../App";
 import Calendario from "./componentes/calendario";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc, updateDoc, getDoc, orderBy } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc, updateDoc, getDoc, orderBy,onSnapshot } from "firebase/firestore";
 import { Dimensions } from "react-native";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import TimePicker from "./componentes/TimePicker";
@@ -87,12 +87,17 @@ export default function Sala({ navigation, route }: Props) {
 
   useEffect(() => {
     fetchSalaInfo();
-    fetchReservasSemana();
+    const unsubscribe = suscribirReservasSemana();
+    return () => { unsubscribe(); }
   }, [numero]);
 
   useEffect(() => {
-    if (selectedDay) fetchReservasForDay(selectedDay);
-    else setReservasDia([]);
+  if (!selectedDay) {
+    setReservasDia([]);
+    return;
+  }
+    const unsubscribe = suscribirReservasDia(selectedDay);
+    return () => unsubscribe();
   }, [selectedDay]);
 
   const fetchSalaInfo = async () => {
@@ -156,46 +161,38 @@ export default function Sala({ navigation, route }: Props) {
     return fechas;
   };
 
-  const fetchReservasSemana = async () => {
-    setLoadingReservas(true);
-    try {
-      const fechasSemana = obtenerFechasSemana();
-      const reservasRef = collection(db, "reservas");
-      const promises = fechasSemana.map(fecha => 
-        getDocs(query(reservasRef, where("sala", "==", numero), where("fecha", "==", fecha)))
-      );
-      
-      const snapshots = await Promise.all(promises);
-      const todasLasReservas: Reserva[] = [];
-      
-      snapshots.forEach(snap => {
-        snap.docs.forEach(d => {
-          const data = d.data() as any;
-          todasLasReservas.push({
-            id: d.id,
-            ...data,
-            horaInicio: normalizeTimeSafe(data.horaInicio),
-            horaFin: normalizeTimeSafe(data.horaFin),
-          });
-        });
+  const suscribirReservasSemana = () => {
+    const fechasSemana = obtenerFechasSemana();
+    const reservasRef = collection(db, "reservas");
+
+    const q = query(
+      reservasRef,
+      where("sala", "==", numero),
+      where("fecha", "in", fechasSemana)
+    );
+
+    return onSnapshot(q, (snap) => {
+      const todasLasReservas: Reserva[] = snap.docs.map((d) => {
+        const data = d.data() as any;
+        return {
+          id: d.id,
+          ...data,
+          horaInicio: normalizeTimeSafe(data.horaInicio),
+          horaFin: normalizeTimeSafe(data.horaFin),
+        };
       });
 
       todasLasReservas.sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
       setReservasSemana(todasLasReservas);
-    } catch (err) {
-      console.log("Error cargar reservas semana:", err);
-    } finally {
-      setLoadingReservas(false);
-    }
+    });
   };
 
-  const fetchReservasForDay = async (fecha: string) => {
-    setLoadingReservas(true);
-    try {
-      const reservasRef = collection(db, "reservas");
-      const q = query(reservasRef, where("sala", "==", numero), where("fecha", "==", fecha));
-      const snap = await getDocs(q);
 
+  const suscribirReservasDia = (fecha: string) => {
+    const reservasRef = collection(db, "reservas");
+    const q = query(reservasRef, where("sala", "==", numero), where("fecha", "==", fecha));
+
+    return onSnapshot(q, (snap) => {
       const arr: Reserva[] = snap.docs.map((d) => {
         const data = d.data() as any;
         return {
@@ -208,12 +205,9 @@ export default function Sala({ navigation, route }: Props) {
 
       arr.sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
       setReservasDia(arr);
-    } catch (err) {
-      console.log("Error cargar reservas:", err);
-    } finally {
-      setLoadingReservas(false);
-    }
+    });
   };
+
 
   // Función para convertir reservas al formato del calendario
   const convertirReservasParaCalendario = () => {
@@ -320,9 +314,7 @@ export default function Sala({ navigation, route }: Props) {
       setHoraFin(""); 
       setMotivo(""); 
       setEditingReservaId(null);
-      
-      await fetchReservasSemana(); 
-      if (selectedDay) await fetchReservasForDay(selectedDay); 
+     
       
       setModalVisible(false);
 
@@ -337,8 +329,7 @@ export default function Sala({ navigation, route }: Props) {
       await deleteDoc(doc(db, "reservas", reserva.id));
       showMessage("Reserva cancelada correctamente.", "success");
       
-      await fetchReservasSemana(); 
-      if (selectedDay) await fetchReservasForDay(selectedDay);
+     
     } catch (err) {
       showMessage("Error al cancelar la reserva.", "error");
     }
@@ -380,7 +371,7 @@ export default function Sala({ navigation, route }: Props) {
     const diaStr = fecha.toISOString().split("T")[0];
     setSelectedDay(diaStr);
     
-    await fetchReservasForDay(diaStr);
+  
     
     setHoraInicio("");
     setHoraFin("");
@@ -418,8 +409,8 @@ export default function Sala({ navigation, route }: Props) {
 
           <View style={styles.centerHeader}>
             <Text style={styles.headerTitle}>{salaInfo?.nombre ?? "Cargando..."}</Text>
-            {salaInfo?.capacidad && <Text style={styles.salaMeta}>Capacidad: {salaInfo.capacidad}</Text>}
-            {salaInfo?.tv && <Text style={styles.salaMeta}>Televisor: Sí</Text>}
+            {/*{salaInfo?.capacidad && <Text style={styles.salaMeta}>Capacidad: {salaInfo.capacidad}</Text>}
+            {salaInfo?.tv && <Text style={styles.salaMeta}>Televisor: Sí</Text>}*/}
           </View>
 
           <View style={styles.rightHeader}>
@@ -474,7 +465,7 @@ export default function Sala({ navigation, route }: Props) {
                   setHoraInicio("");
                   setHoraFin("");
                   setMotivo("");
-                  fetchReservasForDay(prevStr);
+           
                 }}
               >
                 <Text style={styles.navButtonText}>◀ Día anterior</Text>
@@ -498,7 +489,7 @@ export default function Sala({ navigation, route }: Props) {
                   setHoraInicio("");
                   setHoraFin("");
                   setMotivo("");
-                  fetchReservasForDay(nextStr);
+                
                 }}
               >
                 <Text style={styles.navButtonText}>Día siguiente ▶</Text>
