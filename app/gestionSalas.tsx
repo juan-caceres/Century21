@@ -5,6 +5,7 @@ import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert,Bu
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from '@react-navigation/stack';
+import { Ionicons } from '@expo/vector-icons';
 
 type RootStackParamList = {
     Home: undefined; // add other screens here if needed
@@ -94,7 +95,7 @@ export default function GestionSalas(){
             
           
             <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
-                <Text style={styles.navButtonText}>🏠 Inicio</Text>
+                <Text style={styles.navButtonText}><Ionicons name="home" size={16} color="#ffffffff" style={{marginRight: 3}} /> Inicio</Text>
             </TouchableOpacity>
 
             <Text style={styles.title}>Gestión de Salas</Text>
