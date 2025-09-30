@@ -8,8 +8,8 @@ import { RootStackParamList } from "../App";
 import Calendario from "./componentes/calendario";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc, updateDoc, getDoc, orderBy,onSnapshot } from "firebase/firestore";
-import { Dimensions } from "react-native";
+import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc, updateDoc, getDoc, orderBy, onSnapshot } from "firebase/firestore";
+import { Dimensions, Platform } from "react-native";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import TimePicker from "./componentes/TimePicker";
 
@@ -28,6 +28,10 @@ type Reserva = {
   usuarioEmail?: string | null;
   creado?: any;
 };
+
+const { width, height } = Dimensions.get("window");
+const isSmallDevice = width < 380;
+const isMediumDevice = width >= 380 && width < 600;
 
 export default function Sala({ navigation, route }: Props) {
   const { numero } = route.params; 
@@ -92,10 +96,10 @@ export default function Sala({ navigation, route }: Props) {
   }, [numero]);
 
   useEffect(() => {
-  if (!selectedDay) {
-    setReservasDia([]);
-    return;
-  }
+    if (!selectedDay) {
+      setReservasDia([]);
+      return;
+    }
     const unsubscribe = suscribirReservasDia(selectedDay);
     return () => unsubscribe();
   }, [selectedDay]);
@@ -187,7 +191,6 @@ export default function Sala({ navigation, route }: Props) {
     });
   };
 
-
   const suscribirReservasDia = (fecha: string) => {
     const reservasRef = collection(db, "reservas");
     const q = query(reservasRef, where("sala", "==", numero), where("fecha", "==", fecha));
@@ -207,7 +210,6 @@ export default function Sala({ navigation, route }: Props) {
       setReservasDia(arr);
     });
   };
-
 
   // Función para convertir reservas al formato del calendario
   const convertirReservasParaCalendario = () => {
@@ -313,8 +315,7 @@ export default function Sala({ navigation, route }: Props) {
       setHoraInicio(""); 
       setHoraFin(""); 
       setMotivo(""); 
-      setEditingReservaId(null);
-     
+      setEditingReservaId(null);  
       
       setModalVisible(false);
 
@@ -327,8 +328,7 @@ export default function Sala({ navigation, route }: Props) {
     if (!reserva.id || reserva.usuarioId !== auth.currentUser?.uid) return;
     try {
       await deleteDoc(doc(db, "reservas", reserva.id));
-      showMessage("Reserva cancelada correctamente.", "success");
-      
+      showMessage("Reserva cancelada correctamente.", "success");     
      
     } catch (err) {
       showMessage("Error al cancelar la reserva.", "error");
@@ -371,11 +371,9 @@ export default function Sala({ navigation, route }: Props) {
     const diaStr = fecha.toISOString().split("T")[0];
     setSelectedDay(diaStr);
     
-  
-    
     setHoraInicio("");
     setHoraFin("");
-    
+ 
     setEditingReservaId(null);
     setMotivo("");
     
@@ -409,8 +407,17 @@ export default function Sala({ navigation, route }: Props) {
 
           <View style={styles.centerHeader}>
             <Text style={styles.headerTitle}>{salaInfo?.nombre ?? "Cargando..."}</Text>
-            {/*{salaInfo?.capacidad && <Text style={styles.salaMeta}>Capacidad: {salaInfo.capacidad}</Text>}
-            {salaInfo?.tv && <Text style={styles.salaMeta}>Televisor: Sí</Text>}*/}
+            {/* Info de sala - ahora con validaciones y tamaños adaptativos */}
+            {salaInfo && (
+              <View style={styles.salaInfoContainer}>
+                {salaInfo.capacidad && typeof salaInfo.capacidad === 'number' && (
+                  <Text style={styles.salaMeta}>Capacidad: {salaInfo.capacidad}</Text>
+                )}
+                {salaInfo.tv !== undefined && (
+                  <Text style={styles.salaMeta}>TV: {salaInfo.tv ? 'Sí' : 'No'}</Text>
+                )}
+              </View>
+            )}
           </View>
 
           <View style={styles.rightHeader}>
@@ -642,56 +649,36 @@ export default function Sala({ navigation, route }: Props) {
   );
 }
 
-const { width, height } = Dimensions.get("window");
-
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#ffffffff",
-    padding: width > 600 ? 40 : 20, 
-  },
-  header: {
-    height: 90, paddingHorizontal: 10, flexDirection: "row",
-    alignItems: "center", justifyContent: "space-between",
-    borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff",
-  },
-  superiorSalas:{
-    height: 40, paddingHorizontal: 10, flexDirection: "row",
-    alignItems: "center", justifyContent:"center",
-    borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff",
-    marginTop: height > 700 ? 50 : 20
-  },
+  container: { flex: 1, backgroundColor: "#ffffffff", padding: width > 600 ? 40 : isSmallDevice ? 12 : 20, },
+  header: { height: isSmallDevice ? 80 : 90, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", },
+  superiorSalas:{ height: 40, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent:"center", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginTop: height > 700 ? 50 : 20 },
   leftHeader: { flexDirection: "row", alignItems: "center" },
   rightHeader: { flexDirection: "row", alignItems: "center" },
   centerHeader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  headerTitle: { color: "#252526", fontSize: 18, fontWeight: "700" },
-  salaMeta: { color: "#252526", fontSize: 11 },
+  headerTitle: { color: "#252526", fontSize: isSmallDevice ? 16 : isMediumDevice ? 17 : 18, fontWeight: "700", textAlign: "center", },
+  salaInfoContainer: { marginTop: 4, alignItems: "center", },
+  salaMeta: { color: "#252526", fontSize: isSmallDevice ? 10 : 11, textAlign: "center", },
   disabledButton: { opacity: 0.4 },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between", 
-    alignItems: "center",
-    width: "100%",
-    paddingHorizontal: 10,
-  },
-  content: { flex: 1, padding: 20, alignItems: "center" },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", paddingHorizontal: isSmallDevice ? 6 : 10, },
+  content: { flex: 1, padding: isSmallDevice ? 12 : 20, alignItems: "center" },
   modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
-  modalContent: { backgroundColor: "#1c1c1c", padding: 20, borderRadius: 10, width: "90%" },
-  modalTitle: { color: "#BEAF87", fontSize: 18, marginBottom: 10, textAlign: "center" },
-  input: { backgroundColor: "#1e1e1e", borderColor: "#BEAF87", borderWidth: 1, borderRadius: 8, color: "#fff", padding: 10, marginBottom: 10 },
-  saveButton: { backgroundColor: "#BEAF87", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, alignItems: "center" },
-  saveText: { color: "#252526", fontWeight: "bold" },
-  cancelButton: { backgroundColor: '#252526', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: "#BEAF87" },
-  cancelText: { color: "#BEAF87", textAlign: "center" },
-  reservaRow: { padding: 8, marginBottom: 6, borderRadius: 6, backgroundColor: "#2e2e2e" },
-  reservaText: { color: "#BEAF87", fontWeight: "bold" },
-  reservaMotivo: { color: "#fff" },
-  reservaUsuario: { color: "#ccc", fontSize: 12 },
-  eliminarText: { color: "#ff6961", fontWeight: "700" },
-  navButton: { backgroundColor: "#BEAF87", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6 },
-  navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
-  feedbackContainer: { padding: 8, borderRadius: 6, marginBottom: 8 },
+  modalContent: { backgroundColor: "#1c1c1c", padding: isSmallDevice ? 16 : 20, borderRadius: 10, width: "90%", maxWidth: 500, },
+  modalTitle: { color: "#BEAF87", fontSize: isSmallDevice ? 16 : 18, marginBottom: 10, textAlign: "center" },
+  input: { backgroundColor: "#1e1e1e", borderColor: "#BEAF87", borderWidth: 1, borderRadius: 8, color: "#fff", padding: isSmallDevice ? 8 : 10, marginBottom: 10, fontSize: isSmallDevice ? 13 : 14, },
+  saveButton: { backgroundColor: "#BEAF87", paddingVertical: isSmallDevice ? 8 : 10, paddingHorizontal: isSmallDevice ? 12 : 16, borderRadius: 8, alignItems: "center" },
+  saveText: { color: "#252526", fontWeight: "bold", fontSize: isSmallDevice ? 13 : 14, },
+  cancelButton: { backgroundColor: '#252526', paddingVertical: isSmallDevice ? 8 : 10, paddingHorizontal: isSmallDevice ? 12 : 16, borderRadius: 8, borderWidth: 1, borderColor: "#BEAF87" },
+  cancelText: { color: "#BEAF87", textAlign: "center", fontSize: isSmallDevice ? 13 : 14, },
+  reservaRow: { padding: isSmallDevice ? 6 : 8, marginBottom: 6, borderRadius: 6, backgroundColor: "#2e2e2e" },
+  reservaText: { color: "#BEAF87", fontWeight: "bold", fontSize: isSmallDevice ? 13 : 14, },
+  reservaMotivo: { color: "#fff", fontSize: isSmallDevice ? 12 : 13, },
+  reservaUsuario: { color: "#ccc", fontSize: isSmallDevice ? 11 : 12 },
+  eliminarText: { color: "#ff6961", fontWeight: "700", fontSize: isSmallDevice ? 12 : 13, },
+  navButton: { backgroundColor: "#BEAF87", paddingVertical: isSmallDevice ? 6 : 8, paddingHorizontal: isSmallDevice ? 10 : 14, borderRadius: 8, marginHorizontal: isSmallDevice ? 4 : 6 },
+  navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: isSmallDevice ? 12 : 14 },
+  feedbackContainer: { padding: isSmallDevice ? 6 : 8, borderRadius: 6, marginBottom: 8 },
   formSection: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#333' },
-  formSectionTitle: { color: '#BEAF87', fontSize: 16, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
+  formSectionTitle: { color: '#BEAF87', fontSize: isSmallDevice ? 14 : 16, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
   buttonContainer: { marginTop: 10 },
 });
