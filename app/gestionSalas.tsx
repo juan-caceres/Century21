@@ -1,10 +1,10 @@
+//app/gestionSalas.tsx
 import { db } from "../firebase";
 import React, {useEffect,useState} from "react";
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert,Button } from "react-native";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from '@react-navigation/stack';
-
 
 type RootStackParamList = {
     Home: undefined; // add other screens here if needed
@@ -20,7 +20,6 @@ export default function GestionSalas(){
     const [editId, setEditId] = useState<string | null>(null);
 
     // Escuchar cambios en tiempo real
-
     useEffect (() => {
         const salasRef = collection(db, "salas");
         const q = query(salasRef, orderBy("createdAt", "asc"));
@@ -100,7 +99,6 @@ export default function GestionSalas(){
 
             <Text style={styles.title}>Gestión de Salas</Text>
            
-
             {/* Formulario */}
             <TextInput
                 style={styles.input}
@@ -133,7 +131,6 @@ export default function GestionSalas(){
             </TouchableOpacity>
 
             {/* Lista de salas */}
-
             <FlatList
                 data={salas}
                 keyExtractor={(item, index) => item.id || index.toString()}
@@ -159,9 +156,6 @@ export default function GestionSalas(){
                 </View>
                 )}
             />
-
-
-
         </View>
     );
 }
@@ -170,40 +164,13 @@ export default function GestionSalas(){
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffffff", padding: 20 },
   title: { fontSize: 22, color: "#d4af37", marginBottom: 15, fontWeight: "bold" },
-  input: {
-    backgroundColor: "#333333ff",
-    color: "#ffffffff",
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 8,
-    borderColor: "#d4af37",
-    borderWidth: 1,
-  },
-  tvButton: {
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: "#333",
-    marginBottom: 10,
-    alignItems: "center",
-  },
+  input: { backgroundColor: "#333333ff", color: "#ffffffff", padding: 10, marginBottom: 10, borderRadius: 8, borderColor: "#d4af37", borderWidth: 1, },
+  tvButton: { padding: 10, borderRadius: 8, backgroundColor: "#333", marginBottom: 10, alignItems: "center", },
   tvButtonActive: { backgroundColor: "#d4af37" },
   tvText: { color: "#fff" },
-  addButton: {
-    backgroundColor: "#d4af37",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 20,
-  },
+  addButton: { backgroundColor: "#d4af37", padding: 12, borderRadius: 8, alignItems: "center", marginBottom: 20, },
   addButtonText: { color: "#000000ff", fontWeight: "bold" },
-  salaItem: {
-    backgroundColor: "#1a1a1a",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#333",
-  },
+  salaItem: { backgroundColor: "#1a1a1a", padding: 12, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: "#333", },
   navButton: { backgroundColor: "#d4af37", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6, alignSelf: 'flex-start', marginBottom: 10 },
   navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
   salaText: { color: "#fff", marginBottom: 5 },
