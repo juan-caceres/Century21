@@ -353,6 +353,11 @@ export default function Sala({ navigation, route }: Props) {
     }
   };
 
+const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
+  const [anio, mes, dia] = fechaISO.split('-');
+  return `${dia}-${mes}-${anio}`;
+};
+
   const handleSeleccionarHorario = async (fecha: Date) => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -372,12 +377,11 @@ export default function Sala({ navigation, route }: Props) {
     const dia = fecha.getDate().toString().padStart(2, "0");
     const mes = (fecha.getMonth() + 1).toString().padStart(2, "0");
     const anio = fecha.getFullYear();
-    const diaStr = `${dia}-${mes}-${anio}`;
+    const diaStr = fecha.toISOString().split('T')[0];
     setSelectedDay(diaStr);
     
     setHoraInicio("");
     setHoraFin("");
- 
     setEditingReservaId(null);
     setMotivo("");
     
@@ -411,9 +415,7 @@ export default function Sala({ navigation, route }: Props) {
           </View>
 
           <View style={styles.centerHeader}>
-            <Text style={styles.headerTitle}>{salaInfo?.nombre ?? "Cargando..."}</Text>
-            {/* Info de sala - ahora con validaciones y tamaños adaptativos */}
-         
+            <Text style={styles.headerTitle}>{salaInfo?.nombre ?? "Cargando..."}</Text>         
           </View>
 
           <View style={styles.rightHeader}>
@@ -436,7 +438,7 @@ export default function Sala({ navigation, route }: Props) {
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Reservas  {selectedDay}</Text>
+            <Text style={styles.modalTitle}>Reservas  {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
 
             {feedbackMessage && (
               <View style={[
@@ -467,8 +469,7 @@ export default function Sala({ navigation, route }: Props) {
                   setEditingReservaId(null);
                   setHoraInicio("");
                   setHoraFin("");
-                  setMotivo("");
-           
+                  setMotivo("");           
                 }}
               >
                 <Text style={styles.navButtonText}>◀ Día anterior</Text>
