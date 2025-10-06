@@ -111,13 +111,19 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
   };
 
   // Reservas para un día específico
-  const obtenerReservasDelDia = (fecha: Date) => {
-    const fechaString = fecha.toISOString().split('T')[0];
-    return reservas.filter(reserva => {
-      const reservaFecha = reserva.inicio.toISOString().split('T')[0];
-      return reservaFecha === fechaString;
-    });
-  };
+const obtenerReservasDelDia = (fecha: Date) => {
+  const año = fecha.getFullYear();
+  const mes = fecha.getMonth();
+  const dia = fecha.getDate();
+  
+  return reservas.filter(reserva => {
+    const reservaAño = reserva.inicio.getFullYear();
+    const reservaMes = reserva.inicio.getMonth();
+    const reservaDia = reserva.inicio.getDate();
+    
+    return reservaAño === año && reservaMes === mes && reservaDia === dia;
+  });
+};
 
   const formatearFecha = (fecha: Date) => {
     const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();

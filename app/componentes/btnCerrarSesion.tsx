@@ -1,3 +1,4 @@
+//app/componentes/btnCerrarSesion.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { View, StyleSheet, TouchableOpacity, Text, Modal, Pressable, Animated } from "react-native";
 import { signOut } from "firebase/auth";

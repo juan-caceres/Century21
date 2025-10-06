@@ -1,3 +1,4 @@
+//app/olvidePassword.tsx
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Modal, ActivityIndicator  } from "react-native";
 import { useFonts } from "expo-font";
