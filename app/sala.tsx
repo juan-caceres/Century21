@@ -213,14 +213,23 @@ export default function Sala({ navigation, route }: Props) {
   };
 
   // Función para convertir reservas al formato del calendario
-  const convertirReservasParaCalendario = () => {
-    return reservasSemana.map(reserva => ({
+const convertirReservasParaCalendario = () => {
+  return reservasSemana.map(reserva => {
+    const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
+    const [horaIni, minIni] = reserva.horaInicio.split(':').map(Number);
+    const [horaFin, minFin] = reserva.horaFin.split(':').map(Number);
+    
+    const fechaInicio = new Date(anio, mes - 1, dia, horaIni, minIni);
+    const fechaFin = new Date(anio, mes - 1, dia, horaFin, minFin);
+    
+    return {
       id: reserva.id,
       titulo: reserva.motivo,
-      inicio: new Date(`${reserva.fecha}T${reserva.horaInicio}:00`),
-      fin: new Date(`${reserva.fecha}T${reserva.horaFin}:00`),
-    }));
-  };
+      inicio: fechaInicio,
+      fin: fechaFin,
+    };
+  });
+};
 
   // Chequeo de que no haya reservas a la misma hora
   const existeSolapamientoEnFirestore = async (
