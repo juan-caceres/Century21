@@ -55,6 +55,7 @@ export default function GestionSalas(){
                 capacidad: parseInt(capacidad),
                 tv,
                 createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
             });
 
             showMessage("Sala agregada correctamente.", "success");
@@ -86,6 +87,7 @@ export default function GestionSalas(){
                 nombre,
                 capacidad: parseInt(capacidad),
                 tv,
+                updatedAt: serverTimestamp(),
             });
             showMessage("Sala editada correctamente.", "success");
             setEditId(null);
@@ -154,7 +156,7 @@ export default function GestionSalas(){
             {feedbackMessage && (
                 <View style={[
                     styles.feedbackContainer,
-                    { backgroundColor: feedbackMessage.type === "success" ? "#d4af37" : "#ff6961" }
+                    { backgroundColor: feedbackMessage.type === "success" ? "#BEAF87" : "#ff6961" }
                 ]}>
                     <Text style={styles.feedbackText}>{feedbackMessage.text}</Text>
                 </View>
@@ -299,40 +301,40 @@ export default function GestionSalas(){
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#ffffffff", padding: 20 },
-    title: { fontSize: 22, color: "#d4af37", marginBottom: 15, fontWeight: "bold", textAlign: "center" },
+    title: { fontSize: 22, color: "#BEAF87", marginBottom: 15, fontWeight: "bold", textAlign: "center" },
     feedbackContainer: { padding: 10, borderRadius: 8, marginBottom: 15, alignItems: "center" },
     feedbackText: { color: "#000", fontWeight: "bold", textAlign: "center" },
     input: { backgroundColor: "#333333ff", color: "#ffffffff", padding: 10, marginBottom: 10, borderRadius: 8, borderColor: "#d4af37", borderWidth: 1, },
     tvButton: { padding: 10, borderRadius: 8, backgroundColor: "#333", marginBottom: 10, alignItems: "center", },
-    tvButtonActive: { backgroundColor: "#d4af37" },
+    tvButtonActive: { backgroundColor: "#BEAF87" },
     tvText: { color: "#fff", fontWeight: "600" },
     buttonRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
-    addButton: { flex: 1, backgroundColor: "#d4af37", padding: 12, borderRadius: 8, alignItems: "center" },
+    addButton: { flex: 1, backgroundColor: "#BEAF87", padding: 12, borderRadius: 8, alignItems: "center" },
     addButtonText: { color: "#000000ff", fontWeight: "bold" },
     cancelButton: { flex: 1, backgroundColor: "transparent", padding: 12, borderRadius: 8, alignItems: "center", borderWidth: 1, borderColor: "#d4af37" },
-    cancelButtonText: { color: "#d4af37", fontWeight: "bold" },
+    cancelButtonText: { color: "#BEAF87", fontWeight: "bold" },
     salaItem: { backgroundColor: "#1a1a1a", padding: 12, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: "#333", },
     salaInfo: { marginBottom: 10 },
-    navButton: { backgroundColor: "#d4af37", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6, alignSelf: 'flex-start', marginBottom: 10 },
+    navButton: { backgroundColor: "#BEAF87", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6, alignSelf: 'flex-start', marginBottom: 10 },
     navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
     salaText: { color: "#fff", fontSize: 16, fontWeight: "bold", marginBottom: 4 },
     salaSubtext: { color: "#aaa", fontSize: 14 },
     actions: { flexDirection: "row", justifyContent: "flex-end", gap: 8 },
-    editButton: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: "#d4af37", borderRadius: 5 },
+    editButton: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: "#BEAF87", borderRadius: 5 },
     deleteButton: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: "#ff6961", borderRadius: 5 },
     actionText: { color: "#fff", fontWeight: "bold", fontSize: 13 },
     modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
     modalContent: { backgroundColor: "#1c1c1c", padding: 25, borderRadius: 15, width: "85%", alignItems: "center" },
-    modalTitle: { color: "#d4af37", fontSize: 20, fontWeight: "bold", marginBottom: 15, textAlign: "center" },
+    modalTitle: { color: "#BEAF87", fontSize: 20, fontWeight: "bold", marginBottom: 15, textAlign: "center" },
     modalMessage: { color: "#fff", fontSize: 16, textAlign: "center", marginBottom: 10, lineHeight: 22 },
     modalDetails: { marginBottom: 20, alignSelf: "flex-start", width: "100%" },
     modalDetailText: { color: "#fff", fontSize: 14, marginBottom: 4 },
     modalWarning: { color: "#ff6961", fontSize: 14, textAlign: "center", marginBottom: 20, fontStyle: "italic" },
     modalButtons: { flexDirection: "row", gap: 10, width: "100%" },
     modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: "center" },
-    confirmButton: { backgroundColor: "#d4af37" },
+    confirmButton: { backgroundColor: "#BEAF87" },
     deleteModalButton: { backgroundColor: "#ff6961" },
-    cancelModalButton: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#d4af37" },
+    cancelModalButton: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#BEAF87" },
     modalButtonText: { color: "#000", fontWeight: "bold", fontSize: 16 },
-    cancelModalText: { color: "#d4af37", fontWeight: "bold", fontSize: 16 },
+    cancelModalText: { color: "#BEAF87", fontWeight: "bold", fontSize: 16 },
 });
