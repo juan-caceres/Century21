@@ -13,6 +13,8 @@ import { Dimensions, Platform } from "react-native";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import TimePicker from "./componentes/TimePicker";
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Notifications from "expo-notifications";
+
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
@@ -55,6 +57,9 @@ export default function Sala({ navigation, route }: Props) {
   // Estados para navegación entre salas
   const [todasLasSalas, setTodasLasSalas] = useState<any[]>([]);
   const [indiceActual, setIndiceActual] = useState<number>(-1);
+
+  //informacion para notificaciones
+  const [minutosAviso, setMinutosAviso] = useState("60"); // por defecto 60 minutos antes
 
   // Carga de fuente personalizada
   const [fontsLoaded] = useFonts({
@@ -320,6 +325,32 @@ const convertirReservasParaCalendario = () => {
           creado: serverTimestamp(),
         });
         showMessage("Reserva creada correctamente.", "success");
+
+        //programar notificacion local
+        try {
+          const [anio, mes, dia] = selectedDay.split('-').map(Number);
+          const [hora, minuto] = horaInicio.split(':').map(Number);
+          const fechaReserva = new Date(anio, mes - 1, dia, hora, minuto);
+
+          const fechaNotificacion = new Date(fechaReserva.getTime() - (parseInt(minutosAviso) || 10) * 60000);
+
+          const trigger=
+          fechaNotificacion > new Date()
+            ? ({ date: fechaNotificacion } as Notifications.DateTriggerInput)
+            : null;
+
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
+              body: `Tu reserva por "${motivo.trim()}" es a las ${horaInicio}.`,
+              sound: true,
+              priority: Notifications.AndroidNotificationPriority.HIGH,
+            },
+            trigger,
+          });
+        } catch (notifErr) {
+          console.log("Error al programar notificación:", notifErr);
+        }
       }
 
       setHoraInicio(""); 
@@ -435,7 +466,7 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
             </Text>
           </View>
           <View style={styles.descripcionItem}>
-            <Ionicons name={salaInfo.tele ? "tv" : "tv-off"} size={14} color="#252526" style={{ marginRight: 4 }} />
+            <Ionicons size={14} color="#252526" style={{ marginRight: 4 }} /> {/*arreglar name del icono*/}
             <Text style={styles.salaDescripcion}>
               {salaInfo.tele ? "Con tele" : "Sin tele"}
             </Text>
@@ -630,7 +661,7 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
                 onChange={setHoraFin}
                 placeholder="Seleccionar hora de fin"
               />
-              
+              <Text style={styles.formLabel}>Motivo</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Motivo de la reserva"
@@ -639,6 +670,15 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
                 onChangeText={setMotivo}
                 multiline={true}
                 numberOfLines={2}
+              />
+              <Text style={styles.formLabel}>Notificación (en)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Minutos antes para recibir notificación (ej: 60)"
+                placeholderTextColor="#888"
+                value={minutosAviso}
+                onChangeText={setMinutosAviso}
+                keyboardType="numeric"
               />
 
               <View style={styles.buttonContainer}>
@@ -703,6 +743,7 @@ const styles = StyleSheet.create({
   feedbackContainer: { padding: isSmallDevice ? 6 : 8, borderRadius: 6, marginBottom: 8 },
   formSection: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#333' },
   formSectionTitle: { color: '#BEAF87', fontSize: isSmallDevice ? 14 : 16, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
+  formLabel: { color: '#BEAF87', fontSize: isSmallDevice ? 14 : 16, fontWeight: '600', marginBottom: 12, textAlign:'left' },
   buttonContainer: { marginTop: 10 },
   salaDescripcionContainer: { flexDirection: "row", justifyContent: "center", marginTop: 4},
 descripcionItem: { flexDirection: "row", alignItems: "center", marginHorizontal: 6},
