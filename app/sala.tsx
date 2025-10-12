@@ -395,6 +395,7 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
     setMotivo("");
     
     setModalVisible(true);
+
   };
 
   return (
@@ -423,9 +424,25 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.centerHeader}>
-            <Text style={styles.headerTitle}>{salaInfo?.nombre ?? "Cargando..."}</Text>         
+      <View style={styles.centerHeader}>
+        <Text style={styles.headerTitle}>{salaInfo?.nombre ?? "Cargando..."}</Text>
+        {salaInfo && (
+        <View style={styles.salaDescripcionContainer}>
+          <View style={styles.descripcionItem}>
+            <Ionicons name="people" size={14} color="#252526" style={{ marginRight: 4 }} />
+            <Text style={styles.salaDescripcion}>
+              {salaInfo.capacidad ?? "-"} personas
+            </Text>
           </View>
+          <View style={styles.descripcionItem}>
+            <Ionicons name={salaInfo.tele ? "tv" : "tv-off"} size={14} color="#252526" style={{ marginRight: 4 }} />
+            <Text style={styles.salaDescripcion}>
+              {salaInfo.tele ? "Con tele" : "Sin tele"}
+            </Text>
+          </View>
+        </View>
+        )}
+      </View>
 
           <View style={styles.rightHeader}>
             <TouchableOpacity
@@ -687,4 +704,7 @@ const styles = StyleSheet.create({
   formSection: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#333' },
   formSectionTitle: { color: '#BEAF87', fontSize: isSmallDevice ? 14 : 16, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
   buttonContainer: { marginTop: 10 },
+  salaDescripcionContainer: { flexDirection: "row", justifyContent: "center", marginTop: 4},
+descripcionItem: { flexDirection: "row", alignItems: "center", marginHorizontal: 6},
+salaDescripcion: { color: "#252526", fontSize: isSmallDevice ? 12 : 14},
 });

@@ -8,6 +8,7 @@ import { db } from "../firebase";
 import { collection, onSnapshot, QueryDocumentSnapshot, DocumentData, query, orderBy } from "firebase/firestore";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import * as Notifications from "expo-notifications";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, "Home">;
 type Props = { navigation: HomeScreenNavigationProp };
@@ -23,7 +24,7 @@ export default function Home({ navigation }: Props) {
 
   useEffect(() => {
     const salasRef = collection(db, "salas");
-    const q = query(salasRef, orderBy("createdAt", "asc")); // ordenar por fecha de creación ascendente
+    const q = query(salasRef, orderBy("createdAt", "asc")/*,orderBy("updatedAt", "desc")*/); // ordenar por fecha de creación ascendente
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const data = querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
@@ -116,7 +117,20 @@ export default function Home({ navigation }: Props) {
               style={[styles.salaButton]}
               onPress={() => navigation.navigate("Sala", { numero: item.id })} 
               activeOpacity={0.7}>
-              <Text style={[styles.salaText, styles.fontTypold]}>{item.nombre}</Text>
+              <View style={styles.salaInfo}>
+                <Text style={[styles.salaText, styles.fontTypold]}>{item.nombre}</Text>
+
+                <View style={styles.iconContainer}> 
+                  <View style={styles.iconGroup}> 
+                    <Ionicons name="person" size={20} color="#BEAF87" />
+                    <Text style={styles.iconText}>{item.capacidad}</Text>
+                  </View>
+                    <MaterialIcons 
+                      name={item.tv ? "tv" : "tv-off"} 
+                      size={22} 
+                      color={item.tv ? "#BEAF87" : "#777"} /> 
+                </View> 
+              </View>
             </TouchableOpacity>
           )}
         />
@@ -137,11 +151,15 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, marginTop: height > 700 ? 50 : 20 },
   logo: { width: 120, height: 50 },
   adminButtons: { marginBottom: 15, gap: 10 },
-  adminButton: { backgroundColor: "#d4af37", padding: 12, borderRadius: 8, alignItems: "center" },
+  adminButton: { backgroundColor: "#BEAF87", padding: 12, borderRadius: 8, alignItems: "center" },
   adminButtonText: { color: "#000", fontWeight: "bold", fontSize: 16 },
   roleContainer: { alignSelf: "center", backgroundColor: "#252526", paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1.5, borderColor: "#BEAF87", marginBottom: 20, shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5, },
   roleText: { color: "#BEAF87", fontWeight: "bold", fontSize: 16, letterSpacing: 1, textTransform: "uppercase", },
   title: { fontSize: 22, fontWeight: "bold", color: "#BEAF87", marginBottom: 15 },
   salaButton: { padding: 15, backgroundColor: "#252526", borderRadius: 8, marginVertical: 8, borderWidth: 1, borderColor: "#BEAF87" },
-  salaText: { color: "#aaa", fontSize: 18 },
+  salaText: { color: "#BEAF87", fontSize: 18 },
+  iconContainer: { flexDirection: "row", alignItems: "center", gap: 12 }, 
+  iconGroup: { flexDirection: "row", alignItems: "center", gap: 4 }, 
+  iconText: { color: "#BEAF87", fontSize: 16, fontWeight: "bold" },
+  salaInfo: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
 });
