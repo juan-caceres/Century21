@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#1a1a1a", borderRadius: 8, paddingHorizontal: 10,
     marginBottom: 10,
   },
-  input: { flex: 1, color: "#252526", height: 48, fontSize: 16 },
+  input: { flex: 1, color: "#fff", height: 48, fontSize: 16 },
   inputError: { borderColor: "red" },
   errorText: { color: "red", alignSelf: "flex-start", marginLeft: "5%", marginBottom: 5 },
   button: { backgroundColor: "#BEAF87", padding: 15, borderRadius: 8, width: "90%", marginTop: 10 },
