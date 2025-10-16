@@ -718,9 +718,9 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffffff", padding: width > 600 ? 40 : isSmallDevice ? 12 : 20, },
-  header: { height: isSmallDevice ? 80 : 90, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", },
-  superiorSalas:{ height: 40, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent:"center", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginTop: height > 700 ? 50 : 20 },
+  container: { flex: 1, backgroundColor: "#ffffffff", padding: width > 600 ? 20 : isSmallDevice ? 8 : 12, },
+  header: { height: isSmallDevice ? 70 : 80, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginBottom: isSmallDevice ? 4 : 8, },
+  superiorSalas:{ height: 40, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent:"center", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginTop: height > 700 ? 40 : 15, marginBottom: 8, },
   leftHeader: { flexDirection: "row", alignItems: "center" },
   rightHeader: { flexDirection: "row", alignItems: "center" },
   centerHeader: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
   salaMeta: { color: "#252526", fontSize: isSmallDevice ? 10 : 11, textAlign: "center", },
   disabledButton: { opacity: 0.4 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", paddingHorizontal: isSmallDevice ? 6 : 10, },
-  content: { flex: 1, padding: isSmallDevice ? 12 : 20, alignItems: "center" },
+  content: { flex: 1, padding: isSmallDevice ? 4 : 8, alignItems: "center" },
   modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
   modalContent: { backgroundColor: "#1c1c1c", padding: isSmallDevice ? 16 : 20, borderRadius: 10, width: "90%", maxWidth: 500, },
   modalTitle: { color: "#BEAF87", fontSize: isSmallDevice ? 16 : 18, marginBottom: 10, textAlign: "center" },

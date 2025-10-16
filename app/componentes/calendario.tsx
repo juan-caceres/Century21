@@ -37,7 +37,7 @@ const ALTURA_HORA = getAlturaHora();
 // Ancho de columnas adaptativo
 const getAnchoColumnaHoras = () => {
   if (isSmallDevice) return 35;
-  if (isMediumDevice) return 45; 
+  if (isMediumDevice) return 45;
   return 55;
 };
 
@@ -328,6 +328,6 @@ const styles = StyleSheet.create({
   lineaDivision: { position: 'absolute', top: 0, left: 0, right: 0, height: 0.5, backgroundColor: '#e8e8e8', },
   eventosContainer: { position: 'absolute', top: 0, left: 2, right: 2, bottom: 0, },
   evento: { position: 'absolute', left: 0, right: 0, backgroundColor: '#BEAF87', borderRadius: isSmallDevice ? 3 : 4, borderLeftWidth: 2, borderLeftColor: '#9A8F6A', },
-  eventoTexto: { color: '#ffffff', fontWeight: 'bold', marginBottom: 1,},
+  eventoTexto: { color: '#ffffff', fontWeight: 'bold', marginBottom: 1, },
   eventoHora: { color: '#ffffff', opacity: 0.9, },
-  });
+});
