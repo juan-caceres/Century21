@@ -281,9 +281,8 @@ async function enviarEmailRecordatorio(usuarioEmail, salaNumero, fecha, horaInic
     from: process.env.SENDGRID_FROM_EMAIL,
     subject: `Recordatorio: Reserva en Sala ${salaNumero}`,
     html: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;background-color:#f4f4f4;padding:20px;margin:0}.container{background-color:white;border-radius:10px;padding:30px;max-width:600px;margin:0 auto;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#BEAF87;color:white;padding:20px;border-radius:8px 8px 0 0;text-align:center}.header h1{margin:0;font-size:24px}.content{padding:20px}.info-row{margin:15px 0;padding:12px;background-color:#f9f9f9;border-left:4px solid #BEAF87;border-radius:4px}.info-label{font-weight:bold;color:#252526;font-size:14px}.info-value{color:#333;margin-top:5px;font-size:16px}.footer{text-align:center;margin-top:30px;padding-top:20px;border-top:1px solid #ddd;color:#666;font-size:12px}.alert{background-color:#fff3cd;border:2px solid #ffc107;padding:15px;border-radius:5px;margin:20px 0;text-align:center;font-weight:bold}.warning{color:#856404;font-size:16px}</style></head><body><div class="container"><div class="header"><h1>RECORDATORIO DE RESERVA</h1></div><div class="content"><div class="alert"><p class="warning">Tu reserva comienza en 1 HORA</p><p style="margin:5px 0;color:#856404;">No olvides asistir.</p></div><div class="info-row"><div class="info-label">Sala:</div><div class="info-value">${String(salaNumero).replace(/[<>]/g, '')}</div></div><div class="info-row"><div class="info-label">Fecha:</div><div class="info-value">${String(fecha).replace(/[<>]/g, '')}</div></div><div class="info-row"><div class="info-label">Hora de inicio:</div><div class="info-value">${String(horaInicio).replace(/[<>]/g, '')}</div></div><div class="info-row"><div class="info-label">Motivo:</div><div class="info-value">${String(motivo).replace(/[<>]/g, '')}</div></div></div><div class="footer"><p><strong>Sistema de Gestion de Salas C21</strong></p><p>Este es un mensaje automatico, por favor no responder.</p></div></div></body></html>`,
-    text: `
-RECORDATORIO DE RESERVA
-==========================
+    text: `Recordatorio de Reserva
+========================
 
 Tu reserva comienza en 1 HORA
 
@@ -292,11 +291,10 @@ Fecha: ${fecha}
 Hora de inicio: ${horaInicio}
 Motivo: ${motivo}
 
-No olvides asistir!
+No olvides asistir.
 
-==========================
-Sistema de Gestion de Salas C21
-    `,
+========================
+Sistema de Gestion de Salas C21`,
   };
 
   try {
@@ -304,7 +302,10 @@ Sistema de Gestion de Salas C21
     console.log('✅ Email enviado correctamente con SendGrid');
     return result;
   } catch (error) {
-    console.error('❌ Error al enviar email con SendGrid:', error);
+    console.error('❌ Error al enviar email con SendGrid:', error.message);
+    if (error.response && error.response.body && error.response.body.errors) {
+      console.error('Detalles del error SendGrid:', JSON.stringify(error.response.body.errors, null, 2));
+    }
     throw error;
   }
 }
