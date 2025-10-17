@@ -409,7 +409,7 @@ const convertirReservasParaCalendario = () => {
         console.log("📅 Fecha de envío:", resultEmail.fechaEnvio);
         return true;
       } else {
-        throw new Error(resultEmail.error || "Error del servidor");
+        throw new Error(`Error: ${resultEmail.error || resultEmail.details || "Error del servidor"}`);
       }
 
     } catch (err: any) {

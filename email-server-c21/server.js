@@ -1,12 +1,18 @@
-// email-server-c21/server.js - Backend para enviar emails
+// email-server-c21/server.js - Backend para enviar emails con SendGrid
 const express = require('express');
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 const cors = require('cors');
 require('dotenv').config();
 const admin = require('firebase-admin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Configurar SendGrid
+if (!process.env.SENDGRID_API_KEY) {
+  console.error('❌ SENDGRID_API_KEY no configurada en variables de entorno');
+}
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // Inicializar Firebase Admin
 const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
@@ -22,15 +28,6 @@ const db = admin.firestore();
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Configurar transporter de Nodemailer
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
 
 // Almacenamiento en memoria de timeouts activos
 const timeoutsActivos = new Map();
@@ -112,7 +109,7 @@ async function enviarYMarcarComoEnviado(docId, data) {
 
     console.log(`✅ Email enviado y marcado como enviado: ${data.usuarioEmail}`);
   } catch (error) {
-    console.error(`❌ Error al enviar email ${docId}:`, error);
+    console.error(`❌ Error al enviar email ${docId}:`, error.message);
     
     await db.collection('emailsProgramados').doc(docId).update({
       estado: 'error',
@@ -126,7 +123,7 @@ async function enviarYMarcarComoEnviado(docId, data) {
 app.get('/', (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'Servidor de emails activo',
+    message: 'Servidor de emails activo con SendGrid',
     timeoutsActivos: timeoutsActivos.size,
     emailsProgramados: timeoutsActivos.size
   });
@@ -264,11 +261,11 @@ app.post('/cancelar-email', async (req, res) => {
   }
 });
 
-// Función auxiliar para enviar email
+// Función auxiliar para enviar email con SendGrid
 async function enviarEmailRecordatorio(usuarioEmail, salaNumero, fecha, horaInicio, motivo) {
-  const mailOptions = {
-    from: `"Sistema de Reservas C21" <${process.env.EMAIL_USER}>`,
+  const msg = {
     to: usuarioEmail,
+    from: process.env.SENDGRID_FROM_EMAIL,
     subject: `🔔 Recordatorio: Reserva en Sala ${salaNumero}`,
     html: `
       <!DOCTYPE html>
@@ -347,7 +344,14 @@ Sistema de Gestión de Salas C21
     `,
   };
 
-  return await transporter.sendMail(mailOptions);
+  try {
+    const result = await sgMail.send(msg);
+    console.log('✅ Email enviado correctamente con SendGrid');
+    return result;
+  } catch (error) {
+    console.error('❌ Error al enviar email con SendGrid:', error);
+    throw error;
+  }
 }
 
 // Endpoint legacy (opcional, para compatibilidad)
@@ -364,11 +368,11 @@ app.post('/enviar-recordatorio', async (req, res) => {
 
     const info = await enviarEmailRecordatorio(usuarioEmail, salaNumero, fecha, horaInicio, motivo);
     
-    console.log('✅ Email enviado:', info.messageId);
+    console.log('✅ Email enviado');
     res.json({ 
       success: true, 
       message: 'Email enviado correctamente',
-      messageId: info.messageId 
+      messageId: info[0]?.messageId || 'sent'
     });
 
   } catch (error) {
@@ -384,11 +388,12 @@ app.post('/enviar-recordatorio', async (req, res) => {
 app.get('/keep-alive', (req, res) => {
   const ahora = new Date();
   const horaActual = ahora.getHours();
-  const diaActual = ahora.getDay(); // 0=Domingo, 1=Lunes, ..., 6=Sábado
+  const diaActual = ahora.getDay();
   
-  // Verificar si estamos en horario laboral (Lunes-Sábado, 8 AM - 6 PM)
   const esHorarioLaboral = diaActual >= 1 && diaActual <= 6 && horaActual >= 8 && horaActual < 18;
   
+  console.log(`🏓 Ping recibido a las ${ahora.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`);
+
   res.json({ 
     status: 'awake',
     message: 'Servidor activo',
