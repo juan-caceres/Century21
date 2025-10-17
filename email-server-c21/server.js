@@ -121,11 +121,19 @@ async function enviarYMarcarComoEnviado(docId, data) {
 
 // Endpoint de salud
 app.get('/', (req, res) => {
+  const apiKeyConfigured = !!process.env.SENDGRID_API_KEY;
+  const fromEmailConfigured = !!process.env.SENDGRID_FROM_EMAIL;
+  
   res.json({ 
     status: 'OK', 
     message: 'Servidor de emails activo con SendGrid',
     timeoutsActivos: timeoutsActivos.size,
-    emailsProgramados: timeoutsActivos.size
+    emailsProgramados: timeoutsActivos.size,
+    sendgridConfigured: apiKeyConfigured && fromEmailConfigured,
+    warnings: {
+      apiKey: apiKeyConfigured ? 'OK' : 'FALTA SENDGRID_API_KEY',
+      fromEmail: fromEmailConfigured ? 'OK' : 'FALTA SENDGRID_FROM_EMAIL'
+    }
   });
 });
 
@@ -263,10 +271,15 @@ app.post('/cancelar-email', async (req, res) => {
 
 // Función auxiliar para enviar email con SendGrid
 async function enviarEmailRecordatorio(usuarioEmail, salaNumero, fecha, horaInicio, motivo) {
+  // Validar que los parámetros no sean undefined
+  if (!usuarioEmail || !salaNumero || !fecha || !horaInicio || !motivo) {
+    throw new Error('Faltan parámetros requeridos para enviar email');
+  }
+
   const msg = {
     to: usuarioEmail,
     from: process.env.SENDGRID_FROM_EMAIL,
-    subject: `🔔 Recordatorio: Reserva en Sala ${salaNumero}`,
+    subject: `Recordatorio: Reserva en Sala ${salaNumero}`,
     html: `
       <!DOCTYPE html>
       <html>
