@@ -383,7 +383,7 @@ const convertirReservasParaCalendario = () => {
 
   async function programarEmailConReintentos(emailData: any, intentos = 0) {
     const MAX_INTENTOS = 3;
-    const BACKEND_URL = "https://tu-backend.onrender.com/programar-email";
+    const BACKEND_URL = "https://century21.onrender.com/programar-email";
 
     try {
       console.log(`📧 Intento ${intentos + 1} de programar email...`);
@@ -476,7 +476,7 @@ const convertirReservasParaCalendario = () => {
   };
 
   async function cancelarEmailProgramado(reservaId: string) {
-    const BACKEND_URL = "https://tu-backend.onrender.com/cancelar-email";
+    const BACKEND_URL = "https://century21.onrender.com/cancelar-email";
     
     try {
       const controller = new AbortController();

@@ -88,7 +88,7 @@ export default function App() {
 
           console.log("Intentando enviar email de recordatorio a:", userEmail);
 
-          const BACKEND_URL = "https://tu-backend.onrender.com/enviar-recordatorio";
+          const BACKEND_URL = "https://century21.onrender.com/enviar-recordatorio";
 
           const response = await fetch(BACKEND_URL, {
             method: "POST",
