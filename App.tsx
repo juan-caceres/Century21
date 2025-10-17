@@ -4,8 +4,6 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import React, { useEffect, useState, createContext, useContext, useRef } from "react";
 import { ActivityIndicator, View, Platform, Modal, Text, TouchableOpacity, StyleSheet } from "react-native";
-import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import Login from "./app/login";
 import Home from "./app/home";
 import Registro from "./app/registro";
@@ -47,16 +45,6 @@ const AuthContext = createContext<{
 });
 export const useAuth = () => useContext(AuthContext);
 
-// Configuración de notificaciones
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
@@ -64,10 +52,6 @@ export default function App() {
   const [blockNavigation, setBlockNavigation] = useState(false);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
   const [fontsLoaded] = useFonts({Typold: require('./assets/Typold-Bold.ttf'),});
-  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
-  const [notification, setNotification] = useState<any>(false);
-  const notificationListener = useRef<any>(null);
-  const responseListener = useRef<any>(null);
 
   // Detección de usuario eliminado
   useEffect(() => {
@@ -236,38 +220,3 @@ const styles = StyleSheet.create({
   modalButton: { backgroundColor: "#BEAF87", paddingVertical: 14, paddingHorizontal: 40, borderRadius: 10, width: "100%", alignItems: "center", shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5, },
   modalButtonText: { color: "#252526", fontSize: 18, fontWeight: "bold",},
 });
-
-// Función para permisos y token push
-async function registerForPushNotificationsAsync(): Promise<string | null> {
-  if (!Device.isDevice) {
-    alert("Debes usar un dispositivo físico para notificaciones push");
-    return null;
-  }
-
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-
-  if (existingStatus !== "granted") {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== "granted") {
-    alert("No se obtuvieron permisos para notificaciones!");
-    return null;
-  }
-
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
-  console.log("Expo Push Token:", token);
-
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#b838367c",
-    });
-  }
-
-  return token;
-}

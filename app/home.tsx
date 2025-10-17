@@ -5,9 +5,9 @@ import React, { useEffect, useState } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList, useAuth } from "../App";
 import { db } from "../firebase";
-import { collection, onSnapshot, QueryDocumentSnapshot, DocumentData, query, orderBy } from "firebase/firestore";
+import { collection,onSnapshot, QueryDocumentSnapshot, DocumentData, query, orderBy } from "firebase/firestore";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
-import * as Notifications from "expo-notifications";
+import * as Notifications from 'expo-notifications';
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, "Home">;
@@ -18,7 +18,7 @@ export default function Home({ navigation }: Props) {
   console.log("Role actual:", role);
   console.log("Tipo de role:", typeof role);
   console.log("Es superuser?", role === "superuser");
-
+ 
   const [salas, setSalas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -9,6 +9,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList, useAuth } from "../App";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
+
 type LoginScreenNavigationProp = StackNavigationProp< RootStackParamList, "Login" >;
 type Props = { navigation: LoginScreenNavigationProp };
 
@@ -24,6 +25,7 @@ export default function Login({ navigation }: Props) {
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Regular.ttf"),
   });
+
 
   if (!fontsLoaded) {
     return (
@@ -64,6 +66,7 @@ export default function Login({ navigation }: Props) {
 
       const userDoc = await getDoc(doc(db, "users", user.uid));
       console.log(" Documento existe:", userDoc.exists());
+
 
       if (!userDoc.exists()) {
         console.log(" Usuario no existe en Firestore - Bloqueando navegación...");
