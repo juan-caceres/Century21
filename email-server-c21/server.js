@@ -389,6 +389,8 @@ app.get('/keep-alive', (req, res) => {
   // Verificar si estamos en horario laboral (Lunes-Sábado, 8 AM - 6 PM)
   const esHorarioLaboral = diaActual >= 1 && diaActual <= 6 && horaActual >= 8 && horaActual < 18;
   
+  console.log(`🏓 Ping recibido a las ${ahora.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`);
+
   res.json({ 
     status: 'awake',
     message: 'Servidor activo',
