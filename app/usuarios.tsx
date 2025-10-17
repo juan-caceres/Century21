@@ -1,11 +1,12 @@
 //app/usuarios.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Dimensions, Modal } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Dimensions, Modal, TextInput } from "react-native";
 import { db } from "../firebase";
 import { collection, getDocs, updateDoc, doc, DocumentData, deleteDoc } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList, useAuth } from "../App";
-import { getAuth, deleteUser } from "firebase/auth";
+import { getAuth } from "firebase/auth";
+import { Ionicons } from "@expo/vector-icons";
 
 type UsuariosScreenNavigationProp = StackNavigationProp<RootStackParamList, "Usuarios">;
 type Props = { navigation: UsuariosScreenNavigationProp };
@@ -17,14 +18,25 @@ type Usuario = {
   createdAt?: any;
 };
 
+type FiltroRol = 'todos' | 'admin' | 'noAdmin';
+
 const Usuarios: React.FC<Props> = ({ navigation }) => {
   const { role } = useAuth(); 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [usuariosFiltrados, setUsuariosFiltrados] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<'promote' | 'demote' | 'delete' | null>(null);
+  const [modalType, setModalType] = useState<'promote' | 'demote' | 'delete' | 'editEmail' | null>(null);
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
   const [message, setMessage] = useState({ text: '', type: 'success' as 'success' | 'error' });
+  
+  // Estados para búsqueda y filtros
+  const [searchText, setSearchText] = useState('');
+  const [filtroRol, setFiltroRol] = useState<FiltroRol>('todos');
+  
+  // Estado para edición de email
+  const [nuevoEmail, setNuevoEmail] = useState('');
+  const [errorEmail, setErrorEmail] = useState('');
 
   const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
     setMessage({ text, type });
@@ -45,9 +57,9 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
           createdAt: data.createdAt
         });
       });
-      // Ordenar por email
       lista.sort((a, b) => a.email.localeCompare(b.email));
       setUsuarios(lista);
+      aplicarFiltros(lista, searchText, filtroRol);
     } catch (e) {
       console.log("Error cargando usuarios:", e);
       showMessage("No se pudieron cargar los usuarios", "error");
@@ -56,9 +68,39 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const openModal = (type: 'promote' | 'demote' | 'delete', user: Usuario) => {
+  const aplicarFiltros = (listaUsuarios: Usuario[], busqueda: string, filtro: FiltroRol) => {
+    let resultado = [...listaUsuarios];
+    
+    // Filtrar por búsqueda de email
+    if (busqueda.trim() !== '') {
+      resultado = resultado.filter(u => 
+        u.email.toLowerCase().includes(busqueda.toLowerCase())
+      );
+    }
+    
+    // Filtrar por rol
+    if (filtro === 'admin') {
+      resultado = resultado.filter(u => u.role === 'admin' || u.role === 'superuser');
+    } else if (filtro === 'noAdmin') {
+      resultado = resultado.filter(u => u.role === 'user');
+    }
+    
+    setUsuariosFiltrados(resultado);
+  };
+
+  useEffect(() => {
+    aplicarFiltros(usuarios, searchText, filtroRol);
+  }, [searchText, filtroRol, usuarios]);
+
+  const openModal = (type: 'promote' | 'demote' | 'delete' | 'editEmail', user: Usuario) => {
     setModalType(type);
     setSelectedUser(user);
+    
+    if (type === 'editEmail') {
+      setNuevoEmail(user.email);
+      setErrorEmail('');
+    }
+    
     setModalVisible(true);
   };
 
@@ -66,41 +108,73 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
     setModalVisible(false);
     setModalType(null);
     setSelectedUser(null);
+    setNuevoEmail('');
+    setErrorEmail('');
   };
 
-const handleAction = async () => {
-  if (!selectedUser || !modalType) return;
-
-  try {
-    switch (modalType) {
-      case 'promote':
-        await updateDoc(doc(db, "users", selectedUser.id), { role: "admin" });
-        showMessage("Usuario promovido a administrador", "success");
-        break;
-      case 'demote':
-        await updateDoc(doc(db, "users", selectedUser.id), { role: "user" });
-        showMessage("Privilegios de administrador removidos", "success");
-        break;
-      case 'delete':
-        console.log("Eliminando usuario con ID:", selectedUser.id);  // Log de depuración
-        const auth = getAuth();
-        const currentUser = auth.currentUser;
-        if (currentUser && currentUser.uid !== selectedUser.id) {
-        await deleteDoc(doc(db, "users", selectedUser.id));
-        showMessage("Usuario eliminado correctamente", "success");
-        } else {
-          showMessage("No puedes eliminar tu propia cuenta", "error");
-        }
-        break;
+  const validarEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!emailRegex.test(email)) {
+      setErrorEmail("Formato de email inválido");
+      return false;
     }
-    fetchUsuarios();
-  } catch (e) {
-    console.log("Error en acción:", e);  // Log de error
-    showMessage("Error al realizar la acción", "error");
-  } finally {
-    closeModal();
-  }
-};
+    
+    const emailExiste = usuarios.some(u => 
+      u.email.toLowerCase() === email.toLowerCase() && u.id !== selectedUser?.id
+    );
+    
+    if (emailExiste) {
+      setErrorEmail("Este email ya está registrado");
+      return false;
+    }
+    
+    setErrorEmail('');
+    return true;
+  };
+
+  const handleAction = async () => {
+    if (!selectedUser || !modalType) return;
+
+    try {
+      switch (modalType) {
+        case 'promote':
+          await updateDoc(doc(db, "users", selectedUser.id), { role: "admin" });
+          showMessage("Usuario promovido a administrador", "success");
+          break;
+        case 'demote':
+          await updateDoc(doc(db, "users", selectedUser.id), { role: "user" });
+          showMessage("Privilegios de administrador removidos", "success");
+          break;
+        case 'delete':
+          const auth = getAuth();
+          const currentUser = auth.currentUser;
+          if (currentUser && currentUser.uid !== selectedUser.id) {
+            await deleteDoc(doc(db, "users", selectedUser.id));
+            showMessage("Usuario eliminado correctamente", "success");
+          } else {
+            showMessage("No puedes eliminar tu propia cuenta", "error");
+          }
+          break;
+        case 'editEmail':
+          if (validarEmail(nuevoEmail.trim())) {
+            await updateDoc(doc(db, "users", selectedUser.id), { 
+              email: nuevoEmail.trim().toLowerCase() 
+            });
+            showMessage("Email actualizado correctamente", "success");
+          } else {
+            return; // No cerrar modal si hay error
+          }
+          break;
+      }
+      fetchUsuarios();
+    } catch (e) {
+      console.log("Error en acción:", e);
+      showMessage("Error al realizar la acción", "error");
+    } finally {
+      closeModal();
+    }
+  };
 
   const getModalContent = () => {
     if (!selectedUser || !modalType) return { title: '', message: '', action: '', color: '' };
@@ -127,6 +201,13 @@ const handleAction = async () => {
           action: 'Eliminar',
           color: '#ff6b6b'
         };
+      case 'editEmail':
+        return {
+          title: 'Editar Email',
+          message: '',
+          action: 'Guardar',
+          color: '#4CAF50'
+        };
       default:
         return { title: '', message: '', action: '', color: '' };
     }
@@ -148,11 +229,15 @@ const handleAction = async () => {
     }
   };
 
+  const limpiarFiltros = () => {
+    setSearchText('');
+    setFiltroRol('todos');
+  };
+
   useEffect(() => {
     fetchUsuarios();
   }, []);
 
-  // Solo el superusuario puede acceder
   if (role !== "superuser") {
     return (
       <View style={styles.container}>
@@ -162,6 +247,7 @@ const handleAction = async () => {
   }
 
   const modalContent = getModalContent();
+  const hayFiltrosActivos = searchText !== '' || filtroRol !== 'todos';
 
   return (
     <View style={styles.container}>
@@ -189,19 +275,121 @@ const handleAction = async () => {
         </View>
       )}
 
+      {/* Barra de búsqueda */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#BEAF87" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por email..."
+          placeholderTextColor="#888"
+          value={searchText}
+          onChangeText={setSearchText}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+        {searchText !== '' && (
+          <TouchableOpacity onPress={() => setSearchText('')}>
+            <Ionicons name="close-circle" size={20} color="#888" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Filtros por rol */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filtroRol === 'todos' && styles.filterButtonActive
+          ]}
+          onPress={() => setFiltroRol('todos')}
+        >
+          <Text style={[
+            styles.filterButtonText,
+            filtroRol === 'todos' && styles.filterButtonTextActive
+          ]}>
+            Todos ({usuarios.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filtroRol === 'admin' && styles.filterButtonActive
+          ]}
+          onPress={() => setFiltroRol('admin')}
+        >
+          <Text style={[
+            styles.filterButtonText,
+            filtroRol === 'admin' && styles.filterButtonTextActive
+          ]}>
+            Admins ({usuarios.filter(u => u.role === 'admin' || u.role === 'superuser').length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filtroRol === 'noAdmin' && styles.filterButtonActive
+          ]}
+          onPress={() => setFiltroRol('noAdmin')}
+        >
+          <Text style={[
+            styles.filterButtonText,
+            filtroRol === 'noAdmin' && styles.filterButtonTextActive
+          ]}>
+            Usuarios ({usuarios.filter(u => u.role === 'user').length})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Botón para limpiar filtros */}
+      {hayFiltrosActivos && (
+        <TouchableOpacity 
+          style={styles.clearFiltersButton}
+          onPress={limpiarFiltros}
+        >
+          <Ionicons name="refresh" size={16} color="#BEAF87" style={{ marginRight: 6 }} />
+          <Text style={styles.clearFiltersText}>Limpiar filtros</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Contador de resultados */}
+      <View style={styles.resultsCounter}>
+        <Text style={styles.resultsCounterText}>
+          Mostrando {usuariosFiltrados.length} de {usuarios.length} usuarios
+        </Text>
+      </View>
+
       {loading ? (
         <Text style={styles.loadingText}>Cargando usuarios...</Text>
-      ) : usuarios.length === 0 ? (
-        <Text style={styles.emptyText}>No hay usuarios registrados</Text>
+      ) : usuariosFiltrados.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search-outline" size={48} color="#888" />
+          <Text style={styles.emptyText}>
+            {searchText !== '' 
+              ? "No se encontraron usuarios con ese email" 
+              : "No hay usuarios en esta categoría"}
+          </Text>
+        </View>
       ) : (
         <FlatList
-          data={usuarios}
+          data={usuariosFiltrados}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <View style={styles.card}>
               <View style={styles.userInfo}>
-                <Text style={styles.email}>{item.email}</Text>
+                <View style={styles.emailRow}>
+                  <Text style={styles.email}>{item.email}</Text>
+                  {/* Botón para editar email */}
+                  <TouchableOpacity
+                    onPress={() => openModal('editEmail', item)}
+                    style={styles.editEmailButton}
+                  >
+                    <Ionicons name="pencil" size={16} color="#BEAF87" />
+                  </TouchableOpacity>
+                </View>
+                
                 <View style={[
                   styles.roleBadge,
                   { backgroundColor: getRoleColor(item.role) }
@@ -250,7 +438,37 @@ const handleAction = async () => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{modalContent.title}</Text>
-            <Text style={styles.modalMessage}>{modalContent.message}</Text>
+            
+            {modalType === 'editEmail' ? (
+              <View style={styles.editEmailContainer}>
+                <Text style={styles.modalMessage}>
+                  Usuario actual: {selectedUser?.email}
+                </Text>
+                
+                <View style={styles.inputContainer}>
+                  <Ionicons name="mail" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+                  <TextInput
+                    style={styles.emailInput}
+                    placeholder="Nuevo email"
+                    placeholderTextColor="#888"
+                    value={nuevoEmail}
+                    onChangeText={(text) => {
+                      setNuevoEmail(text);
+                      setErrorEmail('');
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+                
+                {errorEmail !== '' && (
+                  <Text style={styles.errorText}>{errorEmail}</Text>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.modalMessage}>{modalContent.message}</Text>
+            )}
             
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -287,7 +505,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 20,
   },
   backButton: {
     backgroundColor: "#BEAF87",
@@ -313,13 +531,81 @@ const styles = StyleSheet.create({
   messageContainer: {
     padding: 12,
     borderRadius: 8,
-    marginBottom: 20,
+    marginBottom: 15,
     alignItems: "center",
   },
   messageText: {
     color: "#fff",
     fontWeight: "bold",
     textAlign: "center",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#252526",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#BEAF87",
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: "#fff",
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  filterContainer: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 15,
+  },
+  filterButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#252526",
+    borderWidth: 1,
+    borderColor: "#444",
+    alignItems: "center",
+  },
+  filterButtonActive: {
+    backgroundColor: "#BEAF87",
+    borderColor: "#BEAF87",
+  },
+  filterButtonText: {
+    color: "#888",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  filterButtonTextActive: {
+    color: "#000",
+    fontWeight: "bold",
+  },
+  clearFiltersButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  clearFiltersText: {
+    color: "#BEAF87",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  resultsCounter: {
+    paddingVertical: 8,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  resultsCounterText: {
+    color: "#888",
+    fontSize: 13,
   },
   accessDenied: {
     fontSize: 20,
@@ -333,11 +619,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
   emptyText: {
     fontSize: 16,
     color: "#888",
     textAlign: "center",
-    marginTop: 20,
+    marginTop: 15,
+    paddingHorizontal: 40,
   },
   card: {
     backgroundColor: "#252526",
@@ -355,11 +648,25 @@ const styles = StyleSheet.create({
   userInfo: {
     marginBottom: 15,
   },
+  emailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
   email: { 
     fontSize: 16, 
     color: "#fff",
     fontWeight: "500",
-    marginBottom: 8,
+    flex: 1,
+  },
+  editEmailButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: "#1c1c1c",
+    borderWidth: 1,
+    borderColor: "#BEAF87",
+    marginLeft: 10,
   },
   roleBadge: {
     alignSelf: "flex-start",
@@ -423,6 +730,32 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 25,
     lineHeight: 22,
+  },
+  editEmailContainer: {
+    width: "100%",
+    marginBottom: 20,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2e2e2e",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginTop: 15,
+    borderWidth: 1,
+    borderColor: "#BEAF87",
+  },
+  emailInput: {
+    flex: 1,
+    color: "#fff",
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  errorText: {
+    color: "#ff6b6b",
+    fontSize: 13,
+    marginTop: 8,
+    textAlign: "center",
   },
   modalButtons: {
     flexDirection: "row",
