@@ -96,6 +96,8 @@ export default function Registro({ navigation }: Props) {
 
   const handleRegister = async () => {
     const isValid = await validarCampos();
+ 
+  
     if (!isValid) return;
     
     try {
@@ -108,6 +110,7 @@ export default function Registro({ navigation }: Props) {
         email: user.email,
         username: username.trim(),
         role: "user", // por defecto es un usuario normal
+    
         createdAt: new Date(),
       });
 
