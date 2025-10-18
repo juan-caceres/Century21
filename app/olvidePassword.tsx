@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },
   modalContent: { backgroundColor: "#1a1a1a", padding: 25, borderRadius: 12, width: "85%", alignItems: "center" },
   modalTitle: { fontSize: 20, fontWeight: "bold", color: "#BEAF87", marginBottom: 10 },
-  modalText: { color: "#252526", fontSize: 16, textAlign: "center", marginBottom: 20 },
+  modalText: { color: "#fff", fontSize: 16, textAlign: "center", marginBottom: 20 },
   modalButton: { backgroundColor: "#BEAF87", paddingVertical: 12, paddingHorizontal: 25, borderRadius: 8 },
   modalButtonText: { color: "#000", fontWeight: "bold", fontSize: 16 },
 });

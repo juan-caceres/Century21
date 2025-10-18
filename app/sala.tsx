@@ -15,7 +15,6 @@ import TimePicker from "./componentes/TimePicker";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Notifications from "expo-notifications";
 
-
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
 type Props = { navigation: SalaScreenNavigationProp; route: SalaScreenRouteProp };
@@ -278,7 +277,6 @@ const convertirReservasParaCalendario = () => {
     const sNew = timeToMinutes(horaInicio);
     const eNew = timeToMinutes(horaFin);
 
-    // límite de 9 a 19
     if (sNew < 9 * 60 || eNew > 19 * 60) {
       showMessage("Las reservas deben estar entre 09:00 y 19:00.", "error");
       return;
@@ -302,7 +300,7 @@ const convertirReservasParaCalendario = () => {
       const usuarioEmail = auth.currentUser?.email ?? null;
       const usuarioId = auth.currentUser?.uid ?? null;
 
-      if (!usuarioId) return;
+      if (!usuarioId || !usuarioEmail) return;
 
       if (editingReservaId) {
         await updateDoc(doc(db, "reservas", editingReservaId), {
@@ -314,7 +312,7 @@ const convertirReservasParaCalendario = () => {
         });
         showMessage("Reserva actualizada correctamente.", "success");
       } else {
-        await addDoc(collection(db, "reservas"), {
+        const docRef = await addDoc(collection(db, "reservas"), {
           sala: numero,
           fecha: selectedDay,
           horaInicio: normalizeTime(horaInicio),
@@ -324,32 +322,49 @@ const convertirReservasParaCalendario = () => {
           usuarioEmail,
           creado: serverTimestamp(),
         });
+        
         showMessage("Reserva creada correctamente.", "success");
 
-        //programar notificacion local
+        await programarEmailConReintentos({
+          reservaId: docRef.id,
+          usuarioEmail,
+          salaNumero: salaInfo?.nombre || numero,
+          fecha: selectedDay,
+          horaInicio: normalizeTime(horaInicio),
+          motivo: motivo.trim(),
+        });
+
         try {
           const [anio, mes, dia] = selectedDay.split('-').map(Number);
-          const [hora, minuto] = horaInicio.split(':').map(Number);
+          const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
           const fechaReserva = new Date(anio, mes - 1, dia, hora, minuto);
+          const fechaNotificacion = new Date(fechaReserva.getTime() - 60 * 60 * 1000);
 
-          const fechaNotificacion = new Date(fechaReserva.getTime() - (parseInt(minutosAviso) || 10) * 60000);
-
-          const trigger=
-          fechaNotificacion > new Date()
-            ? ({ date: fechaNotificacion } as Notifications.DateTriggerInput)
-            : null;
+          const trigger =
+            fechaNotificacion > new Date()
+              ? ({ date: fechaNotificacion } as Notifications.DateTriggerInput)
+              : null;
 
           await Notifications.scheduleNotificationAsync({
             content: {
               title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
-              body: `Tu reserva por "${motivo.trim()}" es a las ${horaInicio}.`,
+              body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
               sound: true,
               priority: Notifications.AndroidNotificationPriority.HIGH,
+              data: {
+                usuarioEmail,
+                salaNumero: salaInfo?.nombre || numero,
+                motivo: motivo.trim(),
+                horaInicio: normalizeTime(horaInicio),
+                fecha: selectedDay,
+              },
             },
             trigger,
           });
+
+          console.log("Notificación local programada para:", fechaNotificacion);
         } catch (notifErr) {
-          console.log("Error al programar notificación:", notifErr);
+          console.log("Error al programar notificación local:", notifErr);
         }
       }
 
@@ -361,20 +376,136 @@ const convertirReservasParaCalendario = () => {
       setModalVisible(false);
 
     } catch (err: any) {
-      console.error("Error guardar reserva:", err);
+      console.error("❌ Error guardar reserva:", err);
+      showMessage("Error al guardar la reserva.", "error");
     }
   };
 
+  async function programarEmailConReintentos(emailData: any, intentos = 0) {
+    const MAX_INTENTOS = 3;
+    const BACKEND_URL = "https://century21.onrender.com/programar-email";
+
+    try {
+      console.log(`📧 Intento ${intentos + 1} de programar email...`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos
+      
+      const responseEmail = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(emailData),
+        signal: controller.signal, // ✅ Usar signal en lugar de timeout
+      });
+
+      clearTimeout(timeoutId); // Limpiar timeout si la petición fue exitosa
+
+      const resultEmail = await responseEmail.json();
+
+      if (responseEmail.ok && resultEmail.success) {
+        console.log("✅ Email programado correctamente en backend");
+        console.log("📅 Fecha de envío:", resultEmail.fechaEnvio);
+        return true;
+      } else {
+        throw new Error(`Error: ${resultEmail.error || resultEmail.details || "Error del servidor"}`);
+      }
+
+    } catch (err: any) {
+      console.error(`❌ Error intento ${intentos + 1}:`, err.message);
+
+      // Reintentar hasta MAX_INTENTOS
+      if (intentos < MAX_INTENTOS - 1) {
+        console.log(`⏳ Esperando 5 segundos antes de reintentar...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return programarEmailConReintentos(emailData, intentos + 1);
+      }
+
+      // Si se agotan los intentos, guardar como respaldo en Firestore
+      console.log("⚠️ Se agotaron los intentos. Guardando en Firestore como respaldo...");
+      await guardarEmailPendienteEnFirestore(emailData);
+      
+      return false;
+    }
+  }
+
+  // FUNCIÓN NUEVA: Guardar email pendiente en Firestore (respaldo)
+  async function guardarEmailPendienteEnFirestore(emailData: any) {
+    try {
+      const [anio, mes, dia] = emailData.fecha.split('-').map(Number);
+      const [hora, minuto] = emailData.horaInicio.split(':').map(Number);
+      const fechaReserva = new Date(anio, mes - 1, dia, hora, minuto);
+      const fechaEnvio = new Date(fechaReserva.getTime() - 60 * 60 * 1000);
+
+      const emailDoc = {
+        reservaId: emailData.reservaId,
+        usuarioEmail: emailData.usuarioEmail,
+        salaNumero: emailData.salaNumero,
+        fecha: emailData.fecha,
+        horaInicio: emailData.horaInicio,
+        motivo: emailData.motivo,
+        fechaReserva: new Date(fechaReserva),
+        fechaEnvio: new Date(fechaEnvio),
+        estado: 'pendiente',
+        creadoEn: new Date(),
+      };
+
+      await addDoc(collection(db, "emailsProgramados"), emailDoc);
+      console.log("✅ Email guardado en Firestore como pendiente");
+    } catch (err) {
+      console.error("❌ Error al guardar email en Firestore:", err);
+    }
+  }
+
   const handleEliminarReserva = async (reserva: Reserva) => {
     if (!reserva.id || reserva.usuarioId !== auth.currentUser?.uid) return;
+    
     try {
+      if (reserva.id) {
+        await cancelarEmailProgramado(reserva.id);
+      }
+      
       await deleteDoc(doc(db, "reservas", reserva.id));
-      showMessage("Reserva cancelada correctamente.", "success");     
-     
+      showMessage("Reserva cancelada correctamente.", "success");
+      
     } catch (err) {
+      console.error("Error al cancelar reserva:", err);
       showMessage("Error al cancelar la reserva.", "error");
     }
   };
+
+  async function cancelarEmailProgramado(reservaId: string) {
+    const BACKEND_URL = "https://century21.onrender.com/cancelar-email";
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reservaId }),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        console.log("✅ Email cancelado correctamente");
+      } else {
+        console.log("⚠️ No se pudo cancelar el email:", result.message);
+      }
+      
+    } catch (err: any) {
+      console.error("❌ Error al cancelar email:", err.message);
+      // No mostramos error al usuario porque es opcional
+    }
+  }
 
   // Para navegar entre salas usando índices
   const goToSala = (direccion: 'prev' | 'next') => {

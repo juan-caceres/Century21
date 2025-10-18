@@ -53,6 +53,58 @@ export default function App() {
   const [showDeletedModal, setShowDeletedModal] = useState(false);
   const [fontsLoaded] = useFonts({Typold: require('./assets/Typold-Bold.ttf'),});
 
+  useEffect(() => {
+    const subscription = Notifications.addNotificationReceivedListener(async (notification) => {
+      const titulo = notification.request.content.title || "";
+      const cuerpo = notification.request.content.body || "";
+      const data = notification.request.content.data || {};
+
+      console.log("Notificación recibida:", titulo);
+
+      // Solo enviar correo si es una notificación de reserva
+      if (titulo.startsWith("Reserva en Sala")) {
+        try {
+          const userEmail = data.usuarioEmail || auth.currentUser?.email || "usuario@ejemplo.com";
+          const salaNumero = data.salaNumero || "desconocida";
+          const motivo = data.motivo || "Sin motivo especificado";
+          const horaInicio = data.horaInicio || "hora no especificada";
+          const fecha = data.fecha || "fecha no especificada";
+
+          console.log("Intentando enviar email de recordatorio a:", userEmail);
+
+          const BACKEND_URL = "https://century21.onrender.com/enviar-recordatorio";
+
+          const response = await fetch(BACKEND_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              usuarioEmail: userEmail,
+              salaNumero: salaNumero,
+              fecha: fecha,
+              horaInicio: horaInicio,
+              motivo: motivo,
+            }),
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            console.log("✅ Email de recordatorio enviado correctamente.");
+          } else {
+            console.error("❌ Error al enviar email:", result.error);
+          }
+        } catch (err) {
+          console.error("❌ Error al enviar email:", err);
+        }
+      }
+    });
+
+    // Limpieza cuando el componente se desmonta
+    return () => subscription.remove();
+  }, []);
+
   // Detección de usuario eliminado
   useEffect(() => {
     let unsubscribeFirestore: (() => void) | null = null;
