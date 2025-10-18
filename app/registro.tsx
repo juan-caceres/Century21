@@ -105,12 +105,11 @@ export default function Registro({ navigation }: Props) {
       const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       const user = userCredential.user;
 
-      // Guardar datos del usuario en Firestore con username
       await setDoc(doc(db, "users", user.uid), {
         email: user.email,
         username: username.trim(),
-        role: "user", // por defecto es un usuario normal
-    
+        role: "user",
+        eliminado: false,
         createdAt: new Date(),
       });
 
@@ -119,7 +118,7 @@ export default function Registro({ navigation }: Props) {
       
       Alert.alert(
         "✅ Cuenta creada",
-        "Revisa tu correo para verificar tu cuenta.\n\n⚠️ IMPORTANTE: Tu email es permanente y no se puede cambiar.\n\n✅ Podrás cambiar tu username cuando quieras.",
+        "Revisa tu correo para verificar tu cuenta.\n\n⚠️ IMPORTANTE: Tu email es permanente y no se puede cambiar.\n\n✅ Podrás cambiar tu Nombre de Usuario cuando quieras.",
         [{ text: "Entendido", onPress: () => navigation.navigate("Login") }]
       );
     } catch (error: any) {

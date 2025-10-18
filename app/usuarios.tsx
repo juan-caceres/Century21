@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Dimensions, Modal, TextInput } from "react-native";
 import { db } from "../firebase";
-import { collection, getDocs, updateDoc, doc, DocumentData, deleteDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, DocumentData, query, where } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList, useAuth } from "../App";
 import { getAuth } from "firebase/auth";
@@ -16,10 +16,12 @@ type Usuario = {
   email: string;
   username: string;
   role: string;
+  eliminado: boolean;
   createdAt?: any;
 };
 
 type FiltroRol = 'todos' | 'admin' | 'noAdmin';
+type FiltroEstado = 'todos' | 'activos' | 'eliminados';
 
 const Usuarios: React.FC<Props> = ({ navigation }) => {
   const { role } = useAuth(); 
@@ -27,15 +29,16 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   const [usuariosFiltrados, setUsuariosFiltrados] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<'promote' | 'demote' | 'delete' | 'editUsername' | 'infoEmail' | null>(null);
+  const [modalType, setModalType] = useState<'promote' | 'demote' | 'delete' | 'reactivate' | 'editUsername' | 'infoEmail' | null>(null);
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
   const [message, setMessage] = useState({ text: '', type: 'success' as 'success' | 'error' });
   
   // Estados para búsqueda y filtros
   const [searchText, setSearchText] = useState('');
   const [filtroRol, setFiltroRol] = useState<FiltroRol>('todos');
+  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('activos');
   
-  // Estado para edición de username
+  // Estado para edición de Nombre usuario
   const [nuevoUsername, setNuevoUsername] = useState('');
   const [errorUsername, setErrorUsername] = useState('');
 
@@ -56,12 +59,13 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
           email: data.email,
           username: data.username || data.email.split('@')[0],
           role: data.role,
+          eliminado: data.eliminado ?? false,
           createdAt: data.createdAt
         });
       });
       lista.sort((a, b) => a.email.localeCompare(b.email));
       setUsuarios(lista);
-      aplicarFiltros(lista, searchText, filtroRol);
+      aplicarFiltros(lista, searchText, filtroRol, filtroEstado);
     } catch (e) {
       console.log("Error cargando usuarios:", e);
       showMessage("No se pudieron cargar los usuarios", "error");
@@ -70,9 +74,10 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const aplicarFiltros = (listaUsuarios: Usuario[], busqueda: string, filtro: FiltroRol) => {
+  const aplicarFiltros = (listaUsuarios: Usuario[], busqueda: string, filtro: FiltroRol, estado: FiltroEstado) => {
     let resultado = [...listaUsuarios];
     
+    // Filtro por búsqueda
     if (busqueda.trim() !== '') {
       resultado = resultado.filter(u => 
         u.email.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -80,20 +85,28 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
       );
     }
     
+    // Filtro por rol
     if (filtro === 'admin') {
       resultado = resultado.filter(u => u.role === 'admin' || u.role === 'superuser');
     } else if (filtro === 'noAdmin') {
       resultado = resultado.filter(u => u.role === 'user');
+    }
+
+    // Filtro por estado (eliminado o no)
+    if (estado === 'activos') {
+      resultado = resultado.filter(u => !u.eliminado);
+    } else if (estado === 'eliminados') {
+      resultado = resultado.filter(u => u.eliminado);
     }
     
     setUsuariosFiltrados(resultado);
   };
 
   useEffect(() => {
-    aplicarFiltros(usuarios, searchText, filtroRol);
-  }, [searchText, filtroRol, usuarios]);
+    aplicarFiltros(usuarios, searchText, filtroRol, filtroEstado);
+  }, [searchText, filtroRol, filtroEstado, usuarios]);
 
-  const openModal = (type: 'promote' | 'demote' | 'delete' | 'editUsername' | 'infoEmail', user?: Usuario) => {
+  const openModal = (type: 'promote' | 'demote' | 'delete' | 'reactivate' | 'editUsername' | 'infoEmail', user?: Usuario) => {
     setModalType(type);
     
     if (type === 'infoEmail') {
@@ -120,32 +133,27 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   const validarUsername = async (username: string): Promise<boolean> => {
     const trimmedUsername = username.trim();
     
-    // Validar que no sea el mismo
     if (trimmedUsername === selectedUser?.username) {
       setErrorUsername("❌ Este ya es tu nombre de usuario actual");
       return false;
     }
 
-    // Validar longitud mínima
     if (trimmedUsername.length < 3) {
       setErrorUsername("Mínimo 3 caracteres");
       return false;
     }
 
-    // Validar longitud máxima
     if (trimmedUsername.length > 20) {
       setErrorUsername("Máximo 20 caracteres");
       return false;
     }
 
-    // Validar formato
     const usernameRegex = /^[a-zA-Z0-9_]+$/;
     if (!usernameRegex.test(trimmedUsername)) {
       setErrorUsername("Solo letras, números y guion bajo (_)");
       return false;
     }
     
-    // Verificar si ya existe
     try {
       const q = query(collection(db, "users"), where("username", "==", trimmedUsername));
       const snapshot = await getDocs(q);
@@ -155,7 +163,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         return false;
       }
     } catch (error) {
-      console.log("Error validando username:", error);
+      console.log("Error validando Nombre de Usuario:", error);
       setErrorUsername("Error al verificar disponibilidad");
       return false;
     }
@@ -185,26 +193,31 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
           const auth = getAuth();
           const currentUser = auth.currentUser;
           if (currentUser && currentUser.uid !== selectedUser.id) {
-            await deleteDoc(doc(db, "users", selectedUser.id));
-            showMessage("Usuario eliminado correctamente", "success");
+            await updateDoc(doc(db, "users", selectedUser.id), { eliminado: true });
+            showMessage("✅ Usuario desactivado correctamente", "success");
             fetchUsuarios();
             closeModal();
           } else {
-            showMessage("No puedes eliminar tu propia cuenta", "error");
+            showMessage("No puedes desactivar tu propia cuenta", "error");
             closeModal();
           }
+          break;
+        case 'reactivate':
+          // NUEVO - Reactivar usuario eliminado
+          await updateDoc(doc(db, "users", selectedUser.id), { eliminado: false });
+          showMessage("✅ Usuario reactivado correctamente", "success");
+          fetchUsuarios();
+          closeModal();
           break;
         case 'editUsername':
           const isValid = await validarUsername(nuevoUsername.trim());
           if (!isValid) {
-            // NO cerrar el modal, solo mostrar el error
             return;
           }
-          // Si es válido, guardar y cerrar
           await updateDoc(doc(db, "users", selectedUser.id), { 
             username: nuevoUsername.trim()
           });
-          showMessage("✅ Username actualizado correctamente", "success");
+          showMessage("✅ Nombre de Usuario actualizado correctamente", "success");
           fetchUsuarios();
           closeModal();
           break;
@@ -236,10 +249,17 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         };
       case 'delete':
         return {
-          title: 'Eliminar Usuario',
-          message: `¿Estás seguro que quieres eliminar a ${selectedUser.username} (${selectedUser.email})? Esta acción no se puede deshacer.`,
-          action: 'Eliminar',
+          title: 'Desactivar Usuario',
+          message: `¿Estás seguro que quieres desactivar a ${selectedUser.username} (${selectedUser.email})? El usuario no podrá iniciar sesión, hasta que decidas reactivarlo después.`,
+          action: 'Desactivar',
           color: '#ff6b6b'
+        };
+      case 'reactivate':
+        return {
+          title: 'Reactivar Usuario',
+          message: `¿Reactivar a ${selectedUser.username} (${selectedUser.email})? El usuario podrá volver a iniciar sesión.`,
+          action: 'Reactivar',
+          color: '#4CAF50'
         };
       case 'editUsername':
         return {
@@ -272,6 +292,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   const limpiarFiltros = () => {
     setSearchText('');
     setFiltroRol('todos');
+    setFiltroEstado('activos');
   };
 
   useEffect(() => {
@@ -287,7 +308,10 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   }
 
   const modalContent = getModalContent();
-  const hayFiltrosActivos = searchText !== '' || filtroRol !== 'todos';
+  const hayFiltrosActivos = searchText !== '' || filtroRol !== 'todos' || filtroEstado !== 'activos';
+
+  const usuariosActivos = usuarios.filter(u => !u.eliminado).length;
+  const usuariosEliminados = usuarios.filter(u => u.eliminado).length;
 
   return (
     <View style={styles.container}>
@@ -320,7 +344,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         <Ionicons name="search" size={20} color="#BEAF87" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por username o email..."
+          placeholder="Buscar por Nombre de Usuario o Email..."
           placeholderTextColor="#888"
           value={searchText}
           onChangeText={setSearchText}
@@ -331,6 +355,56 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
             <Ionicons name="close-circle" size={20} color="#888" />
           </TouchableOpacity>
         )}
+      </View>
+
+      {/* Filtros por estado (Activos/Eliminados) */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filtroEstado === 'activos' && styles.filterButtonActive
+          ]}
+          onPress={() => setFiltroEstado('activos')}
+        >
+          <Ionicons name="checkmark-circle" size={16} color={filtroEstado === 'activos' ? "#000" : "#4CAF50"} style={{ marginRight: 4 }} />
+          <Text style={[
+            styles.filterButtonText,
+            filtroEstado === 'activos' && styles.filterButtonTextActive
+          ]}>
+            Activos ({usuariosActivos})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filtroEstado === 'eliminados' && styles.filterButtonActive
+          ]}
+          onPress={() => setFiltroEstado('eliminados')}
+        >
+          <Ionicons name="close-circle" size={16} color={filtroEstado === 'eliminados' ? "#000" : "#ff6b6b"} style={{ marginRight: 4 }} />
+          <Text style={[
+            styles.filterButtonText,
+            filtroEstado === 'eliminados' && styles.filterButtonTextActive
+          ]}>
+            Inactivos ({usuariosEliminados})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filtroEstado === 'todos' && styles.filterButtonActive
+          ]}
+          onPress={() => setFiltroEstado('todos')}
+        >
+          <Text style={[
+            styles.filterButtonText,
+            filtroEstado === 'todos' && styles.filterButtonTextActive
+          ]}>
+            Todos ({usuarios.length})
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Filtros por rol */}
@@ -346,7 +420,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
             styles.filterButtonText,
             filtroRol === 'todos' && styles.filterButtonTextActive
           ]}>
-            Todos ({usuarios.length})
+            Todos Roles
           </Text>
         </TouchableOpacity>
 
@@ -361,7 +435,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
             styles.filterButtonText,
             filtroRol === 'admin' && styles.filterButtonTextActive
           ]}>
-            Admins ({usuarios.filter(u => u.role === 'admin' || u.role === 'superuser').length})
+            Admins
           </Text>
         </TouchableOpacity>
 
@@ -376,7 +450,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
             styles.filterButtonText,
             filtroRol === 'noAdmin' && styles.filterButtonTextActive
           ]}>
-            Usuarios ({usuarios.filter(u => u.role === 'user').length})
+            Usuarios
           </Text>
         </TouchableOpacity>
       </View>
@@ -416,24 +490,41 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            <View style={[
+              styles.card,
+              item.eliminado && styles.cardEliminado
+            ]}>
+              {/* Usuario eliminado */}
+              {item.eliminado && (
+                <View style={styles.eliminadoBadge}>
+                  <Ionicons name="ban" size={14} color="#fff" style={{ marginRight: 4 }} />
+                  <Text style={styles.eliminadoBadgeText}>INACTIVO</Text>
+                </View>
+              )}
+
               <View style={styles.userInfo}>
-                {/* Username con botón de edición */}
+                {/* Nombre usuario con botón de edición */}
                 <View style={styles.usernameRow}>
                   <Ionicons name="person" size={18} color="#BEAF87" style={{ marginRight: 6 }} />
-                  <Text style={styles.username}>@{item.username}</Text>
-                  <TouchableOpacity
-                    onPress={() => openModal('editUsername', item)}
-                    style={styles.editButton}
-                  >
-                    <Ionicons name="pencil" size={16} color="#BEAF87" />
-                  </TouchableOpacity>
+                  <Text style={[styles.username, item.eliminado && styles.textEliminado]}>
+                    @{item.username}
+                  </Text>
+                  {!item.eliminado && (
+                    <TouchableOpacity
+                      onPress={() => openModal('editUsername', item)}
+                      style={styles.editButton}
+                    >
+                      <Ionicons name="pencil" size={16} color="#BEAF87" />
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {/* Email con botón de info */}
                 <View style={styles.emailRow}>
                   <Ionicons name="mail" size={16} color="#888" style={{ marginRight: 6 }} />
-                  <Text style={styles.email}>{item.email}</Text>
+                  <Text style={[styles.email, item.eliminado && styles.textEliminado]}>
+                    {item.email}
+                  </Text>
                   <TouchableOpacity
                     onPress={() => openModal('infoEmail')}
                     style={styles.infoButton}
@@ -451,33 +542,49 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
               </View>
 
               <View style={styles.actionButtons}>
-                {item.role === "user" && (
+                {/* Botón de Reactivar (solo para usuarios eliminados) */}
+                {item.eliminado && (
                   <TouchableOpacity
-                    style={[styles.actionButton, styles.promoteButton]}
-                    onPress={() => openModal('promote', item)}
+                    style={[styles.actionButton, styles.reactivateButton]}
+                    onPress={() => openModal('reactivate', item)}
                   >
-                    <Text style={styles.actionButtonText}>Hacer Admin</Text>
+                    <Ionicons name="checkmark-circle" size={16} color="#fff" style={{ marginRight: 4 }} />
+                    <Text style={styles.actionButtonText}>Reactivar</Text>
                   </TouchableOpacity>
                 )}
 
-                {item.role === "admin" && (
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.demoteButton]}
-                    onPress={() => openModal('demote', item)}
-                  >
-                    <Text style={styles.actionButtonText}>Quitar Admin</Text>
-                  </TouchableOpacity>
-                )}
+                {/* Botones normales (solo para usuarios activos) */}
+                {!item.eliminado && (
+                  <>
+                    {item.role === "user" && (
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.promoteButton]}
+                        onPress={() => openModal('promote', item)}
+                      >
+                        <Text style={styles.actionButtonText}>Hacer Admin</Text>
+                      </TouchableOpacity>
+                    )}
 
-                {item.role !== "superuser" && (
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.deleteButton]}
-                    onPress={() => openModal('delete', item)}
-                  >
-                    <Text style={[styles.actionButtonText, { color: "#fff" }]}>
-                      Eliminar
-                    </Text>
-                  </TouchableOpacity>
+                    {item.role === "admin" && (
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.demoteButton]}
+                        onPress={() => openModal('demote', item)}
+                      >
+                        <Text style={styles.actionButtonText}>Quitar Admin</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {item.role !== "superuser" && (
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.deleteButton]}
+                        onPress={() => openModal('delete', item)}
+                      >
+                        <Text style={[styles.actionButtonText, { color: "#fff" }]}>
+                          Desactivar
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
               </View>
             </View>
@@ -513,7 +620,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
                 </TouchableOpacity>
               </>
             ) : (
-              // Modales normales (editar, eliminar, promover)
+              // Modales normales (editar, eliminar, reactivar, promover)
               <>
                 <Text style={styles.modalTitle}>{modalContent.title}</Text>
                 
@@ -582,332 +689,68 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
 const { height } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#ffffffff", 
-    padding: 20,
-    paddingTop: height > 700 ? 70 : 40,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  backButton: {
-    backgroundColor: "#BEAF87",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: "#000",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  title: { 
-    fontSize: 24, 
-    fontWeight: "bold", 
-    color: "#BEAF87",
-    textAlign: "center",
-    flex: 1,
-  },
-  placeholder: {
-    width: 80,
-  },
-  messageContainer: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 15,
-    alignItems: "center",
-  },
-  messageText: {
-    color: "#fff",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#252526",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#BEAF87",
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: "#fff",
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-  filterContainer: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 15,
-  },
-  filterButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: "#252526",
-    borderWidth: 1,
-    borderColor: "#444",
-    alignItems: "center",
-  },
-  filterButtonActive: {
-    backgroundColor: "#BEAF87",
-    borderColor: "#BEAF87",
-  },
-  filterButtonText: {
-    color: "#888",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  filterButtonTextActive: {
-    color: "#000",
-    fontWeight: "bold",
-  },
-  clearFiltersButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    marginBottom: 10,
-  },
-  clearFiltersText: {
-    color: "#BEAF87",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  resultsCounter: {
-    paddingVertical: 8,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  resultsCounterText: {
-    color: "#888",
-    fontSize: 13,
-  },
-  accessDenied: {
-    fontSize: 20,
-    color: "#ff6b6b",
-    textAlign: "center",
-    marginTop: 50,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#BEAF87",
-    textAlign: "center",
-    marginTop: 20,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#888",
-    textAlign: "center",
-    marginTop: 15,
-    paddingHorizontal: 40,
-  },
-  card: {
-    backgroundColor: "#252526",
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#BEAF87",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  userInfo: {
-    marginBottom: 15,
-  },
-  usernameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  username: {
-    fontSize: 18,
-    color: "#BEAF87",
-    fontWeight: "bold",
-    flex: 1,
-  },
-  emailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  email: { 
-    fontSize: 14, 
-    color: "#aaa",
-    flex: 1,
-  },
-  editButton: {
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: "#1c1c1c",
-    borderWidth: 1,
-    borderColor: "#BEAF87",
-    marginLeft: 10,
-  },
-  infoButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  roleBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  roleText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  actionButtons: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  promoteButton: {
-    backgroundColor: "#4CAF50",
-  },
-  demoteButton: {
-    backgroundColor: "#ff9800",
-  },
-  deleteButton: {
-    backgroundColor: "#ff6b6b",
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.7)",
-  },
-  modalContent: {
-    backgroundColor: "#1c1c1c",
-    padding: 25,
-    borderRadius: 15,
-    width: "85%",
-    maxWidth: 400,
-    alignItems: "center",
-  },
-  iconContainer: {
-    marginBottom: 15,
-  },
-  modalTitle: {
-    color: "#BEAF87",
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 15,
-    textAlign: "center",
-  },
-  modalMessage: {
-    color: "#fff",
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 25,
-    lineHeight: 22,
-  },
-  infoModalText: {
-    color: "#fff",
-    fontSize: 15,
-    textAlign: "center",
-    marginBottom: 15,
-    lineHeight: 22,
-    paddingHorizontal: 10,
-  },
-  editContainer: {
-    width: "100%",
-    marginBottom: 20,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#2e2e2e",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginTop: 15,
-    borderWidth: 1,
-    borderColor: "#BEAF87",
-  },
-  input: {
-    flex: 1,
-    color: "#fff",
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-  helpText: {
-    color: "#888",
-    fontSize: 12,
-    marginTop: 8,
-    textAlign: "center",
-  },
-  errorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 10,
-    paddingHorizontal: 10,
-  },
-  errorText: {
-    color: "#ff6b6b",
-    fontSize: 13,
-    fontWeight: "600",
-    flex: 1,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 10,
-    width: "100%",
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  modalButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  cancelModalButton: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#BEAF87",
-  },
-  cancelModalButtonText: {
-    color: "#BEAF87",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  container: { flex: 1, backgroundColor: "#ffffffff", padding: 20, paddingTop: height > 700 ? 70 : 40, },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, },
+  backButton: { backgroundColor: "#BEAF87", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, },
+  backButtonText: { color: "#000", fontWeight: "bold", fontSize: 14, },
+  title: { fontSize: 24, fontWeight: "bold", color: "#BEAF87", textAlign: "center", flex: 1, },
+  placeholder: { width: 80, },
+  messageContainer: { padding: 12, borderRadius: 8, marginBottom: 15, alignItems: "center", },
+  messageText: { color: "#fff", fontWeight: "bold", textAlign: "center", },
+  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#252526", borderRadius: 10, paddingHorizontal: 12, marginBottom: 15, borderWidth: 1, borderColor: "#BEAF87", },
+  searchIcon: { marginRight: 8, },
+  searchInput: { flex: 1, color: "#fff", paddingVertical: 12, fontSize: 16, },
+  filterContainer: { flexDirection: "row", gap: 8, marginBottom: 15, },
+  filterButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, backgroundColor: "#252526", borderWidth: 1, borderColor: "#444", alignItems: "center", flexDirection: "row", justifyContent: "center", },
+  filterButtonActive: { backgroundColor: "#BEAF87", borderColor: "#BEAF87", },
+  filterButtonText: { color: "#888", fontSize: 13, fontWeight: "600", },
+  filterButtonTextActive: {color: "#000", fontWeight: "bold", },
+  clearFiltersButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 8, marginBottom: 10, },
+  clearFiltersText: { color: "#BEAF87", fontSize: 14, fontWeight: "600", },
+  resultsCounter: { paddingVertical: 8, alignItems: "center",marginBottom: 10, },
+  resultsCounterText: { color: "#888", fontSize: 13, },
+  accessDenied: { fontSize: 20, color: "#ff6b6b", textAlign: "center", marginTop: 50, },
+  loadingText: { fontSize: 16, color: "#BEAF87", textAlign: "center", marginTop: 20, },
+  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 40, },
+  emptyText: { fontSize: 16, color: "#888", textAlign: "center", marginTop: 15, paddingHorizontal: 40,},
+  card: { backgroundColor: "#252526", padding: 20, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: "#BEAF87", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, },
+  cardEliminado: { opacity: 0.7, borderColor: "#ff6b6b", backgroundColor: "#1a1a1a", },
+  eliminadoBadge: { position: "absolute", top: 10, right: 10, backgroundColor: "#ff6b6b", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, flexDirection: "row", alignItems: "center", zIndex: 1, },
+  eliminadoBadgeText: { color: "#fff", fontSize: 10, fontWeight: "bold", },
+  textEliminado: { textDecorationLine: "line-through", opacity: 0.6, },
+  reactivateButton: { backgroundColor: "#4CAF50", flexDirection: "row", alignItems: "center", justifyContent: "center", },
+  userInfo: { marginBottom: 15, },
+  usernameRow: { flexDirection: "row", alignItems: "center", marginBottom: 8, },
+  username: { fontSize: 18, color: "#BEAF87", fontWeight: "bold", flex: 1, },
+  emailRow: { flexDirection: "row", alignItems: "center", marginBottom: 10, },
+  email: { fontSize: 14, color: "#aaa", flex: 1,},
+  editButton: { padding: 6, borderRadius: 6, backgroundColor: "#1c1c1c", borderWidth: 1, borderColor: "#BEAF87", marginLeft: 10, },
+  infoButton: { padding: 4, marginLeft: 8, },
+  roleBadge: { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, },
+  roleText: { color: "#fff", fontSize: 12, fontWeight: "bold", },
+  actionButtons: { flexDirection: "row", gap: 8, },
+  actionButton: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, alignItems: "center", },
+  promoteButton: { backgroundColor: "#4CAF50", },
+  demoteButton: { backgroundColor: "#ff9800", },
+  deleteButton: { backgroundColor: "#ff6b6b", },
+  actionButtonText: { color: "#fff", fontWeight: "bold", fontSize: 14, },
+  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)", },
+  modalContent: { backgroundColor: "#1c1c1c", padding: 25, borderRadius: 15, width: "85%", maxWidth: 400, alignItems: "center", },
+  iconContainer: { marginBottom: 15, },
+  modalTitle: { color: "#BEAF87", fontSize: 20, fontWeight: "bold", marginBottom: 15, textAlign: "center", },
+  modalMessage: { color: "#fff", fontSize: 16, textAlign: "center", marginBottom: 25, lineHeight: 22, },
+  infoModalText: { color: "#fff", fontSize: 15, textAlign: "center", marginBottom: 15, lineHeight: 22, paddingHorizontal: 10, },
+  editContainer: { width: "100%", marginBottom: 20, },
+  inputContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#2e2e2e", borderRadius: 8, paddingHorizontal: 12, marginTop: 15, borderWidth: 1, borderColor: "#BEAF87", },
+  input: { flex: 1, color: "#fff", paddingVertical: 12, fontSize: 16, },
+  helpText: { color: "#888", fontSize: 12, marginTop: 8, textAlign: "center", },
+  errorContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 10, paddingHorizontal: 10,},
+  errorText: { color: "#ff6b6b", fontSize: 13, fontWeight: "600", flex: 1, },
+  modalButtons: { flexDirection: "row", gap: 10, width: "100%", },
+  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: "center", },
+  modalButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16, },
+  cancelModalButton: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#BEAF87", },
+  cancelModalButtonText: { color: "#BEAF87", fontWeight: "bold", fontSize: 16, },
 });
 
 export default Usuarios;

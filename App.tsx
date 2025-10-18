@@ -102,11 +102,10 @@ export default function App() {
       }
     });
 
-    // Limpieza cuando el componente se desmonta
     return () => subscription.remove();
   }, []);
 
-  // Detección de usuario eliminado
+  // Detección de usuario eliminado O desactivado
   useEffect(() => {
     let unsubscribeFirestore: (() => void) | null = null;
 
@@ -132,19 +131,55 @@ export default function App() {
           if (userDoc.exists()) {
             const userData = userDoc.data();
             const userRole = userData.role?.toLowerCase()?.trim() ?? "user";
-            console.log("Usuario válido - Rol:", userRole);
+            const isEliminado = userData.eliminado ?? false;
+            
+            console.log("Usuario válido - Rol:", userRole, "- Eliminado:", isEliminado);
+            
+            // Si el usuario está eliminado, bloquear acceso
+            if (isEliminado) {
+              console.log("❌ Usuario desactivado - Bloqueando acceso...");
+              setRole(null);
+              setBlockNavigation(true);
+              
+              // Cerrar sesión automáticamente
+              setTimeout(async () => {
+                try {
+                  await signOut(auth);
+                  console.log("✅ Sesión cerrada - Usuario desactivado");
+                } catch (err) {
+                  console.error("❌ Error cerrando sesión:", err);
+                }
+              }, 100);
+              
+              setLoading(false);
+              return;
+            }
+            
             setRole(userRole);
             setBlockNavigation(false);
 
-            // Detectar si el usuario es eliminado
+            // Listener en tiempo real para detectar cambios en el documento
             unsubscribeFirestore = onSnapshot(
               userDocRef,
               async (docSnapshot) => {
                 if (!docSnapshot.exists()) {
-                  console.log("USUARIO ELIMINADO - Cerrando sesión...");
-                  
-                  // Mostrar modal personalizado
+                  console.log("❌ USUARIO ELIMINADO COMPLETAMENTE - Cerrando sesión...");
                   setShowDeletedModal(true);
+                } else {
+                  const updatedData = docSnapshot.data();
+                  const isNowEliminado = updatedData.eliminado ?? false;
+                  
+                  if (isNowEliminado) {
+                    console.log("❌ USUARIO DESACTIVADO EN TIEMPO REAL - Cerrando sesión...");
+                    setBlockNavigation(true);
+                    
+                    try {
+                      await signOut(auth);
+                      console.log("✅ Sesión cerrada - Usuario desactivado en tiempo real");
+                    } catch (err) {
+                      console.error("❌ Error cerrando sesión:", err);
+                    }
+                  }
                 }
               },
               (error) => {
@@ -177,7 +212,7 @@ export default function App() {
   }, []);
 
   const handleAccountDeletedConfirm = async () => {
-    console.log("Usuario confirmó eliminación, cerrando sesión...");
+    console.log("Usuario confirmó eliminación permanente, cerrando sesión...");
     setShowDeletedModal(false);
     
     try {
@@ -229,7 +264,7 @@ export default function App() {
         <StatusBar style="light" />
       </NavigationContainer>
 
-      {/* Modal de cuenta eliminada */}
+      {/* Modal de cuenta eliminada permanentemente */}
       <Modal 
         transparent 
         visible={showDeletedModal} 
@@ -245,7 +280,7 @@ export default function App() {
               Cuenta Eliminada
             </Text>
             <Text style={[styles.modalMessage, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-              Tu cuenta ha sido eliminada por un administrador. Serás redirigido al inicio de sesión.
+              Tu cuenta ha sido eliminada permanentemente por un administrador. Serás redirigido al inicio de sesión.
             </Text>
             <TouchableOpacity
               style={styles.modalButton}
