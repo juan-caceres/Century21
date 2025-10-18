@@ -8,6 +8,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList, useAuth } from "../App";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { registerForPushNotificationsAsync } from "./servicios/notifications";
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login">;
 type Props = { navigation: LoginScreenNavigationProp };
@@ -116,6 +117,10 @@ export default function Login({ navigation }: Props) {
       }
 
       console.log("✅ Login completamente exitoso");
+
+      //usuario valido, actualiza token de notificaciones
+      await registerForPushNotificationsAsync(user.uid);
+    
       
     } catch (error: any) {
       console.log("❌ Error en login:", error.code, error.message);
