@@ -1,21 +1,21 @@
 // app/login.tsx
 import React, { useState } from "react";
-import { Text, StyleSheet, View, TextInput, TouchableOpacity, Image, ActivityIndicator, Modal, } from "react-native";
+import { Text, StyleSheet, View, TextInput, TouchableOpacity, Image, ActivityIndicator, Modal } from "react-native";
 import { useFonts } from "expo-font";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList, useAuth } from "../App";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
-type LoginScreenNavigationProp = StackNavigationProp< RootStackParamList, "Login" >;
+type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login">;
 type Props = { navigation: LoginScreenNavigationProp };
 
 export default function Login({ navigation }: Props) {
-  const [email, setEmail] = useState("");
+  const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [errorEmail, setErrorEmail] = useState("");
+  const [errorEmailOrUsername, setErrorEmailOrUsername] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
   const [showDeletedModal, setShowDeletedModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -35,11 +35,11 @@ export default function Login({ navigation }: Props) {
 
   const validarCampos = () => {
     let valid = true;
-    setErrorEmail("");
+    setErrorEmailOrUsername("");
     setErrorPassword("");
 
-    if (!email.includes("@")) {
-      setErrorEmail("Correo inválido.");
+    if (!emailOrUsername.trim()) {
+      setErrorEmailOrUsername("Ingrese su email o username.");
       valid = false;
     }
     if (!password) {
@@ -49,24 +49,59 @@ export default function Login({ navigation }: Props) {
     return valid;
   };
 
+  // Función para buscar el email del username
+  const buscarEmailPorUsername = async (username: string): Promise<string | null> => {
+    try {
+      const q = query(collection(db, "users"), where("username", "==", username.trim()));
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty) {
+        const userData = snapshot.docs[0].data();
+        return userData.email || null;
+      }
+      
+      return null;
+    } catch (error) {
+      console.log("Error buscando username:", error);
+      return null;
+    }
+  };
+
   const logueo = async () => {
     if (!validarCampos()) return;
 
     setLoading(true);
-    setErrorEmail("");
+    setErrorEmailOrUsername("");
     setErrorPassword("");
 
     try {
-      console.log(" Intentando login con:", email);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      let emailToLogin = emailOrUsername.trim();
+
+      // Si NO contiene @, asumimos que es username y buscamos email
+      if (!emailToLogin.includes("@")) {
+        console.log("🔍 Buscando email para username:", emailToLogin);
+        const foundEmail = await buscarEmailPorUsername(emailToLogin);
+        
+        if (!foundEmail) {
+          setErrorEmailOrUsername("Username no encontrado.");
+          setLoading(false);
+          return;
+        }
+        
+        emailToLogin = foundEmail;
+        console.log("✅ Email encontrado:", emailToLogin);
+      }
+
+      console.log("🔐 Intentando login con email:", emailToLogin);
+      const userCredential = await signInWithEmailAndPassword(auth, emailToLogin, password);
       const user = userCredential.user;
-      console.log(" Login exitoso en Auth, verificando Firestore...");
+      console.log("✅ Login exitoso en Auth, verificando Firestore...");
 
       const userDoc = await getDoc(doc(db, "users", user.uid));
-      console.log(" Documento existe:", userDoc.exists());
+      console.log("📄 Documento existe:", userDoc.exists());
 
       if (!userDoc.exists()) {
-        console.log(" Usuario no existe en Firestore - Bloqueando navegación...");
+        console.log("❌ Usuario no existe en Firestore - Bloqueando navegación...");
         
         setBlockNavigation(true);
         
@@ -78,21 +113,21 @@ export default function Login({ navigation }: Props) {
         return;
       }
 
-      console.log(" Login completamente exitoso");
+      console.log("✅ Login completamente exitoso");
       
     } catch (error: any) {
-      console.log(" Error en login:", error.code, error.message);
+      console.log("❌ Error en login:", error.code, error.message);
       
       if (error.code === "auth/user-not-found") {
-        setErrorEmail("No existe una cuenta con este correo.");
+        setErrorEmailOrUsername("No existe una cuenta con este email/username.");
       } else if (error.code === "auth/wrong-password") {
         setErrorPassword("Contraseña incorrecta.");
       } else if (error.code === "auth/invalid-email") {
-        setErrorEmail("Correo no válido.");
+        setErrorEmailOrUsername("Email no válido.");
       } else if (error.code === "auth/invalid-credential") {
-        setErrorEmail("Credenciales inválidas.");
+        setErrorEmailOrUsername("Credenciales inválidas.");
       } else {
-        setErrorEmail("Error al iniciar sesión: " + error.message);
+        setErrorEmailOrUsername("Error al iniciar sesión: " + error.message);
       }
     } finally {
       setLoading(false);
@@ -100,20 +135,20 @@ export default function Login({ navigation }: Props) {
   };
 
   const handleModalClose = async () => {
-    console.log(" Cerrando modal y sesión...");
+    console.log("🚪 Cerrando modal y sesión...");
     setShowDeletedModal(false);
     
     try {
       if (auth.currentUser) {
         await auth.signOut();
-        console.log(" Sesión cerrada desde modal");
+        console.log("✅ Sesión cerrada desde modal");
       }
     } catch (err) {
-      console.log(" Error cerrando sesión desde modal:", err);
+      console.log("❌ Error cerrando sesión desde modal:", err);
     }
     
     setBlockNavigation(false);
-    setEmail("");
+    setEmailOrUsername("");
     setPassword("");
   };
 
@@ -129,19 +164,18 @@ export default function Login({ navigation }: Props) {
         Inicia sesión para continuar
       </Text>
 
-      <View style={[styles.inputContainer, errorEmail ? styles.inputError : null]}>
-        <Icon name="email-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+      <View style={[styles.inputContainer, errorEmailOrUsername ? styles.inputError : null]}>
+        <Icon name="account-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
         <TextInput
-          placeholder="Correo"
-          value={email}
-          onChangeText={setEmail}
+          placeholder="Nombre de Usuario o Email"
+          value={emailOrUsername}
+          onChangeText={setEmailOrUsername}
           style={[styles.input, styles.fontTypold]}
           placeholderTextColor="#aaa"
-          keyboardType="email-address"
           autoCapitalize="none"
         />
       </View>
-      {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}
+      {errorEmailOrUsername ? <Text style={styles.errorText}>{errorEmailOrUsername}</Text> : null}
 
       <View style={[styles.inputContainer, errorPassword ? styles.inputError : null]}>
         <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
@@ -211,7 +245,7 @@ const styles = StyleSheet.create({
   loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   logo: { width: 220, height: 120, marginBottom: 20 },
   title: { fontSize: 26, fontWeight: "bold", color: "#BEAF87", marginBottom: 5 },
-  subtitle: { fontSize: 16, color: "#fff", marginBottom: 25 },
+  subtitle: { fontSize: 16, color: "#252526", marginBottom: 25 },
   inputContainer: { flexDirection: "row", alignItems: "center", width: "90%", borderWidth: 1, borderColor: "#BEAF87", backgroundColor: "#252526", borderRadius: 8, paddingHorizontal: 10, marginBottom: 10 },
   input: { flex: 1, color: "#fff", height: 48, fontSize: 16 },
   inputError: { borderColor: "red" },

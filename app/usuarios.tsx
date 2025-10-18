@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Dimensions, Modal, TextInput } from "react-native";
 import { db } from "../firebase";
-import { collection, getDocs, updateDoc, doc, DocumentData, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, DocumentData, deleteDoc, query, where } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList, useAuth } from "../App";
 import { getAuth } from "firebase/auth";
@@ -14,6 +14,7 @@ type Props = { navigation: UsuariosScreenNavigationProp };
 type Usuario = {
   id: string;
   email: string;
+  username: string;
   role: string;
   createdAt?: any;
 };
@@ -26,7 +27,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   const [usuariosFiltrados, setUsuariosFiltrados] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<'promote' | 'demote' | 'delete' | 'editEmail' | null>(null);
+  const [modalType, setModalType] = useState<'promote' | 'demote' | 'delete' | 'editUsername' | 'infoEmail' | null>(null);
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
   const [message, setMessage] = useState({ text: '', type: 'success' as 'success' | 'error' });
   
@@ -34,9 +35,9 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
   const [filtroRol, setFiltroRol] = useState<FiltroRol>('todos');
   
-  // Estado para edición de email
-  const [nuevoEmail, setNuevoEmail] = useState('');
-  const [errorEmail, setErrorEmail] = useState('');
+  // Estado para edición de username
+  const [nuevoUsername, setNuevoUsername] = useState('');
+  const [errorUsername, setErrorUsername] = useState('');
 
   const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
     setMessage({ text, type });
@@ -52,7 +53,8 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         const data = docu.data() as DocumentData;
         lista.push({ 
           id: docu.id, 
-          email: data.email, 
+          email: data.email,
+          username: data.username || data.email.split('@')[0],
           role: data.role,
           createdAt: data.createdAt
         });
@@ -71,14 +73,13 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   const aplicarFiltros = (listaUsuarios: Usuario[], busqueda: string, filtro: FiltroRol) => {
     let resultado = [...listaUsuarios];
     
-    // Filtrar por búsqueda de email
     if (busqueda.trim() !== '') {
       resultado = resultado.filter(u => 
-        u.email.toLowerCase().includes(busqueda.toLowerCase())
+        u.email.toLowerCase().includes(busqueda.toLowerCase()) ||
+        u.username.toLowerCase().includes(busqueda.toLowerCase())
       );
     }
     
-    // Filtrar por rol
     if (filtro === 'admin') {
       resultado = resultado.filter(u => u.role === 'admin' || u.role === 'superuser');
     } else if (filtro === 'noAdmin') {
@@ -92,13 +93,17 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
     aplicarFiltros(usuarios, searchText, filtroRol);
   }, [searchText, filtroRol, usuarios]);
 
-  const openModal = (type: 'promote' | 'demote' | 'delete' | 'editEmail', user: Usuario) => {
+  const openModal = (type: 'promote' | 'demote' | 'delete' | 'editUsername' | 'infoEmail', user?: Usuario) => {
     setModalType(type);
-    setSelectedUser(user);
     
-    if (type === 'editEmail') {
-      setNuevoEmail(user.email);
-      setErrorEmail('');
+    if (type === 'infoEmail') {
+      setSelectedUser(null);
+    } else if (user) {
+      setSelectedUser(user);
+      if (type === 'editUsername') {
+        setNuevoUsername(user.username);
+        setErrorUsername('');
+      }
     }
     
     setModalVisible(true);
@@ -108,28 +113,54 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
     setModalVisible(false);
     setModalType(null);
     setSelectedUser(null);
-    setNuevoEmail('');
-    setErrorEmail('');
+    setNuevoUsername('');
+    setErrorUsername('');
   };
 
-  const validarEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const validarUsername = async (username: string): Promise<boolean> => {
+    const trimmedUsername = username.trim();
     
-    if (!emailRegex.test(email)) {
-      setErrorEmail("Formato de email inválido");
+    // Validar que no sea el mismo
+    if (trimmedUsername === selectedUser?.username) {
+      setErrorUsername("❌ Este ya es tu nombre de usuario actual");
+      return false;
+    }
+
+    // Validar longitud mínima
+    if (trimmedUsername.length < 3) {
+      setErrorUsername("Mínimo 3 caracteres");
+      return false;
+    }
+
+    // Validar longitud máxima
+    if (trimmedUsername.length > 20) {
+      setErrorUsername("Máximo 20 caracteres");
+      return false;
+    }
+
+    // Validar formato
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!usernameRegex.test(trimmedUsername)) {
+      setErrorUsername("Solo letras, números y guion bajo (_)");
       return false;
     }
     
-    const emailExiste = usuarios.some(u => 
-      u.email.toLowerCase() === email.toLowerCase() && u.id !== selectedUser?.id
-    );
-    
-    if (emailExiste) {
-      setErrorEmail("Este email ya está registrado");
+    // Verificar si ya existe
+    try {
+      const q = query(collection(db, "users"), where("username", "==", trimmedUsername));
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty && snapshot.docs[0].id !== selectedUser?.id) {
+        setErrorUsername(`El nombre de usuario "@${trimmedUsername}" ya está en uso`);
+        return false;
+      }
+    } catch (error) {
+      console.log("Error validando username:", error);
+      setErrorUsername("Error al verificar disponibilidad");
       return false;
     }
     
-    setErrorEmail('');
+    setErrorUsername('');
     return true;
   };
 
@@ -141,10 +172,14 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         case 'promote':
           await updateDoc(doc(db, "users", selectedUser.id), { role: "admin" });
           showMessage("Usuario promovido a administrador", "success");
+          fetchUsuarios();
+          closeModal();
           break;
         case 'demote':
           await updateDoc(doc(db, "users", selectedUser.id), { role: "user" });
           showMessage("Privilegios de administrador removidos", "success");
+          fetchUsuarios();
+          closeModal();
           break;
         case 'delete':
           const auth = getAuth();
@@ -152,26 +187,31 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
           if (currentUser && currentUser.uid !== selectedUser.id) {
             await deleteDoc(doc(db, "users", selectedUser.id));
             showMessage("Usuario eliminado correctamente", "success");
+            fetchUsuarios();
+            closeModal();
           } else {
             showMessage("No puedes eliminar tu propia cuenta", "error");
+            closeModal();
           }
           break;
-        case 'editEmail':
-          if (validarEmail(nuevoEmail.trim())) {
-            await updateDoc(doc(db, "users", selectedUser.id), { 
-              email: nuevoEmail.trim().toLowerCase() 
-            });
-            showMessage("Email actualizado correctamente", "success");
-          } else {
-            return; // No cerrar modal si hay error
+        case 'editUsername':
+          const isValid = await validarUsername(nuevoUsername.trim());
+          if (!isValid) {
+            // NO cerrar el modal, solo mostrar el error
+            return;
           }
+          // Si es válido, guardar y cerrar
+          await updateDoc(doc(db, "users", selectedUser.id), { 
+            username: nuevoUsername.trim()
+          });
+          showMessage("✅ Username actualizado correctamente", "success");
+          fetchUsuarios();
+          closeModal();
           break;
       }
-      fetchUsuarios();
     } catch (e) {
       console.log("Error en acción:", e);
       showMessage("Error al realizar la acción", "error");
-    } finally {
       closeModal();
     }
   };
@@ -183,27 +223,27 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
       case 'promote':
         return {
           title: 'Promover a Admin',
-          message: `¿Promover a ${selectedUser.email} como administrador?`,
+          message: `¿Promover a ${selectedUser.username} (${selectedUser.email}) como administrador?`,
           action: 'Promover',
           color: '#4CAF50'
         };
       case 'demote':
         return {
           title: 'Quitar Admin',
-          message: `¿Quitar privilegios de administrador a ${selectedUser.email}?`,
+          message: `¿Quitar privilegios de administrador a ${selectedUser.username}?`,
           action: 'Quitar Admin',
           color: '#ff9800'
         };
       case 'delete':
         return {
           title: 'Eliminar Usuario',
-          message: `¿Estás seguro que quieres eliminar a ${selectedUser.email}? Esta acción no se puede deshacer.`,
+          message: `¿Estás seguro que quieres eliminar a ${selectedUser.username} (${selectedUser.email})? Esta acción no se puede deshacer.`,
           action: 'Eliminar',
           color: '#ff6b6b'
         };
-      case 'editEmail':
+      case 'editUsername':
         return {
-          title: 'Editar Email',
+          title: 'Editar Nombre de Usuario',
           message: '',
           action: 'Guardar',
           color: '#4CAF50'
@@ -280,12 +320,11 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         <Ionicons name="search" size={20} color="#BEAF87" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por email..."
+          placeholder="Buscar por username o email..."
           placeholderTextColor="#888"
           value={searchText}
           onChangeText={setSearchText}
           autoCapitalize="none"
-          keyboardType="email-address"
         />
         {searchText !== '' && (
           <TouchableOpacity onPress={() => setSearchText('')}>
@@ -367,7 +406,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
           <Ionicons name="search-outline" size={48} color="#888" />
           <Text style={styles.emptyText}>
             {searchText !== '' 
-              ? "No se encontraron usuarios con ese email" 
+              ? "No se encontraron usuarios" 
               : "No hay usuarios en esta categoría"}
           </Text>
         </View>
@@ -379,14 +418,27 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
           renderItem={({ item }) => (
             <View style={styles.card}>
               <View style={styles.userInfo}>
-                <View style={styles.emailRow}>
-                  <Text style={styles.email}>{item.email}</Text>
-                  {/* Botón para editar email */}
+                {/* Username con botón de edición */}
+                <View style={styles.usernameRow}>
+                  <Ionicons name="person" size={18} color="#BEAF87" style={{ marginRight: 6 }} />
+                  <Text style={styles.username}>@{item.username}</Text>
                   <TouchableOpacity
-                    onPress={() => openModal('editEmail', item)}
-                    style={styles.editEmailButton}
+                    onPress={() => openModal('editUsername', item)}
+                    style={styles.editButton}
                   >
                     <Ionicons name="pencil" size={16} color="#BEAF87" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Email con botón de info */}
+                <View style={styles.emailRow}>
+                  <Ionicons name="mail" size={16} color="#888" style={{ marginRight: 6 }} />
+                  <Text style={styles.email}>{item.email}</Text>
+                  <TouchableOpacity
+                    onPress={() => openModal('infoEmail')}
+                    style={styles.infoButton}
+                  >
+                    <Ionicons name="information-circle" size={18} color="#888" />
                   </TouchableOpacity>
                 </View>
                 
@@ -433,58 +485,93 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         />
       )}
 
-      {/* Modal de confirmación */}
+      {/* Modal principal */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{modalContent.title}</Text>
-            
-            {modalType === 'editEmail' ? (
-              <View style={styles.editEmailContainer}>
-                <Text style={styles.modalMessage}>
-                  Usuario actual: {selectedUser?.email}
-                </Text>
-                
-                <View style={styles.inputContainer}>
-                  <Ionicons name="mail" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
-                  <TextInput
-                    style={styles.emailInput}
-                    placeholder="Nuevo email"
-                    placeholderTextColor="#888"
-                    value={nuevoEmail}
-                    onChangeText={(text) => {
-                      setNuevoEmail(text);
-                      setErrorEmail('');
-                    }}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
+            {modalType === 'infoEmail' ? (
+              // Modal de información del email
+              <>
+                <View style={styles.iconContainer}>
+                  <Ionicons name="information-circle" size={48} color="#BEAF87" />
                 </View>
-                
-                {errorEmail !== '' && (
-                  <Text style={styles.errorText}>{errorEmail}</Text>
-                )}
-              </View>
+                <Text style={styles.modalTitle}>Email no editable</Text>
+                <Text style={styles.infoModalText}>
+                  ⚠️ El email <Text style={{ fontWeight: 'bold' }}>no puede modificarse</Text>.
+                </Text>
+                <Text style={styles.infoModalText}>
+                  ✅ Puedes editar el <Text style={{ fontWeight: 'bold' }}>NOMBRE DE USUARIO</Text> para cambiar cómo se identifica el usuario.
+                </Text>
+                <Text style={styles.infoModalText}>
+                  🔒 El email es <Text style={{ fontWeight: 'bold' }}>permanente</Text> por razones de seguridad.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: '#BEAF87', width: '100%' }]}
+                  onPress={closeModal}
+                >
+                  <Text style={styles.modalButtonText}>Entendido</Text>
+                </TouchableOpacity>
+              </>
             ) : (
-              <Text style={styles.modalMessage}>{modalContent.message}</Text>
+              // Modales normales (editar, eliminar, promover)
+              <>
+                <Text style={styles.modalTitle}>{modalContent.title}</Text>
+                
+                {modalType === 'editUsername' ? (
+                  <View style={styles.editContainer}>
+                    <Text style={styles.modalMessage}>
+                      Nombre de Usuario actual: <Text style={{ color: '#BEAF87', fontWeight: 'bold' }}>@{selectedUser?.username}</Text>
+                    </Text>
+                    
+                    <View style={styles.inputContainer}>
+                      <Ionicons name="at" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Nuevo username"
+                        placeholderTextColor="#888"
+                        value={nuevoUsername}
+                        onChangeText={(text) => {
+                          setNuevoUsername(text);
+                          setErrorUsername('');
+                        }}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        maxLength={20}
+                      />
+                    </View>
+
+                    <Text style={styles.helpText}>
+                      3-20 caracteres • Letras, números y _
+                    </Text>
+                    
+                    {errorUsername !== '' && (
+                      <View style={styles.errorContainer}>
+                        <Ionicons name="alert-circle" size={16} color="#ff6b6b" style={{ marginRight: 6 }} />
+                        <Text style={styles.errorText}>{errorUsername}</Text>
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={styles.modalMessage}>{modalContent.message}</Text>
+                )}
+                
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: modalContent.color }]}
+                    onPress={handleAction}
+                  >
+                    <Text style={styles.modalButtonText}>{modalContent.action}</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelModalButton]}
+                    onPress={closeModal}
+                  >
+                    <Text style={styles.cancelModalButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
             )}
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: modalContent.color }]}
-                onPress={handleAction}
-              >
-                <Text style={styles.modalButtonText}>{modalContent.action}</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelModalButton]}
-                onPress={closeModal}
-              >
-                <Text style={styles.cancelModalButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </Modal>
@@ -648,25 +735,38 @@ const styles = StyleSheet.create({
   userInfo: {
     marginBottom: 15,
   },
+  usernameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  username: {
+    fontSize: 18,
+    color: "#BEAF87",
+    fontWeight: "bold",
+    flex: 1,
+  },
   emailRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   email: { 
-    fontSize: 16, 
-    color: "#fff",
-    fontWeight: "500",
+    fontSize: 14, 
+    color: "#aaa",
     flex: 1,
   },
-  editEmailButton: {
+  editButton: {
     padding: 6,
     borderRadius: 6,
     backgroundColor: "#1c1c1c",
     borderWidth: 1,
     borderColor: "#BEAF87",
     marginLeft: 10,
+  },
+  infoButton: {
+    padding: 4,
+    marginLeft: 8,
   },
   roleBadge: {
     alignSelf: "flex-start",
@@ -715,7 +815,11 @@ const styles = StyleSheet.create({
     padding: 25,
     borderRadius: 15,
     width: "85%",
+    maxWidth: 400,
     alignItems: "center",
+  },
+  iconContainer: {
+    marginBottom: 15,
   },
   modalTitle: {
     color: "#BEAF87",
@@ -731,7 +835,15 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     lineHeight: 22,
   },
-  editEmailContainer: {
+  infoModalText: {
+    color: "#fff",
+    fontSize: 15,
+    textAlign: "center",
+    marginBottom: 15,
+    lineHeight: 22,
+    paddingHorizontal: 10,
+  },
+  editContainer: {
     width: "100%",
     marginBottom: 20,
   },
@@ -745,17 +857,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#BEAF87",
   },
-  emailInput: {
+  input: {
     flex: 1,
     color: "#fff",
     paddingVertical: 12,
     fontSize: 16,
   },
+  helpText: {
+    color: "#888",
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+    paddingHorizontal: 10,
+  },
   errorText: {
     color: "#ff6b6b",
     fontSize: 13,
-    marginTop: 8,
-    textAlign: "center",
+    fontWeight: "600",
+    flex: 1,
   },
   modalButtons: {
     flexDirection: "row",
