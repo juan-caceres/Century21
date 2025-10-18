@@ -16,6 +16,7 @@ import { useFonts } from 'expo-font';
 import { getDoc, doc, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase";
 import GestionSalas from "./app/gestionSalas";
+import * as Notifications from 'expo-notifications';
 
 export type RootStackParamList = {
   Login: undefined;
