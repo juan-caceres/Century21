@@ -9,18 +9,28 @@ import { collection,onSnapshot, QueryDocumentSnapshot, DocumentData, query, orde
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import * as Notifications from 'expo-notifications';
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { registerForPushNotificationsAsync } from "./servicios/notifications";
+
+
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, "Home">;
 type Props = { navigation: HomeScreenNavigationProp };
 
 export default function Home({ navigation }: Props) {
   const { role } = useAuth(); 
+  const {user} = useAuth();
   console.log("Role actual:", role);
   console.log("Tipo de role:", typeof role);
   console.log("Es superuser?", role === "superuser");
  
   const [salas, setSalas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      registerForPushNotificationsAsync(user.uid);
+    }
+  }, [user]);
 
   useEffect(() => {
     const salasRef = collection(db, "salas");
@@ -137,6 +147,7 @@ export default function Home({ navigation }: Props) {
       )}
 
       {/* Botón para lanzar notificación */}
+      <Text style={{ marginTop: 20, fontSize: 16, color: "#BEAF87", textAlign: "center" }}>Bienvenido {user?.email} probemos notificacion</Text>
       <Button title="Enviar Notificación" onPress={sendNotification} />
     </View>
   );
