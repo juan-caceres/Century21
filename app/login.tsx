@@ -18,6 +18,7 @@ export default function Login({ navigation }: Props) {
   const [errorEmailOrUsername, setErrorEmailOrUsername] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
   const [showDeletedModal, setShowDeletedModal] = useState(false);
+  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setBlockNavigation } = useAuth();
 
@@ -39,7 +40,7 @@ export default function Login({ navigation }: Props) {
     setErrorPassword("");
 
     if (!emailOrUsername.trim()) {
-      setErrorEmailOrUsername("Ingrese su email o username.");
+      setErrorEmailOrUsername("Ingrese su email o Nombre de Usuario.");
       valid = false;
     }
     if (!password) {
@@ -62,7 +63,7 @@ export default function Login({ navigation }: Props) {
       
       return null;
     } catch (error) {
-      console.log("Error buscando username:", error);
+      console.log("Error buscando Nombre de Usuario:", error);
       return null;
     }
   };
@@ -79,11 +80,11 @@ export default function Login({ navigation }: Props) {
 
       // Si NO contiene @, asumimos que es username y buscamos email
       if (!emailToLogin.includes("@")) {
-        console.log("🔍 Buscando email para username:", emailToLogin);
+        console.log("🔍 Buscando email para Nombre de Usuario:", emailToLogin);
         const foundEmail = await buscarEmailPorUsername(emailToLogin);
         
         if (!foundEmail) {
-          setErrorEmailOrUsername("Username no encontrado.");
+          setErrorEmailOrUsername("Nombre de Usuario no encontrado.");
           setLoading(false);
           return;
         }
@@ -113,13 +114,30 @@ export default function Login({ navigation }: Props) {
         return;
       }
 
-      console.log("✅ Login completamente exitoso");
+      const userData = userDoc.data();
+      const isEliminado = userData.eliminado ?? false;
+      
+      if (isEliminado) {
+        console.log("❌ Usuario desactivado - Bloqueando navegación...");
+        
+        setBlockNavigation(true);  
+        await auth.signOut();
+        
+        setTimeout(() => {
+          setShowDeactivatedModal(true);
+          setLoading(false);
+        }, 100);
+        
+        return;
+      }
+
+      console.log("✅ Login completamente exitoso - Usuario activo");
       
     } catch (error: any) {
       console.log("❌ Error en login:", error.code, error.message);
       
       if (error.code === "auth/user-not-found") {
-        setErrorEmailOrUsername("No existe una cuenta con este email/username.");
+        setErrorEmailOrUsername("No existe una cuenta con este email/Nombre de Usuario.");
       } else if (error.code === "auth/wrong-password") {
         setErrorPassword("Contraseña incorrecta.");
       } else if (error.code === "auth/invalid-email") {
@@ -147,6 +165,14 @@ export default function Login({ navigation }: Props) {
       console.log("❌ Error cerrando sesión desde modal:", err);
     }
     
+    setBlockNavigation(false);
+    setEmailOrUsername("");
+    setPassword("");
+  };
+
+  const handleDeactivatedModalClose = () => {
+    console.log("🚪 Cerrando modal de usuario desactivado...");
+    setShowDeactivatedModal(false);
     setBlockNavigation(false);
     setEmailOrUsername("");
     setPassword("");
@@ -211,7 +237,7 @@ export default function Login({ navigation }: Props) {
         <Text style={[styles.link, styles.fontTypold]}>Crear cuenta</Text>
       </TouchableOpacity>
 
-      {/* Modal de usuario eliminado */}
+      {/* Modal de usuario eliminado permanentemente */}
       <Modal 
         transparent 
         visible={showDeletedModal} 
@@ -231,6 +257,37 @@ export default function Login({ navigation }: Props) {
               onPress={handleModalClose}
             >
               <Text style={[styles.fontTypold, styles.modalButtonText]}>Aceptar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de usuario desactivado */}
+      <Modal 
+        transparent 
+        visible={showDeactivatedModal} 
+        animationType="fade"
+        onRequestClose={handleDeactivatedModalClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.iconContainer}>
+              <Icon name="account-off" size={48} color="#ff6b6b" />
+            </View>
+            <Text style={[styles.fontTypold, styles.modalTitle]}>
+              Cuenta Desactivada
+            </Text>
+            <Text style={[styles.fontTypold, styles.modalMessage]}>
+              Tu cuenta ha sido desactivada temporalmente por un administrador. No puedes iniciar sesión en este momento.
+            </Text>
+            <Text style={[styles.fontTypold, styles.modalMessage, { fontSize: 14, color: "#aaa", marginTop: -10 }]}>
+              Contacta con el administrador si crees que esto es un error.
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={handleDeactivatedModalClose}
+            >
+              <Text style={[styles.fontTypold, styles.modalButtonText]}>Entendido</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -255,6 +312,7 @@ const styles = StyleSheet.create({
   link: { marginTop: 20, color: "#252526", fontSize: 16, fontWeight: "600" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" },
   modalContent: { backgroundColor: "#fff", padding: 25, borderRadius: 12, width: "80%", alignItems: "center" },
+  iconContainer: { marginBottom: 15 },
   modalTitle: { fontSize: 20, fontWeight: "bold", color: "#BEAF87", marginBottom: 10 },
   modalMessage: { fontSize: 16, textAlign: "center", marginBottom: 20, color: "#252526" },
   modalButton: { backgroundColor: "#BEAF87", paddingVertical: 10, paddingHorizontal: 25, borderRadius: 8 },
