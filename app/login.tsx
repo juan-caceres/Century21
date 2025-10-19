@@ -22,7 +22,7 @@ export default function Login({ navigation }: Props) {
   const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setBlockNavigation } = useAuth();
-
+  
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Regular.ttf"),
   });
@@ -98,6 +98,9 @@ export default function Login({ navigation }: Props) {
       console.log("🔐 Intentando login con email:", emailToLogin);
       const userCredential = await signInWithEmailAndPassword(auth, emailToLogin, password);
       const user = userCredential.user;
+
+      //actualizar token de notificaciones del usuario
+      await registerForPushNotificationsAsync(user.uid);
       console.log("✅ Login exitoso en Auth, verificando Firestore...");
 
       const userDoc = await getDoc(doc(db, "users", user.uid));
