@@ -750,6 +750,7 @@ const convertirReservasParaCalendario = () => {
               <Text style={{ color: "#252526" }}>Cargando...</Text>
             ) : reservasDia.length === 0 ? (
               <Text style={{ color: "#929292ff" }}>No hay reservas para este día.</Text>
+              
             ) : (
               <FlatList
                 data={reservasDia}
@@ -832,6 +833,8 @@ const convertirReservasParaCalendario = () => {
             </Modal>
 
             <View style={styles.formSection}>
+              <Text
+              style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>*tocar reseva para editar</Text>
               <Text style={styles.formSectionTitle}>
                 {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
               </Text>
