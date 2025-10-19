@@ -123,6 +123,7 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
+  // Detección de usuario eliminado O desactivado
   useEffect(() => {
     let unsubscribeFirestore: (() => void) | null = null;
 
@@ -150,11 +151,13 @@ export default function App() {
             
             console.log("Usuario válido - Rol:", userRole, "- Eliminado:", isEliminado);
             
+            // Si el usuario está eliminado, bloquear acceso
             if (isEliminado) {
               console.log("❌ Usuario desactivado - Bloqueando acceso...");
               setRole(null);
               setBlockNavigation(true);
               
+              // Cerrar sesión automáticamente
               setTimeout(async () => {
                 try {
                   await signOut(auth);
@@ -176,6 +179,7 @@ export default function App() {
               setShowSessionModal(true);
             }
 
+            // Listener en tiempo real para detectar cambios en el documento
             unsubscribeFirestore = onSnapshot(
               userDocRef,
               async (docSnapshot) => {

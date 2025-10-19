@@ -134,6 +134,22 @@ export default function Login({ navigation, route }: Props) {
       }
 
       console.log("✅ Login completamente exitoso - Usuario activo");
+      
+      if (isEliminado) {
+        console.log("❌ Usuario desactivado - Bloqueando navegación...");
+        
+        setBlockNavigation(true);  
+        await auth.signOut();
+        
+        setTimeout(() => {
+          setShowDeactivatedModal(true);
+          setLoading(false);
+        }, 100);
+        
+        return;
+      }
+
+      console.log("✅ Login completamente exitoso - Usuario activo");
       setSessionPending(true);
       setLoading(false);
 
