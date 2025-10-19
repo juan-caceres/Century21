@@ -37,6 +37,7 @@ const AuthContext = createContext<{
   setRole: React.Dispatch<React.SetStateAction<string | null>>;
   blockNavigation: boolean;
   setBlockNavigation: React.Dispatch<React.SetStateAction<boolean>>;
+  setSessionPending: React.Dispatch<React.SetStateAction<boolean>>;
 }>({
   user: null,
   setUser: () => {},
@@ -44,6 +45,7 @@ const AuthContext = createContext<{
   setRole: () => {},
   blockNavigation: false,
   setBlockNavigation: () => {},
+  setSessionPending: () => {},
 });
 export const useAuth = () => useContext(AuthContext);
 
@@ -63,6 +65,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [blockNavigation, setBlockNavigation] = useState(false);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [sessionPending, setSessionPending] = useState(false);
   const [fontsLoaded] = useFonts({Typold: require('./assets/Typold-Bold.ttf'),});
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<any>(false);
@@ -77,7 +81,6 @@ export default function App() {
 
       console.log("Notificación recibida:", titulo);
 
-      // Solo enviar correo si es una notificación de reserva
       if (titulo.startsWith("Reserva en Sala")) {
         try {
           const userEmail = data.usuarioEmail || auth.currentUser?.email || "usuario@ejemplo.com";
@@ -127,7 +130,6 @@ export default function App() {
     const unsub = onAuthStateChanged(auth, async (usuario) => {
       console.log("Auth state cambió:", usuario ? "Usuario logueado" : "Sin usuario");
       
-      // Limpiar listener anterior de Firestore si existe
       if (unsubscribeFirestore) {
         unsubscribeFirestore();
         unsubscribeFirestore = null;
@@ -137,7 +139,6 @@ export default function App() {
 
       if (usuario) {
         try {
-          // Verificar si el usuario existe en Firestore
           const userDocRef = doc(db, "users", usuario.uid);
           const userDoc = await getDoc(userDocRef);
           
@@ -172,6 +173,11 @@ export default function App() {
             
             setRole(userRole);
             setBlockNavigation(false);
+            
+            // Si hay sesión pendiente, mostrar modal
+            if (sessionPending) {
+              setShowSessionModal(true);
+            }
 
             // Listener en tiempo real para detectar cambios en el documento
             unsubscribeFirestore = onSnapshot(
@@ -213,6 +219,7 @@ export default function App() {
       } else {
         setRole(null);
         setBlockNavigation(false);
+        setSessionPending(false);
       }
 
       setLoading(false);
@@ -224,7 +231,7 @@ export default function App() {
         unsubscribeFirestore();
       }
     };
-  }, []);
+  }, [sessionPending]);
 
   const handleAccountDeletedConfirm = async () => {
     console.log("Usuario confirmó eliminación permanente, cerrando sesión...");
@@ -241,6 +248,27 @@ export default function App() {
     }
   };
 
+  const handleKeepSession = () => {
+    console.log("✅ Usuario eligió mantener sesión");
+    setShowSessionModal(false);
+    setSessionPending(false);
+  };
+
+  const handleLogoutSession = async () => {
+    console.log("❌ Usuario eligió cerrar sesión");
+    setShowSessionModal(false);
+    setSessionPending(false);
+    
+    try {
+      await signOut(auth);
+      setUser(null);
+      setRole(null);
+      setBlockNavigation(false);
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
+  };
+
   if (loading || !fontsLoaded) return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
       <ActivityIndicator size="large" color="#BEAF87" />
@@ -250,18 +278,16 @@ export default function App() {
   const shouldShowAuthScreens = !user || blockNavigation || !role;
 
   return (
-    <AuthContext.Provider value={{ user, setUser, role, setRole, blockNavigation, setBlockNavigation }}>
+    <AuthContext.Provider value={{ user, setUser, role, setRole, blockNavigation, setBlockNavigation, setSessionPending }}>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {shouldShowAuthScreens ? (
-            // Pantallas de autenticación
             <>
               <Stack.Screen name="Login" component={Login} />
               <Stack.Screen name="Registro" component={Registro} />
               <Stack.Screen name="OlvidePassword" component={olvidePassword} />
             </>
           ) : (
-            // Pantallas principales (solo si usuario válido)
             <>
               <Stack.Screen name="Home" component={Home} />
               <Stack.Screen name="GestionSalas" component={GestionSalas} />
@@ -309,6 +335,48 @@ export default function App() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de confirmación de sesión */}
+      <Modal 
+        transparent 
+        visible={showSessionModal} 
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.iconText}>📱</Text>
+            </View>
+            <Text style={[styles.modalTitle, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+              Mantener Sesión
+            </Text>
+            <Text style={[styles.modalMessage, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+              ¿Deseas mantener tu sesión activa? Podrás acceder sin necesidad de volver a iniciar sesión.
+            </Text>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={handleLogoutSession}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modalButtonText, { color: "#BEAF87" }]}>
+                  Cerrar Sesión
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={handleKeepSession}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modalButtonText, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+                  Mantener
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </AuthContext.Provider>
   );
 }
@@ -320,11 +388,13 @@ const styles = StyleSheet.create({
   iconText: { fontSize: 40,},
   modalTitle: { color: "#BEAF87", fontSize: 24, fontWeight: "bold", marginBottom: 15, textAlign: "center",},
   modalMessage: { color: "#fff" ,fontSize: 16, textAlign: "center", marginBottom: 30, lineHeight: 24, paddingHorizontal: 10,},
-  modalButton: { backgroundColor: "#BEAF87", paddingVertical: 14, paddingHorizontal: 40, borderRadius: 10, width: "100%", alignItems: "center", shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5, },
+  buttonContainer: { flexDirection: "row", gap: 12, width: "100%" },
+  modalButton: { paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10, flex: 1, alignItems: "center", shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5, },
+  confirmButton: { backgroundColor: "#BEAF87" },
+  cancelButton: { backgroundColor: "#555", borderWidth: 1, borderColor: "#BEAF87" },
   modalButtonText: { color: "#252526", fontSize: 18, fontWeight: "bold",},
 });
 
-// Función para permisos y token push
 async function registerForPushNotificationsAsync(): Promise<string | null> {
   if (!Device.isDevice) {
     alert("Debes usar un dispositivo físico para notificaciones push");

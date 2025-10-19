@@ -10,9 +10,9 @@ import { RootStackParamList, useAuth } from "../App";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login">;
-type Props = { navigation: LoginScreenNavigationProp };
+type Props = { navigation: LoginScreenNavigationProp; route?: any };
 
-export default function Login({ navigation }: Props) {
+export default function Login({ navigation, route }: Props) {
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorEmailOrUsername, setErrorEmailOrUsername] = useState("");
@@ -21,6 +21,8 @@ export default function Login({ navigation }: Props) {
   const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setBlockNavigation } = useAuth();
+
+  const setSessionPending = route?.params?.setSessionPending || (() => {});
 
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Regular.ttf"),
@@ -133,6 +135,24 @@ export default function Login({ navigation }: Props) {
 
       console.log("✅ Login completamente exitoso - Usuario activo");
       
+      if (isEliminado) {
+        console.log("❌ Usuario desactivado - Bloqueando navegación...");
+        
+        setBlockNavigation(true);  
+        await auth.signOut();
+        
+        setTimeout(() => {
+          setShowDeactivatedModal(true);
+          setLoading(false);
+        }, 100);
+        
+        return;
+      }
+
+      console.log("✅ Login completamente exitoso - Usuario activo");
+      setSessionPending(true);
+      setLoading(false);
+
     } catch (error: any) {
       console.log("❌ Error en login:", error.code, error.message);
       
@@ -147,7 +167,6 @@ export default function Login({ navigation }: Props) {
       } else {
         setErrorEmailOrUsername("Error al iniciar sesión: " + error.message);
       }
-    } finally {
       setLoading(false);
     }
   };
