@@ -5,6 +5,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../../firebase";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
 import { useAuth } from "../../App";
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 type RootStackParamList = {
   Login: undefined;
@@ -44,7 +45,9 @@ export default function BtnCerrarSesion() {
         style={styles.logoutButton} 
         onPress={() => setModalVisible(true)}
       >
-        <Text style={styles.logoutText}>Cerrar Sesión</Text>
+      
+        <Text style={styles.logoutText}>Cerrar Sesión </Text>
+
       </TouchableOpacity>
 
       {/* Modal de confirmación */}
@@ -85,7 +88,7 @@ export default function BtnCerrarSesion() {
 
 const styles = StyleSheet.create({
   logoutButton: { 
-    backgroundColor: "#BEAF87", 
+    backgroundColor: "#f89292ff", 
     padding: 8, 
     borderRadius: 5 
   },
