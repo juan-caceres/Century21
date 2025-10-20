@@ -96,20 +96,20 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     setSemanaActual(nuevaFecha);
   };
 
-  // Reservas para un día específico
-  const obtenerReservasDelDia = (fecha: Date) => {
-    const año = fecha.getFullYear();
-    const mes = fecha.getMonth();
-    const dia = fecha.getDate();
+// Reservas para un día específico
+const obtenerReservasDelDia = (fecha: Date) => {
+  const año = fecha.getFullYear();
+  const mes = fecha.getMonth();
+  const dia = fecha.getDate();
+  
+  return reservas.filter(reserva => {
+    const reservaAño = reserva.inicio.getFullYear();
+    const reservaMes = reserva.inicio.getMonth();
+    const reservaDia = reserva.inicio.getDate();
     
-    return reservas.filter(reserva => {
-      const reservaAño = reserva.inicio.getFullYear();
-      const reservaMes = reserva.inicio.getMonth();
-      const reservaDia = reserva.inicio.getDate();
-      
-      return reservaAño === año && reservaMes === mes && reservaDia === dia;
-    });
-  };
+    return reservaAño === año && reservaMes === mes && reservaDia === dia;
+  });
+};
 
   const formatearFecha = (fecha: Date) => {
     const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
@@ -139,54 +139,55 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     }
   };
 
-  // Render de evento en el calendario
-  const renderizarEvento = (reserva: Reserva, fecha: Date) => {
-    const horaInicio = reserva.inicio.getHours();
-    const minutosInicio = reserva.inicio.getMinutes();
-    const horaFin = reserva.fin.getHours();
-    const minutosFin = reserva.fin.getMinutes();
-    
-    const topPosition = ((horaInicio - HORAS_INICIO) + minutosInicio / 60) * ALTURA_HORA;
-    const duration = ((horaFin - horaInicio) + (minutosFin - minutosInicio) / 60) * ALTURA_HORA;
-    
-    const tituloFontSize = isSmallDevice ? 8 : isMediumDevice ? 9 : 10;
-    const horaFontSize = isSmallDevice ? 7 : isMediumDevice ? 8 : 9;
-    
-    return (
-      <View
-        key={reserva.id}
-        style={[
-          styles.evento,
-          {
-            top: topPosition,
-            height: Math.max(duration, 20),
-            padding: isSmallDevice ? 3 : isMediumDevice ? 4 : 5,
-          }
-        ]}
-      >
-        <Text style={[styles.eventoTexto, { fontSize: tituloFontSize }]} numberOfLines={isSmallDevice ? 1 : 2}>
-          {reserva.titulo}
-        </Text>
-        <Text style={[styles.eventoHora, { fontSize: horaFontSize }]}>
-          {`${horaInicio.toString().padStart(2, '0')}:${minutosInicio.toString().padStart(2, '0')}`}
-        </Text>
-      </View>
-    );
-  };
+// Render de evento en el calendario
+const renderizarEvento = (reserva: Reserva, fecha: Date) => {
+  const horaInicio = reserva.inicio.getHours();
+  const minutosInicio = reserva.inicio.getMinutes();
+  const horaFin = reserva.fin.getHours();
+  const minutosFin = reserva.fin.getMinutes();
+  
+  const topPosition = ((horaInicio - HORAS_INICIO) + minutosInicio / 60) * ALTURA_HORA;
+  const duration = ((horaFin - horaInicio) + (minutosFin - minutosInicio) / 60) * ALTURA_HORA;
+  
+  const tituloFontSize = isSmallDevice ? 8 : isMediumDevice ? 9 : 10;
+  const horaFontSize = isSmallDevice ? 7 : isMediumDevice ? 8 : 9;
+  
+  return (
+    <View
+      key={reserva.id}
+      style={[
+        styles.evento,
+        {
+          top: topPosition,
+          height: Math.max(duration, 20),
+          padding: isSmallDevice ? 3 : isMediumDevice ? 4 : 5,
+        }
+      ]}
+    >
+      <Text style={[styles.eventoTexto, { fontSize: tituloFontSize }]} numberOfLines={isSmallDevice ? 1 : 2}>
+        {reserva.titulo}
+      </Text>
+      <Text style={[styles.eventoHora, { fontSize: horaFontSize }]}>
+        {`${horaInicio.toString().padStart(2, '0')}:${minutosInicio.toString().padStart(2, '0')}`}
+      </Text>
+    </View>
+  );
+};
 
-  // FUNCIÓN PARA MANEJAR EL TOQUE EN LAS CELDAS
-  const manejarToqueCelda = (dia: Date, horaIndex: number) => {
-    const esPasado = esDiaPasado(dia);
-    
-    if (esPasado) {
-      return;
-    }
+// FUNCIÓN PARA MANEJAR EL TOQUE EN LAS CELDAS
+const manejarToqueCelda = (dia: Date, horaIndex: number) => {
+  const esPasado = esDiaPasado(dia);
+  
+  if (esPasado) {
+    alert("No se pueden seleccionar días anteriores.");
+    return;
+  }
 
-    const fechaHora = new Date(dia);
-    fechaHora.setHours(0, 0, 0, 0);
-    
-    alSeleccionarHorario(fechaHora);
-  };
+  const fechaHora = new Date(dia);
+  fechaHora.setHours(0, 0, 0, 0);
+  
+  alSeleccionarHorario(fechaHora);
+};
 
   const botonNavSize = isSmallDevice ? 32 : isMediumDevice ? 36 : 40;
   const tituloFontSize = isSmallDevice ? 11 : isMediumDevice ? 13 : 15;
@@ -324,7 +325,7 @@ const styles = StyleSheet.create({
   filaHora: { justifyContent: 'center', alignItems: 'center', paddingRight: isSmallDevice ? 2 : 4, },
   horaTexto: { color: '#666666', fontWeight: '500', },
   celdaHora: { borderBottomWidth: 0.5, borderBottomColor: '#e8e8e8', borderRightWidth: 0.5, borderRightColor: '#e8e8e8', position: 'relative', width: '100%', },
-  celdaPasada: { backgroundColor: '#f8f8f8', opacity: 0.5, },
+  celdaPasada: { backgroundColor: '#d3d3d3', opacity: 0.7, },
   lineaDivision: { position: 'absolute', top: 0, left: 0, right: 0, height: 0.5, backgroundColor: '#e8e8e8', },
   eventosContainer: { position: 'absolute', top: 0, left: 2, right: 2, bottom: 0, },
   evento: { position: 'absolute', left: 0, right: 0, backgroundColor: '#BEAF87', borderRadius: isSmallDevice ? 3 : 4, borderLeftWidth: 2, borderLeftColor: '#9A8F6A', },
