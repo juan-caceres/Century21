@@ -1,11 +1,11 @@
 //app/gestionSalas.tsx
 import { db } from "../firebase";
 import React, {useEffect,useState} from "react";
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, Modal } from "react-native";
+import { View, Text, TextInput,Dimensions ,TouchableOpacity, FlatList, StyleSheet, Alert, Modal } from "react-native";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 type RootStackParamList = {
     Home: undefined;
@@ -144,13 +144,24 @@ export default function GestionSalas(){
 
     return (
         <View style={styles.container}>
-            <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
-                <Text style={styles.navButtonText}>
-                    <Ionicons name="home" size={16} color="#ffffffff" style={{marginRight: 3}} /> Inicio
-                </Text>
-            </TouchableOpacity>
-
-            <Text style={styles.title}>Gestión de Salas</Text>
+            
+            {/* Header */}
+                  <View style={styles.header}>
+                    <TouchableOpacity 
+                      style={styles.backButton}
+                      onPress={() => navigation.navigate("Home")}
+                    >
+                      <Text style={styles.backButtonText}><FontAwesome name="arrow-left" size={15} color="white" /> Inicio</Text>
+                    </TouchableOpacity>
+            
+                    
+                    
+                    <Text style={styles.title}>Gestión de Salas</Text>
+                 
+                    <View style={styles.placeholder} />
+    
+                  </View>
+            
 
             {/* Mensaje de feedback */}
             {feedbackMessage && (
@@ -299,9 +310,12 @@ export default function GestionSalas(){
     );
 }
 
+const { height } = Dimensions.get("window");
+
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#ffffffff", padding: 20 },
-    title: { fontSize: 22, color: "#BEAF87", marginBottom: 15, fontWeight: "bold", textAlign: "center" },
+    container: { flex: 1, backgroundColor: "#ffffffff", padding: 20, paddingTop: height > 700 ? 70 : 40, },
+    title: { fontSize: 24, fontWeight: "bold", color: "#BEAF87", textAlign: "left", flex: 1, marginLeft:18 },
+    header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, },
     feedbackContainer: { padding: 10, borderRadius: 8, marginBottom: 15, alignItems: "center" },
     feedbackText: { color: "#000", fontWeight: "bold", textAlign: "center" },
     input: { backgroundColor: "#333333ff", color: "#ffffffff", padding: 10, marginBottom: 10, borderRadius: 8, borderColor: "#d4af37", borderWidth: 1, },
@@ -315,8 +329,9 @@ const styles = StyleSheet.create({
     cancelButtonText: { color: "#BEAF87", fontWeight: "bold" },
     salaItem: { backgroundColor: "#1a1a1a", padding: 12, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: "#333", },
     salaInfo: { marginBottom: 10 },
-    navButton: { backgroundColor: "#BEAF87", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6, alignSelf: 'flex-start', marginBottom: 10 },
-    navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: 14 },
+    placeholder: { width: 80, },
+    backButton: { backgroundColor: "#BEAF87", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, },
+    backButtonText: { color: "#ffffffff", fontWeight: "bold", fontSize: 14, },
     salaText: { color: "#fff", fontSize: 16, fontWeight: "bold", marginBottom: 4 },
     salaSubtext: { color: "#aaa", fontSize: 14 },
     actions: { flexDirection: "row", justifyContent: "flex-end", gap: 8 },

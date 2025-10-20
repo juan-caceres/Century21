@@ -8,6 +8,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList, useAuth } from "../App";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { registerForPushNotificationsAsync } from "./servicios/notifications";
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login">;
 type Props = { navigation: LoginScreenNavigationProp; route?: any };
@@ -27,6 +28,7 @@ export default function Login({ navigation, route }: Props) {
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Regular.ttf"),
   });
+
 
   if (!fontsLoaded) {
     return (
@@ -98,10 +100,14 @@ export default function Login({ navigation, route }: Props) {
       console.log("🔐 Intentando login con email:", emailToLogin);
       const userCredential = await signInWithEmailAndPassword(auth, emailToLogin, password);
       const user = userCredential.user;
+
+      //actualizar token de notificaciones del usuario
+      await registerForPushNotificationsAsync(user.uid);
       console.log("✅ Login exitoso en Auth, verificando Firestore...");
 
       const userDoc = await getDoc(doc(db, "users", user.uid));
       console.log("📄 Documento existe:", userDoc.exists());
+
 
       if (!userDoc.exists()) {
         console.log("❌ Usuario no existe en Firestore - Bloqueando navegación...");
@@ -115,6 +121,11 @@ export default function Login({ navigation, route }: Props) {
         
         return;
       }
+
+
+      
+      
+    
 
       const userData = userDoc.data();
       const isEliminado = userData.eliminado ?? false;
@@ -132,7 +143,8 @@ export default function Login({ navigation, route }: Props) {
         
         return;
       }
-
+      //usuario valido, actualiza token de notificaciones
+      await registerForPushNotificationsAsync(user.uid);
       console.log("✅ Login completamente exitoso - Usuario activo");
       
       if (isEliminado) {

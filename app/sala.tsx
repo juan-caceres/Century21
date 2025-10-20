@@ -1,10 +1,10 @@
 //app/sala.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, ActivityIndicator, Alert } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
-import { RootStackParamList } from "../App";
+import { RootStackParamList, useAuth } from "../App";
 import Calendario from "./componentes/calendario";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
@@ -14,6 +14,7 @@ import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import TimePicker from "./componentes/TimePicker";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Notifications from "expo-notifications";
+import { notifyReservaCreated,notifyReservaEdited,notifyReservaDeleted,notifyReservaDeletedByAdmin } from "./servicios/notificationService";
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
@@ -34,6 +35,7 @@ type Reserva = {
 const { width, height } = Dimensions.get("window");
 const isSmallDevice = width < 380;
 const isMediumDevice = width >= 380 && width < 600;
+
 
 export default function Sala({ navigation, route }: Props) {
   const { numero } = route.params; 
@@ -57,8 +59,6 @@ export default function Sala({ navigation, route }: Props) {
   const [todasLasSalas, setTodasLasSalas] = useState<any[]>([]);
   const [indiceActual, setIndiceActual] = useState<number>(-1);
 
-  //informacion para notificaciones
-  const [minutosAviso, setMinutosAviso] = useState("60"); // por defecto 60 minutos antes
 
   // Carga de fuente personalizada
   const [fontsLoaded] = useFonts({
@@ -109,6 +109,22 @@ export default function Sala({ navigation, route }: Props) {
     return () => unsubscribe();
   }, [selectedDay]);
 
+  //funcion para obtener username del usuario actual
+  const obtenerUsernameActual = async (): Promise<string> => {
+    try{
+      const usuarioId = auth.currentUser?.uid;
+      if (!usuarioId) return "Usuario";
+
+      const userDoc = await getDoc(doc(db,"users", usuarioId));
+      const userData = userDoc.data();
+      return userData?.username || userData?.email || "Usuario";
+
+    }catch (error){
+      console.log("Error al obtener username:", error);
+      return "Usuario";
+    }
+  };
+
   const fetchSalaInfo = async () => {
     try {
       const docRef = doc(db, "salas", numero);
@@ -120,14 +136,7 @@ export default function Sala({ navigation, route }: Props) {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigation.replace("Login");
-    } catch (err: any) {
-      console.log("Error cierre sesión:", err);
-    }
-  };
+
 
   const timeToMinutes = (t: string) => {
     const [hh, mm] = t.split(":").map((x) => parseInt(x, 10));
@@ -264,11 +273,14 @@ const convertirReservasParaCalendario = () => {
     return false;
   };
 
+
+  //FUNCION PARA MOSTRAR MENSAJE DE EXITO O ERROR 
   const showMessage = (text: string, type: "success" | "error" = "success", duration = 2500) => {
     setFeedbackMessage({ text, type });
     setTimeout(() => setFeedbackMessage(null), duration);
   };
 
+  //FUNCION PARA CREAR O ACTUALIZAR RESERVA
   const handleCreateOrUpdateReserva = async () => {
     if (!horaInicio || !horaFin || !motivo.trim()) {
       showMessage("Completa todos los campos antes de guardar.", "error");
@@ -304,9 +316,16 @@ const convertirReservasParaCalendario = () => {
       const usuarioEmail = auth.currentUser?.email ?? null;
       const usuarioId = auth.currentUser?.uid ?? null;
 
+      //obtengo datos para la notificacion
+      const userName = await obtenerUsernameActual();
+      const salaName = salaInfo?.nombre || numero;
+
       if (!usuarioId || !usuarioEmail) return;
 
       if (editingReservaId) {
+
+        
+
         await updateDoc(doc(db, "reservas", editingReservaId), {
           horaInicio: normalizeTime(horaInicio),
           horaFin: normalizeTime(horaFin),
@@ -315,6 +334,17 @@ const convertirReservasParaCalendario = () => {
           usuarioId,
         });
         showMessage("Reserva actualizada correctamente.", "success");
+
+        //notificar a admins/superusers de la edicion de la reserva
+        console.log("enviando notificacion de reserva editada ...");
+        try{
+          await notifyReservaEdited( userName,salaName,selectedDay,normalizeTime(horaInicio),normalizeTime(horaFin));
+          console.log("✅ Notificación de edición enviada exitosamente");
+
+        }catch (notiError){
+          console.log("Error enviando notificacion de reserva editada:", notiError);
+        }
+
       } else {
         const docRef = await addDoc(collection(db, "reservas"), {
           sala: numero,
@@ -329,6 +359,15 @@ const convertirReservasParaCalendario = () => {
         
         showMessage("Reserva creada correctamente.", "success");
 
+        //notificar a admins/superusers de la nueva reserva
+        console.log("enviando notificacion de reserva creada ...");
+        try{
+          await notifyReservaCreated(userName,salaName,selectedDay,normalizeTime(horaInicio),normalizeTime(horaFin));
+          console.log("✅ Notificación de creación enviada exitosamente");
+        }catch (notiError){
+          console.log("Error enviando notificacion de reserva creada:", notiError);
+        }
+
         await programarEmailConReintentos({
           reservaId: docRef.id,
           usuarioEmail,
@@ -338,38 +377,54 @@ const convertirReservasParaCalendario = () => {
           motivo: motivo.trim(),
         });
 
+
+        
         try {
-          const [anio, mes, dia] = selectedDay.split('-').map(Number);
-          const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
-          const fechaReserva = new Date(anio, mes - 1, dia, hora, minuto);
-          const fechaNotificacion = new Date(fechaReserva.getTime() - 60 * 60 * 1000);
+  const [anio, mes, dia] = selectedDay.split('-').map(Number);
+  const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
 
-          const trigger =
-            fechaNotificacion > new Date()
-              ? ({ date: fechaNotificacion } as Notifications.DateTriggerInput)
-              : null;
+  // 📅 Fecha de la reserva (local)
+  const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
 
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
-              body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
-              sound: true,
-              priority: Notifications.AndroidNotificationPriority.HIGH,
-              data: {
-                usuarioEmail,
-                salaNumero: salaInfo?.nombre || numero,
-                motivo: motivo.trim(),
-                horaInicio: normalizeTime(horaInicio),
-                fecha: selectedDay,
-              },
-            },
-            trigger,
-          });
+  // ⏰ Notificación 60 minutos antes
+  const fechaNotificacionLocal = new Date(fechaReservaLocal);
+  fechaNotificacionLocal.setMinutes(fechaNotificacionLocal.getMinutes() - 60);
 
-          console.log("Notificación local programada para:", fechaNotificacion);
-        } catch (notifErr) {
-          console.log("Error al programar notificación local:", notifErr);
-        }
+  console.log("Fecha reserva:", fechaReservaLocal.toString());
+  console.log("Fecha notificación:", fechaNotificacionLocal.toString());
+
+  // ✅ Solo programamos si la notificación es futura
+  if (fechaNotificacionLocal > new Date()) {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
+        body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        data: {
+          usuarioEmail,
+          salaNumero: salaInfo?.nombre || numero,
+          motivo: motivo.trim(),
+          horaInicio: normalizeTime(horaInicio),
+          fecha: selectedDay,
+        },
+      },
+      // 🔥 Aquí la corrección
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE, // 👈 Especificamos tipo corregido
+        date: fechaNotificacionLocal,
+      } as Notifications.DateTriggerInput, // 👈 Forzamos el tipo correcto
+    });
+
+    console.log("✅ Notificación programada para:", fechaNotificacionLocal.toLocaleString());
+  } else {
+    console.log("⚠️ La hora de notificación ya pasó. No se programó.");
+  }
+} catch (notifErr) {
+  console.log("❌ Error al programar notificación local:", notifErr);
+}
+
+
       }
 
       setHoraInicio(""); 
@@ -462,16 +517,28 @@ const convertirReservasParaCalendario = () => {
     }
   }
 
+  //FUNCION PARA ELIMINAR RESERVA
   const handleEliminarReserva = async (reserva: Reserva) => {
+    
     if (!reserva.id || reserva.usuarioId !== auth.currentUser?.uid) return;
     
     try {
+      //obtengo datos para la notificacion
+      const userName = await obtenerUsernameActual();
+      const salaName = salaInfo?.nombre || numero;
       if (reserva.id) {
         await cancelarEmailProgramado(reserva.id);
       }
       
       await deleteDoc(doc(db, "reservas", reserva.id));
       showMessage("Reserva cancelada correctamente.", "success");
+
+      console.log("enviando notificacion de reserva eliminada ...");
+      try {
+        await notifyReservaDeleted( userName,salaName,reserva.fecha,normalizeTime(reserva.horaInicio),normalizeTime(reserva.horaFin));
+      } catch(notiError){
+        console.log("Error enviando notificacion de reserva eliminada:", notiError);
+      }
       
     } catch (err) {
       console.error("Error al cancelar reserva:", err);
@@ -528,7 +595,7 @@ const convertirReservasParaCalendario = () => {
     }
   };
 
-const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
+ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
   const [anio, mes, dia] = fechaISO.split('-');
   return `${dia}-${mes}-${anio}`;
 };
@@ -731,6 +798,7 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
               <Text style={{ color: "#252526" }}>Cargando...</Text>
             ) : reservasDia.length === 0 ? (
               <Text style={{ color: "#929292ff" }}>No hay reservas para este día.</Text>
+              
             ) : (
               <FlatList
                 data={reservasDia}
@@ -813,6 +881,8 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
             </Modal>
 
             <View style={styles.formSection}>
+              <Text
+              style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>*tocar reseva para editar</Text>
               <Text style={styles.formSectionTitle}>
                 {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
               </Text>
@@ -863,15 +933,11 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
                 multiline={true}
                 numberOfLines={2}
               />
-              <Text style={styles.formLabel}>Notificación (en)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Minutos antes para recibir notificación (ej: 60)"
-                placeholderTextColor="#888"
-                value={minutosAviso}
-                onChangeText={setMinutosAviso}
-                keyboardType="numeric"
-              />
+
+              <Text
+              style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}
+              >*recibirá una notificación 60 minutos antes de la reserva</Text>
+     
 
               <View style={styles.buttonContainer}>
                 <TouchableOpacity 

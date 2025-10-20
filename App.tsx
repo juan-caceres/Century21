@@ -4,8 +4,6 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import React, { useEffect, useState, createContext, useContext, useRef } from "react";
 import { ActivityIndicator, View, Platform, Modal, Text, TouchableOpacity, StyleSheet } from "react-native";
-import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import Login from "./app/login";
 import Home from "./app/home";
 import Registro from "./app/registro";
@@ -18,6 +16,7 @@ import { useFonts } from 'expo-font';
 import { getDoc, doc, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase";
 import GestionSalas from "./app/gestionSalas";
+import * as Notifications from 'expo-notifications';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -28,6 +27,16 @@ export type RootStackParamList = {
   Usuarios: undefined;
   GestionSalas: undefined;
 };
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const Stack = createStackNavigator<RootStackParamList>();
 const AuthContext = createContext<{
@@ -49,16 +58,6 @@ const AuthContext = createContext<{
 });
 export const useAuth = () => useContext(AuthContext);
 
-// Configuración de notificaciones
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
@@ -68,20 +67,23 @@ export default function App() {
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [sessionPending, setSessionPending] = useState(false);
   const [fontsLoaded] = useFonts({Typold: require('./assets/Typold-Bold.ttf'),});
-  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
-  const [notification, setNotification] = useState<any>(false);
-  const notificationListener = useRef<any>(null);
-  const responseListener = useRef<any>(null);
-
+  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  
   useEffect(() => {
-    const subscription = Notifications.addNotificationReceivedListener(async (notification) => {
-      const titulo = notification.request.content.title || "";
-      const cuerpo = notification.request.content.body || "";
-      const data = notification.request.content.data || {};
+  console.log('📱 Configurando listeners de notificaciones...');
 
-      console.log("Notificación recibida:", titulo);
+  // 🔹 Listener cuando se recibe una notificación (app en foreground)
+  notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+    const titulo = notification.request.content.title || "";
+    const cuerpo = notification.request.content.body || "";
+    const data = notification.request.content.data || {};
+    console.log("📩 Notificación recibida:", titulo, cuerpo, data);
 
-      if (titulo.startsWith("Reserva en Sala")) {
+    // Enviar email si es de tipo "Reserva en Sala"
+    if (titulo.startsWith("Reserva en Sala")) {
+      (async () => {
+
         try {
           const userEmail = data.usuarioEmail || auth.currentUser?.email || "usuario@ejemplo.com";
           const salaNumero = data.salaNumero || "desconocida";
@@ -92,19 +94,10 @@ export default function App() {
           console.log("Intentando enviar email de recordatorio a:", userEmail);
 
           const BACKEND_URL = "https://century21.onrender.com/enviar-recordatorio";
-
           const response = await fetch(BACKEND_URL, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              usuarioEmail: userEmail,
-              salaNumero: salaNumero,
-              fecha: fecha,
-              horaInicio: horaInicio,
-              motivo: motivo,
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ usuarioEmail: userEmail, salaNumero, fecha, horaInicio, motivo }),
           });
 
           const result = await response.json();
@@ -117,11 +110,38 @@ export default function App() {
         } catch (err) {
           console.error("❌ Error al enviar email:", err);
         }
-      }
-    });
+      })();
+    }
+  });
 
-    return () => subscription.remove();
-  }, []);
+  // 🔹 Listener cuando el usuario toca una notificación
+  responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+    console.log('👆 Usuario interactuó con la notificación:', response);
+    const data = response.notification.request.content.data;
+
+    if (data.type === 'reserva_created') {
+      console.log('Navegar a detalles de reserva:', data.reservaId);
+      // navigation.navigate('DetalleReserva', { id: data.reservaId });
+    } else if (data.type === 'reserva_edited') {
+      console.log('Navegar a detalles de reserva editada:', data.reservaId);
+    } else if (data.type === 'reserva_deleted') {
+      console.log('Reserva eliminada:', data.reservaId);
+    }
+  });
+
+  // 🔹 Limpieza segura al desmontar
+  return () => {
+    console.log("🧹 Limpiando listeners de notificaciones...");
+    if (notificationListener.current) {
+      notificationListener.current.remove();
+      notificationListener.current = null;
+    }
+    if (responseListener.current) {
+      responseListener.current.remove();
+      responseListener.current = null;
+    }
+  };
+}, []);
 
   // Detección de usuario eliminado O desactivado
   useEffect(() => {
@@ -395,36 +415,4 @@ const styles = StyleSheet.create({
   modalButtonText: { color: "#252526", fontSize: 18, fontWeight: "bold",},
 });
 
-async function registerForPushNotificationsAsync(): Promise<string | null> {
-  if (!Device.isDevice) {
-    alert("Debes usar un dispositivo físico para notificaciones push");
-    return null;
-  }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-
-  if (existingStatus !== "granted") {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== "granted") {
-    alert("No se obtuvieron permisos para notificaciones!");
-    return null;
-  }
-
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
-  console.log("Expo Push Token:", token);
-
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#b838367c",
-    });
-  }
-
-  return token;
-}

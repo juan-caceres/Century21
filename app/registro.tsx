@@ -8,6 +8,7 @@ import { doc, setDoc, collection, query, where, getDocs } from "firebase/firesto
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../App";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { registerForPushNotificationsAsync } from "./servicios/notifications";
 
 type RegistroScreenNavigationProp = StackNavigationProp<RootStackParamList, "Registro">;
 type Props = { navigation: RegistroScreenNavigationProp };
@@ -96,6 +97,8 @@ export default function Registro({ navigation }: Props) {
 
   const handleRegister = async () => {
     const isValid = await validarCampos();
+ 
+  
     if (!isValid) return;
     
     try {
@@ -108,8 +111,11 @@ export default function Registro({ navigation }: Props) {
         username: username.trim(),
         role: "user",
         eliminado: false,
+        notificationToken:'',
         createdAt: new Date(),
       });
+
+      await registerForPushNotificationsAsync(user.uid);
 
       // Enviar correo de verificación
       await sendEmailVerification(user);

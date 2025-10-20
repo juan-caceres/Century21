@@ -7,6 +7,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList, useAuth } from "../App";
 import { getAuth } from "firebase/auth";
 import { Ionicons } from "@expo/vector-icons";
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 type UsuariosScreenNavigationProp = StackNavigationProp<RootStackParamList, "Usuarios">;
 type Props = { navigation: UsuariosScreenNavigationProp };
@@ -321,12 +322,15 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
           style={styles.backButton}
           onPress={() => navigation.navigate("Home")}
         >
-          <Text style={styles.backButtonText}>← Inicio</Text>
+        <Text style={styles.backButtonText}><FontAwesome name="arrow-left" size={15} color="white" /> Inicio</Text>
+
         </TouchableOpacity>
+
+        
         
         <Text style={styles.title}>Gestión de Usuarios</Text>
+     
         
-        <View style={styles.placeholder} />
       </View>
 
       {/* Mensaje de feedback */}
@@ -692,8 +696,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffffff", padding: 20, paddingTop: height > 700 ? 70 : 40, },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, },
   backButton: { backgroundColor: "#BEAF87", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, },
-  backButtonText: { color: "#000", fontWeight: "bold", fontSize: 14, },
-  title: { fontSize: 24, fontWeight: "bold", color: "#BEAF87", textAlign: "center", flex: 1, },
+  backButtonText: { color: "#ffffffff", fontWeight: "bold", fontSize: 14, },
+  title: { fontSize: 24, fontWeight: "bold", color: "#BEAF87",marginLeft: 18, textAlign: "left", flex: 1, },
   placeholder: { width: 80, },
   messageContainer: { padding: 12, borderRadius: 8, marginBottom: 15, alignItems: "center", },
   messageText: { color: "#fff", fontWeight: "bold", textAlign: "center", },
