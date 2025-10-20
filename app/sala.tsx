@@ -216,16 +216,18 @@ export default function Sala({ navigation, route }: Props) {
     });
   };
 
-  // Función para convertir reservas al formato del calendario
+// Función para convertir reservas al formato del calendario
 const convertirReservasParaCalendario = () => {
-  return reservasSemana.map(reserva => {
+  const reservasConvertidas = reservasSemana.map(reserva => {
+    // Parsear la fecha en partes
     const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
-    const [horaIni, minIni] = reserva.horaInicio.split(':').map(Number);
-    const [horaFin, minFin] = reserva.horaFin.split(':').map(Number);
+    const [hora, minuto] = reserva.horaInicio.split(':').map(Number);
+    const [horaF, minutoF] = reserva.horaFin.split(':').map(Number);
     
-    const fechaInicio = new Date(anio, mes - 1, dia, horaIni, minIni);
-    const fechaFin = new Date(anio, mes - 1, dia, horaFin, minFin);
-    
+    // Crear fechas usando constructor de Date (zona horaria local)
+    const fechaInicio = new Date(anio, mes - 1, dia, hora, minuto);
+    const fechaFin = new Date(anio, mes - 1, dia, horaF, minutoF);
+
     return {
       id: reserva.id,
       titulo: reserva.motivo,
@@ -233,6 +235,8 @@ const convertirReservasParaCalendario = () => {
       fin: fechaFin,
     };
   });
+  
+  return reservasConvertidas;
 };
 
   // Chequeo de que no haya reservas a la misma hora
@@ -646,15 +650,45 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
               <TouchableOpacity
-                style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8 }]}
+                style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8,
+                 opacity: (() => {
+                    if (!selectedDay) return 1;
+                    const prev = new Date(selectedDay + 'T00:00:00');
+                    prev.setDate(prev.getDate() - 1);
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    prev.setHours(0, 0, 0, 0);
+                    return prev < hoy ? 0.3 : 1; // 0.3 de opacidad si es día pasado
+                  })()
+                }
+              ]} 
                 onPress={() => {
                   if (!selectedDay) return;
-                  const prev = new Date(selectedDay);
+                  
+                  // Crear fecha y retroceder un día
+                  const prev = new Date(selectedDay + 'T00:00:00');
                   prev.setDate(prev.getDate() - 1);
+                  
+                  // Verificar si es día pasado
+                  const hoy = new Date();
+                  hoy.setHours(0, 0, 0, 0);
+                  prev.setHours(0, 0, 0, 0);
+                  
+                  if (prev < hoy) {
+                    showMessage("No se pueden seleccionar días anteriores a hoy.", "error");
+                    return;
+                  }
                   
                   // Saltar domingo
                   if (prev.getDay() === 0) {
                     prev.setDate(prev.getDate() - 1);
+                    prev.setHours(0, 0, 0, 0);
+                    
+                    // Verificar nuevamente si es día pasado después de saltar domingo
+                    if (prev < hoy) {
+                      showMessage("No se pueden seleccionar días anteriores a hoy.", "error");
+                      return;
+                    }
                   }
                   
                   const prevStr = prev.toISOString().split("T")[0];
@@ -667,7 +701,7 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
               >
                 <Text style={styles.navButtonText}>◀ Día anterior</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8 }]}
                 onPress={() => {
@@ -686,7 +720,6 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
                   setHoraInicio("");
                   setHoraFin("");
                   setMotivo("");
-                
                 }}
               >
                 <Text style={styles.navButtonText}>Día siguiente ▶</Text>
@@ -784,19 +817,42 @@ const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
                 {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
               </Text>
               
-              <TimePicker
+           {/*    <TimePicker
                 label="Hora de inicio"
                 value={horaInicio}
                 onChange={setHoraInicio}
                 placeholder="Seleccionar hora de inicio"
               />
               
-              <TimePicker
+             <TimePicker
                 label="Hora de fin"
                 value={horaFin}
                 onChange={setHoraFin}
                 placeholder="Seleccionar hora de fin"
+              /> */}
+
+              {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después */}
+              <Text style={styles.formLabel}>Hora de inicio</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="HH:MM (ej: 14:30)"
+                placeholderTextColor="#888"
+                value={horaInicio}
+                onChangeText={setHoraInicio}
+                keyboardType="default"
               />
+
+              {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después */}
+              <Text style={styles.formLabel}>Hora de fin</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="HH:MM (ej: 16:00)"
+                placeholderTextColor="#888"
+                value={horaFin}
+                onChangeText={setHoraFin}
+                keyboardType="default"
+              />
+
               <Text style={styles.formLabel}>Motivo</Text>
               <TextInput
                 style={styles.input}
