@@ -59,8 +59,6 @@ export default function Sala({ navigation, route }: Props) {
   const [todasLasSalas, setTodasLasSalas] = useState<any[]>([]);
   const [indiceActual, setIndiceActual] = useState<number>(-1);
 
-  //informacion para notificaciones
-  const [minutosAviso, setMinutosAviso] = useState("60"); // por defecto 60 minutos antes
 
   // Carga de fuente personalizada
   const [fontsLoaded] = useFonts({
@@ -382,34 +380,51 @@ const convertirReservasParaCalendario = () => {
 
         
         try {
-          const [anio, mes, dia] = selectedDay.split('-').map(Number);
-          const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
-          const fechaReserva = new Date(anio, mes - 1, dia, hora, minuto);
-          const fechaNotificacion = new Date(fechaReserva.getTime() - 60 * 60 * 1000);
+  const [anio, mes, dia] = selectedDay.split('-').map(Number);
+  const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
 
-          const trigger = fechaNotificacion > new Date()? ({ date: fechaNotificacion } as Notifications.DateTriggerInput): null;
-          //FUNCION DE EXPO PARA PROGRAMAR NOTIFICACION LOCAL
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
-              body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
-              sound: true,
-              priority: Notifications.AndroidNotificationPriority.HIGH,
-              data: {
-                usuarioEmail,
-                salaNumero: salaInfo?.nombre || numero,
-                motivo: motivo.trim(),
-                horaInicio: normalizeTime(horaInicio),
-                fecha: selectedDay,
-              },
-            },
-            trigger,
-          });
+  // 📅 Fecha de la reserva (local)
+  const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
 
-          console.log("Notificación local programada para:", fechaNotificacion);
-        } catch (notifErr) {
-          console.log("Error al programar notificación local:", notifErr);
-        }
+  // ⏰ Notificación 60 minutos antes
+  const fechaNotificacionLocal = new Date(fechaReservaLocal);
+  fechaNotificacionLocal.setMinutes(fechaNotificacionLocal.getMinutes() - 60);
+
+  console.log("Fecha reserva:", fechaReservaLocal.toString());
+  console.log("Fecha notificación:", fechaNotificacionLocal.toString());
+
+  // ✅ Solo programamos si la notificación es futura
+  if (fechaNotificacionLocal > new Date()) {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
+        body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        data: {
+          usuarioEmail,
+          salaNumero: salaInfo?.nombre || numero,
+          motivo: motivo.trim(),
+          horaInicio: normalizeTime(horaInicio),
+          fecha: selectedDay,
+        },
+      },
+      // 🔥 Aquí la corrección
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE, // 👈 Especificamos tipo corregido
+        date: fechaNotificacionLocal,
+      } as Notifications.DateTriggerInput, // 👈 Forzamos el tipo correcto
+    });
+
+    console.log("✅ Notificación programada para:", fechaNotificacionLocal.toLocaleString());
+  } else {
+    console.log("⚠️ La hora de notificación ya pasó. No se programó.");
+  }
+} catch (notifErr) {
+  console.log("❌ Error al programar notificación local:", notifErr);
+}
+
+
       }
 
       setHoraInicio(""); 
@@ -918,18 +933,11 @@ const convertirReservasParaCalendario = () => {
                 multiline={true}
                 numberOfLines={2}
               />
-              <Text style={styles.formLabel}>Notificación (en minutos)</Text>
+
               <Text
               style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}
-              >*indique cuanto tiempo antes desea recibir una notificación (por defecto está en 60 minutos antes)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Minutos antes para recibir notificación (ej: 60)"
-                placeholderTextColor="#888"
-                value={minutosAviso}
-                onChangeText={setMinutosAviso}
-                keyboardType="numeric"
-              />
+              >*recibirá una notificación 60 minutos antes de la reserva</Text>
+     
 
               <View style={styles.buttonContainer}>
                 <TouchableOpacity 
