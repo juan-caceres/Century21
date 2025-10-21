@@ -151,17 +151,22 @@ app.post('/programar-email', (req, res) => {
       });
     }
 
-    // Crear fecha de reserva
-    const fechaReserva = new Date(anio, mes - 1, dia, hora, minuto);
-    console.log('📅 Fecha de reserva:', fechaReserva.toISOString());
+    // 🔥 CREAR FECHA EN HORA LOCAL DE ARGENTINA (UTC-3)
+    // En lugar de usar Date.UTC, usamos el constructor normal que interpreta en hora local del servidor
+    // Pero necesitamos ajustar manualmente a Argentina
+    const fechaReservaUTC = new Date(Date.UTC(anio, mes - 1, dia, hora, minuto));
+    // Ajustamos sumando 3 horas porque Argentina está en UTC-3
+    fechaReservaUTC.setHours(fechaReservaUTC.getHours() + 3);
+    
+    console.log('📅 Fecha de reserva (UTC ajustada):', fechaReservaUTC.toISOString());
 
     // Calcular fecha de envío (1 hora antes)
-    const fechaEnvio = new Date(fechaReserva.getTime() - 60 * 60 * 1000);
-    console.log('📧 Fecha de envío (1h antes):', fechaEnvio.toISOString());
+    const fechaEnvio = new Date(fechaReservaUTC.getTime() - 60 * 60 * 1000);
+    console.log('📧 Fecha de envío (1h antes, UTC):', fechaEnvio.toISOString());
 
     // Verificar que la fecha de envío sea futura
     const ahora = new Date();
-    console.log('🕐 Fecha actual:', ahora.toISOString());
+    console.log('🕐 Fecha actual (UTC):', ahora.toISOString());
     
     if (fechaEnvio <= ahora) {
       console.log('⚠️ La fecha de envío ya pasó - NO SE PROGRAMA');
@@ -180,7 +185,7 @@ app.post('/programar-email', (req, res) => {
       fecha,
       horaInicio,
       motivo: motivo || 'Sin motivo especificado',
-      fechaReserva: fechaReserva.toISOString(),
+      fechaReserva: fechaReservaUTC.toISOString(),
       fechaEnvio: fechaEnvio.toISOString(),
       enviado: false,
       creadoEn: new Date().toISOString()
@@ -194,14 +199,13 @@ app.post('/programar-email', (req, res) => {
     console.log(`   - Envío programado para: ${fechaEnvio.toLocaleString('es-AR')}`);
     console.log(`   - Total emails pendientes: ${emailsProgramados.length}`);
 
-    // ✅ DEVOLVER RESPUESTA CORRECTA (no "inmediato")
     res.json({
       success: true,
       message: 'Email programado correctamente',
       fechaEnvio: fechaEnvio.toISOString(),
       emailsPendientes: emailsProgramados.length,
       debug: {
-        fechaReserva: fechaReserva.toISOString(),
+        fechaReserva: fechaReservaUTC.toISOString(),
         fechaEnvio: fechaEnvio.toISOString(),
         ahora: ahora.toISOString()
       }
