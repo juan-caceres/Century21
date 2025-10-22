@@ -1,6 +1,6 @@
 // email-server-c21/server.js - Backend para Century 21 con cron jobs
 const express = require('express');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const cron = require('node-cron');
 const cors = require('cors');
 require('dotenv').config();
@@ -12,87 +12,70 @@ const PORT = process.env.PORT || 10000;
 app.use(cors());
 app.use(express.json());
 
-// Array para almacenar emails programados (en memoria)
+// Array para almacenar emails programados
 let emailsProgramados = [];
 
-// Configurar transportador de nodemailer para Gmail
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // 👈 Usa 'service' en lugar de host/port manual
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS // 👈 Debe ser "App Password" de Google, NO tu contraseña normal
-  },
-  // Opciones de timeout más generosas
-  connectionTimeout: 30000, // 30 segundos
-  greetingTimeout: 30000,
-  socketTimeout: 30000
-});
-
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ Error verificando conexión SMTP:', error);
-    console.error('🔍 Verifica tus credenciales en Render:');
-    console.error('   - EMAIL_USER debe ser tu email completo (ej: tumail@gmail.com)');
-    console.error('   - EMAIL_PASS debe ser una "App Password" de Google, no tu contraseña normal');
-  } else {
-    console.log('✅ Servidor SMTP listo para enviar emails');
-  }
-});
+// 🔥 CONFIGURAR RESEND (reemplaza nodemailer)
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ========== FUNCIONES AUXILIARES ==========
 
 // Función para enviar email de recordatorio
 const enviarEmailRecordatorio = async (emailData) => {
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: emailData.usuarioEmail,
-    subject: `🔔 Recordatorio: Reserva en ${emailData.salaNumero} - 1 hora restante`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          .header { background-color: #BEAF87; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
-          .content { padding: 20px; }
-          .info-box { background-color: #f9f9f9; padding: 15px; border-left: 4px solid #BEAF87; margin: 15px 0; }
-          .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>⏰ Recordatorio de Reserva</h1>
-          </div>
-          <div class="content">
-            <p>Hola,</p>
-            <p>Te recordamos que tu reserva está programada para <strong>dentro de 1 hora</strong>.</p>
-            
-            <div class="info-box">
-              <h3>📋 Detalles de la Reserva:</h3>
-              <ul style="list-style: none; padding-left: 0;">
-                <li>🏢 <strong>Sala:</strong> ${emailData.salaNumero}</li>
-                <li>📅 <strong>Fecha:</strong> ${emailData.fecha}</li>
-                <li>⏰ <strong>Hora:</strong> ${emailData.horaInicio}</li>
-                <li>📝 <strong>Motivo:</strong> ${emailData.motivo}</li>
-              </ul>
-            </div>
-            
-            <p>¡Te esperamos!</p>
-          </div>
-          <div class="footer">
-            <p>Este es un mensaje automático, por favor no respondas a este correo.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Email enviado correctamente a ${emailData.usuarioEmail}`);
+    const { data, error } = await resend.emails.send({
+      from: 'Century 21 <onboarding@resend.dev>', // Cambia cuando verifiques tu dominio
+      to: emailData.usuarioEmail,
+      subject: `🔔 Recordatorio: Reserva en ${emailData.salaNumero} - 1 hora restante`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .header { background-color: #BEAF87; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+            .content { padding: 20px; }
+            .info-box { background-color: #f9f9f9; padding: 15px; border-left: 4px solid #BEAF87; margin: 15px 0; }
+            .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>⏰ Recordatorio de Reserva</h1>
+            </div>
+            <div class="content">
+              <p>Hola,</p>
+              <p>Te recordamos que tu reserva está programada para <strong>dentro de 1 hora</strong>.</p>
+              
+              <div class="info-box">
+                <h3>📋 Detalles de la Reserva:</h3>
+                <ul style="list-style: none; padding-left: 0;">
+                  <li>🏢 <strong>Sala:</strong> ${emailData.salaNumero}</li>
+                  <li>📅 <strong>Fecha:</strong> ${emailData.fecha}</li>
+                  <li>⏰ <strong>Hora:</strong> ${emailData.horaInicio}</li>
+                  <li>📝 <strong>Motivo:</strong> ${emailData.motivo}</li>
+                </ul>
+              </div>
+              
+              <p>¡Te esperamos!</p>
+            </div>
+            <div class="footer">
+              <p>Este es un mensaje automático, por favor no respondas a este correo.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    });
+
+    if (error) {
+      console.error(`❌ Error enviando email a ${emailData.usuarioEmail}:`, error);
+      return false;
+    }
+
+    console.log(`✅ Email enviado correctamente a ${emailData.usuarioEmail}`, data);
     return true;
   } catch (error) {
     console.error(`❌ Error enviando email a ${emailData.usuarioEmail}:`, error);
