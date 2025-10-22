@@ -24,7 +24,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const enviarEmailRecordatorio = async (emailData) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Century 21 <onboarding@resend.dev>', // Cambia cuando verifiques tu dominio
+      from: 'Century 21 <abcitcentury21@gmail.com>', // Cambia cuando verifiques tu dominio
       to: emailData.usuarioEmail,
       subject: `🔔 Recordatorio: Reserva en ${emailData.salaNumero} - 1 hora restante`,
       html: `
