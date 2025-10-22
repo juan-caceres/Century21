@@ -36,7 +36,6 @@ const { width, height } = Dimensions.get("window");
 const isSmallDevice = width < 380;
 const isMediumDevice = width >= 380 && width < 600;
 
-
 export default function Sala({ navigation, route }: Props) {
   const { numero } = route.params; 
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -135,8 +134,6 @@ export default function Sala({ navigation, route }: Props) {
       console.log("No se pudo cargar metadata sala:", err);
     }
   };
-
-
 
   const timeToMinutes = (t: string) => {
     const [hh, mm] = t.split(":").map((x) => parseInt(x, 10));
@@ -273,7 +270,6 @@ const convertirReservasParaCalendario = () => {
     return false;
   };
 
-
   //FUNCION PARA MOSTRAR MENSAJE DE EXITO O ERROR 
   const showMessage = (text: string, type: "success" | "error" = "success", duration = 2500) => {
     setFeedbackMessage({ text, type });
@@ -323,9 +319,6 @@ const convertirReservasParaCalendario = () => {
       if (!usuarioId || !usuarioEmail) return;
 
       if (editingReservaId) {
-
-        
-
         await updateDoc(doc(db, "reservas", editingReservaId), {
           horaInicio: normalizeTime(horaInicio),
           horaFin: normalizeTime(horaFin),
@@ -376,24 +369,22 @@ const convertirReservasParaCalendario = () => {
           horaInicio: normalizeTime(horaInicio),
           motivo: motivo.trim(),
         });
-
-
         
         try {
   const [anio, mes, dia] = selectedDay.split('-').map(Number);
   const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
 
-  // 📅 Fecha de la reserva (local)
+  // Fecha de la reserva (local)
   const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
 
-  // ⏰ Notificación 60 minutos antes
+  // Notificación 60 minutos antes
   const fechaNotificacionLocal = new Date(fechaReservaLocal);
   fechaNotificacionLocal.setMinutes(fechaNotificacionLocal.getMinutes() - 60);
 
   console.log("Fecha reserva:", fechaReservaLocal.toString());
   console.log("Fecha notificación:", fechaNotificacionLocal.toString());
 
-  // ✅ Solo programamos si la notificación es futura
+  // Solo programamos si la notificación es futura
   if (fechaNotificacionLocal > new Date()) {
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -409,11 +400,10 @@ const convertirReservasParaCalendario = () => {
           fecha: selectedDay,
         },
       },
-      // 🔥 Aquí la corrección
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE, // 👈 Especificamos tipo corregido
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: fechaNotificacionLocal,
-      } as Notifications.DateTriggerInput, // 👈 Forzamos el tipo correcto
+      } as Notifications.DateTriggerInput, 
     });
 
     console.log("✅ Notificación programada para:", fechaNotificacionLocal.toLocaleString());
@@ -423,7 +413,6 @@ const convertirReservasParaCalendario = () => {
 } catch (notifErr) {
   console.log("❌ Error al programar notificación local:", notifErr);
 }
-
 
       }
 
@@ -440,56 +429,53 @@ const convertirReservasParaCalendario = () => {
     }
   };
 
-  async function programarEmailConReintentos(emailData: any, intentos = 0) {
-    const MAX_INTENTOS = 3;
-    const BACKEND_URL = "https://century21.onrender.com/programar-email";
+async function programarEmailConReintentos(emailData: any, intentos = 0) {
+  const MAX_INTENTOS = 3;
+  const BACKEND_URL = "https://century21-4et6.onrender.com/programar-email";
 
-    try {
-      console.log(`📧 Intento ${intentos + 1} de programar email...`);
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos
-      
-      const responseEmail = await fetch(BACKEND_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(emailData),
-        signal: controller.signal, // ✅ Usar signal en lugar de timeout
-      });
+  try {
+    console.log(`📧 Intento ${intentos + 1} de programar email...`);
+    console.log(`🌐 URL: ${BACKEND_URL}`);
+    
+    const responseEmail = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(emailData),
+    });
 
-      clearTimeout(timeoutId); // Limpiar timeout si la petición fue exitosa
+    const resultEmail = await responseEmail.json();
+    
+    console.log("📦 Respuesta del servidor:", resultEmail);
 
-      const resultEmail = await responseEmail.json();
-
-      if (responseEmail.ok && resultEmail.success) {
-        console.log("✅ Email programado correctamente en backend");
-        console.log("📅 Fecha de envío:", resultEmail.fechaEnvio);
-        return true;
-      } else {
-        throw new Error(`Error: ${resultEmail.error || resultEmail.details || "Error del servidor"}`);
-      }
-
-    } catch (err: any) {
-      console.error(`❌ Error intento ${intentos + 1}:`, err.message);
-
-      // Reintentar hasta MAX_INTENTOS
-      if (intentos < MAX_INTENTOS - 1) {
-        console.log(`⏳ Esperando 5 segundos antes de reintentar...`);
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        return programarEmailConReintentos(emailData, intentos + 1);
-      }
-
-      // Si se agotan los intentos, guardar como respaldo en Firestore
-      console.log("⚠️ Se agotaron los intentos. Guardando en Firestore como respaldo...");
-      await guardarEmailPendienteEnFirestore(emailData);
-      
-      return false;
+    if (responseEmail.ok && resultEmail.success) {
+      console.log("✅ Email programado correctamente en backend");
+      console.log("📅 Fecha de envío:", resultEmail.fechaEnvio);
+      return true;
+    } else {
+      throw new Error(`Error: ${resultEmail.error || resultEmail.details || "Error del servidor"}`);
     }
-  }
 
-  // FUNCIÓN NUEVA: Guardar email pendiente en Firestore (respaldo)
+  } catch (err: any) {
+    console.error(`❌ Error intento ${intentos + 1}:`, err.message);
+
+    // Reintentar hasta MAX_INTENTOS
+    if (intentos < MAX_INTENTOS - 1) {
+      console.log(`⏳ Esperando 5 segundos antes de reintentar...`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      return programarEmailConReintentos(emailData, intentos + 1);
+    }
+
+    // Si se agotan los intentos, guardar como respaldo en Firestore
+    console.log("⚠️ Se agotaron los intentos. Guardando en Firestore como respaldo...");
+    await guardarEmailPendienteEnFirestore(emailData);
+    
+    return false;
+  }
+}
+
+  // Guardar email pendiente en Firestore (respaldo)
   async function guardarEmailPendienteEnFirestore(emailData: any) {
     try {
       const [anio, mes, dia] = emailData.fecha.split('-').map(Number);
@@ -546,37 +532,30 @@ const convertirReservasParaCalendario = () => {
     }
   };
 
-  async function cancelarEmailProgramado(reservaId: string) {
-    const BACKEND_URL = "https://century21.onrender.com/cancelar-email";
+async function cancelarEmailProgramado(reservaId: string) {
+  const BACKEND_URL = "https://century21-4et6.onrender.com/cancelar-email";
+  
+  try {
+    const response = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ reservaId }),
+    });
     
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      const response = await fetch(BACKEND_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ reservaId }),
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      const result = await response.json();
-      
-      if (response.ok && result.success) {
-        console.log("✅ Email cancelado correctamente");
-      } else {
-        console.log("⚠️ No se pudo cancelar el email:", result.message);
-      }
-      
-    } catch (err: any) {
-      console.error("❌ Error al cancelar email:", err.message);
-      // No mostramos error al usuario porque es opcional
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      console.log("✅ Email cancelado correctamente");
+    } else {
+      console.log("⚠️ No se pudo cancelar el email:", result.message);
     }
+    
+  } catch (err: any) {
+    console.error("❌ Error al cancelar email:", err.message);
   }
+}
 
   // Para navegar entre salas usando índices
   const goToSala = (direccion: 'prev' | 'next') => {
@@ -725,7 +704,7 @@ const convertirReservasParaCalendario = () => {
                     const hoy = new Date();
                     hoy.setHours(0, 0, 0, 0);
                     prev.setHours(0, 0, 0, 0);
-                    return prev < hoy ? 0.3 : 1; // 0.3 de opacidad si es día pasado
+                    return prev < hoy ? 0.3 : 1;
                   })()
                 }
               ]} 
@@ -887,7 +866,7 @@ const convertirReservasParaCalendario = () => {
                 {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
               </Text>
               
-           {/*    <TimePicker
+              <TimePicker
                 label="Hora de inicio"
                 value={horaInicio}
                 onChange={setHoraInicio}
@@ -899,10 +878,10 @@ const convertirReservasParaCalendario = () => {
                 value={horaFin}
                 onChange={setHoraFin}
                 placeholder="Seleccionar hora de fin"
-              /> */}
+              /> 
 
               {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después */}
-              <Text style={styles.formLabel}>Hora de inicio</Text>
+             {/*  <Text style={styles.formLabel}>Hora de inicio</Text>
               <TextInput
                 style={styles.input}
                 placeholder="HH:MM (ej: 14:30)"
@@ -912,7 +891,7 @@ const convertirReservasParaCalendario = () => {
                 keyboardType="default"
               />
 
-              {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después */}
+              {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después
               <Text style={styles.formLabel}>Hora de fin</Text>
               <TextInput
                 style={styles.input}
@@ -921,7 +900,7 @@ const convertirReservasParaCalendario = () => {
                 value={horaFin}
                 onChangeText={setHoraFin}
                 keyboardType="default"
-              />
+              /> */}
 
               <Text style={styles.formLabel}>Motivo</Text>
               <TextInput
