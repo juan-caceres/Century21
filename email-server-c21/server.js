@@ -15,7 +15,7 @@ app.use(express.json());
 // Array para almacenar emails programados
 let emailsProgramados = [];
 
-// 🔥 CONFIGURAR BREVO
+//  CONFIGURAR BREVO
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 apiInstance.setApiKey(
   SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey,
@@ -98,7 +98,7 @@ const enviarEmailRecordatorio = async (emailData) => {
     const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
     
     console.log(`✅ Email enviado correctamente a ${emailData.usuarioEmail}`);
-    console.log('📬 Message ID:', result.messageId);
+    console.log('📬 Message ID:', result.body?.messageId || result.messageId || 'N/A');
     return true;
     
   } catch (error) {
@@ -367,35 +367,6 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     brevoConfigured: !!process.env.BREVO_API_KEY
   });
-});
-
-// 6️⃣ Endpoint de prueba de email
-app.post('/test-email', async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const testData = {
-      usuarioEmail: email || 'lautaa256@gmail.com',
-      salaNumero: 'Sala de Prueba',
-      fecha: new Date().toLocaleDateString('es-AR'),
-      horaInicio: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-      motivo: 'Email de prueba del sistema Brevo'
-    };
-
-    const enviado = await enviarEmailRecordatorio(testData);
-
-    res.json({
-      success: enviado,
-      message: enviado ? 'Email de prueba enviado correctamente' : 'Error al enviar email de prueba'
-    });
-
-  } catch (error) {
-    console.error('❌ Error en test-email:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
 });
 
 // Iniciar servidor

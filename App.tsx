@@ -67,7 +67,7 @@ export default function App() {
 
           console.log("Intentando enviar email de recordatorio a:", userEmail);
 
-          const BACKEND_URL = "https://century21.onrender.com/enviar-recordatorio";
+          const BACKEND_URL = "https://century21-4et6.onrender.com/enviar-recordatorio";
           const response = await fetch(BACKEND_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -388,5 +388,3 @@ const styles = StyleSheet.create({
   cancelButton: { backgroundColor: "#555", borderWidth: 1, borderColor: "#BEAF87" },
   modalButtonText: { color: "#252526", fontSize: 18, fontWeight: "bold",},
 });
-
-
