@@ -4,8 +4,7 @@ import { View, StyleSheet, TouchableOpacity, Text, Modal, Pressable, Animated } 
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
-import { useAuth } from "../../App";
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useAuth } from "../context/authContext";
 
 type RootStackParamList = {
   Login: undefined;

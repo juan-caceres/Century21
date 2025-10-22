@@ -4,7 +4,6 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, A
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
-import { RootStackParamList, useAuth } from "../App";
 import Calendario from "./componentes/calendario";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
@@ -14,6 +13,7 @@ import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import TimePicker from "./componentes/TimePicker";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Notifications from "expo-notifications";
+import { RootStackParamList } from "../app/types/navigation";
 import { notifyReservaCreated,notifyReservaEdited,notifyReservaDeleted,notifyReservaDeletedByAdmin } from "./servicios/notificationService";
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
@@ -83,7 +83,7 @@ export default function Sala({ navigation, route }: Props) {
         setTodasLasSalas(salas);
         
         // Encontrar el índice de la sala actual
-        const idx = salas.findIndex(s => s.id === numero);
+        const idx = salas.findIndex(s => s.id === String(numero));
         setIndiceActual(idx);
       } catch (err) {
         console.log("Error al cargar salas:", err);
@@ -248,7 +248,7 @@ const convertirReservasParaCalendario = () => {
   // Chequeo de que no haya reservas a la misma hora
   const existeSolapamientoEnFirestore = async (
     fecha: string,
-    sala: string,
+    sala: string | number,
     inicio: string,
     fin: string,
     excepcionId?: string
@@ -352,14 +352,8 @@ const convertirReservasParaCalendario = () => {
         
         showMessage("Reserva creada correctamente.", "success");
 
-        //notificar a admins/superusers de la nueva reserva
-        console.log("enviando notificacion de reserva creada ...");
-        try{
-          await notifyReservaCreated(userName,salaName,selectedDay,normalizeTime(horaInicio),normalizeTime(horaFin));
-          console.log("✅ Notificación de creación enviada exitosamente");
-        }catch (notiError){
-          console.log("Error enviando notificacion de reserva creada:", notiError);
-        }
+      
+        
 
         await programarEmailConReintentos({
           reservaId: docRef.id,
@@ -570,7 +564,8 @@ async function cancelarEmailProgramado(reservaId: string) {
     
     if (nuevoIndice >= 0 && nuevoIndice < todasLasSalas.length) {
       const nuevaSala = todasLasSalas[nuevoIndice];
-      navigation.replace("Sala", { numero: nuevaSala.id });
+      const numero= nuevaSala.id;
+      navigation.replace("Sala", { numero});
     }
   };
 

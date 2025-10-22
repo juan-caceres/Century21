@@ -1,10 +1,11 @@
 //app/usuarios.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Dimensions, Modal, TextInput } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet,Button, Dimensions, Modal, TextInput } from "react-native";
 import { db } from "../firebase";
 import { collection, getDocs, updateDoc, doc, DocumentData, query, where } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList, useAuth } from "../App";
+import { RootStackParamList } from "../app/types/navigation";
+import { useAuth } from "./context/authContext";
 import { getAuth } from "firebase/auth";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -617,11 +618,13 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
                   🔒 El email es <Text style={{ fontWeight: 'bold' }}>permanente</Text> por razones de seguridad.
                 </Text>
                 <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: '#BEAF87', width: '100%' }]}
+                  style={[styles.botonInfo, { backgroundColor: '#BEAF87' }]}
                   onPress={closeModal}
                 >
-                  <Text style={styles.modalButtonText}>Entendido</Text>
+                  <Text style={[styles.textoInfo, { color: '#fff' }]}>Entendido</Text>
                 </TouchableOpacity>
+
+                
               </>
             ) : (
               // Modales normales (editar, eliminar, reactivar, promover)
@@ -752,7 +755,9 @@ const styles = StyleSheet.create({
   errorText: { color: "#ff6b6b", fontSize: 13, fontWeight: "600", flex: 1, },
   modalButtons: { flexDirection: "row", gap: 10, width: "100%", },
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: "center", },
-  modalButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16, },
+  modalButtonText: { color: "#ffffffff", fontWeight: "bold", fontSize: 16, },
+  botonInfo:{padding: 12,borderRadius: 8,alignItems: 'center',},
+  textoInfo:{ fontSize:16, fontWeight:"bold" },
   cancelModalButton: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#BEAF87", },
   cancelModalButtonText: { color: "#BEAF87", fontWeight: "bold", fontSize: 16, },
 });

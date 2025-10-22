@@ -3,7 +3,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { auth, db } from '../../firebase';
 import Constants from 'expo-constants';
 
 /**
@@ -68,6 +68,8 @@ export async function registerForPushNotificationsAsync(uid: string) {
     const token = tokenData.data;
 
     console.log('✅ Token de notificación obtenido:', token);
+
+
 
     // Guardar el token en Firestore
     await updateDoc(doc(db, 'users', uid), {
