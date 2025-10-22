@@ -41,10 +41,17 @@ if (!process.env.BREVO_API_KEY) {
 }
 
 // ========== FUNCIONES AUXILIARES ==========
+const convertirAFormatoDDMMYYYY = (fechaISO) => {
+  const [anio, mes, dia] = fechaISO.split('-');
+  return `${dia}-${mes}-${anio}`;
+};
+
 
 const enviarEmailRecordatorio = async (emailData) => {
   try {
-    console.log('📧 Enviando email a:', emailData.usuarioEmail);
+    console.log('📧 Iniciando envío de email con Brevo...');
+    console.log('📧 Destinatario:', emailData.usuarioEmail);
+    fechaEmailConvertida= convertirAFormatoDDMMYYYY(emailData.fecha);
     
     const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
     
@@ -86,7 +93,7 @@ const enviarEmailRecordatorio = async (emailData) => {
               <h3>📋 Detalles de la Reserva:</h3>
               <ul style="list-style: none; padding-left: 0;">
                 <li>🏢 <strong>Sala:</strong> ${emailData.salaNumero}</li>
-                <li>📅 <strong>Fecha:</strong> ${emailData.fecha}</li>
+                <li>📅 <strong>Fecha:</strong> ${fechaEmailConvertida}</li>
                 <li>⏰ <strong>Hora:</strong> ${emailData.horaInicio}</li>
                 <li>📝 <strong>Motivo:</strong> ${emailData.motivo}</li>
               </ul>
