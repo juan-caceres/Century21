@@ -6,14 +6,18 @@ import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/
 import { auth, db } from "../firebase";
 import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "../App";
+import { RootStackParamList } from "../app/types/navigation";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { registerForPushNotificationsAsync } from "./servicios/notifications";
+import { signOut } from 'firebase/auth';
+import { useAuth } from '../app/context/authContext';
 
 type RegistroScreenNavigationProp = StackNavigationProp<RootStackParamList, "Registro">;
 type Props = { navigation: RegistroScreenNavigationProp };
 
 export default function Registro({ navigation }: Props) {
+  
+  const { setUser } = useAuth();
   // Estados para inputs
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -25,6 +29,7 @@ export default function Registro({ navigation }: Props) {
   const [errorUsername, setErrorUsername] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
   const [errorConfirm, setErrorConfirm] = useState("");
+ 
   
   // Carga de fuente personalizada
   const [fontsLoaded] = useFonts({
@@ -95,6 +100,8 @@ export default function Registro({ navigation }: Props) {
     return valid;
   };
 
+
+
   const handleRegister = async () => {
     const isValid = await validarCampos();
  
@@ -115,7 +122,9 @@ export default function Registro({ navigation }: Props) {
         createdAt: new Date(),
       });
 
-      await registerForPushNotificationsAsync(user.uid);
+      if (user) {
+            registerForPushNotificationsAsync(user.uid);
+      }
 
       // Enviar correo de verificación
       await sendEmailVerification(user);
@@ -123,8 +132,11 @@ export default function Registro({ navigation }: Props) {
       Alert.alert(
         "✅ Cuenta creada",
         "Revisa tu correo para verificar tu cuenta.\n\n⚠️ IMPORTANTE: Tu email es permanente y no se puede cambiar.\n\n✅ Podrás cambiar tu Nombre de Usuario cuando quieras.",
-        [{ text: "Entendido", onPress: () => navigation.navigate("Login") }]
+        [
+          {text: "Entendido"}
+        ]
       );
+
     } catch (error: any) {
       if (error.code === "auth/email-already-in-use") {
         setErrorEmail("Este correo ya está registrado.");

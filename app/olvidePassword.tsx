@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Modal, ActivityIndicator  } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "../App";
+import { RootStackParamList } from "../app/types/navigation";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../firebase";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
