@@ -1,6 +1,6 @@
-// email-server-c21/server.js - Backend para Century 21 con cron jobs
+// email-server-c21/server.js - Backend para Century 21 con Brevo
 const express = require('express');
-const { Resend } = require('resend');
+const SibApiV3Sdk = require('@getbrevo/brevo');
 const cron = require('node-cron');
 const cors = require('cors');
 require('dotenv').config();
@@ -15,70 +15,88 @@ app.use(express.json());
 // Array para almacenar emails programados
 let emailsProgramados = [];
 
-// 🔥 CONFIGURAR RESEND (reemplaza nodemailer)
-const resend = new Resend(process.env.RESEND_API_KEY);
+// 🔥 CONFIGURAR BREVO
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+apiInstance.setApiKey(
+  SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey,
+  process.env.BREVO_API_KEY
+);
+
+// Verificar configuración al iniciar
+if (!process.env.BREVO_API_KEY) {
+  console.error('❌ ERROR: Falta BREVO_API_KEY en las variables de entorno');
+} else {
+  console.log('✅ Brevo API Key configurada correctamente');
+}
 
 // ========== FUNCIONES AUXILIARES ==========
 
 // Función para enviar email de recordatorio
 const enviarEmailRecordatorio = async (emailData) => {
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'Century 21 <abcitcentury21@gmail.com>', // Cambia cuando verifiques tu dominio
-      to: emailData.usuarioEmail,
-      subject: `🔔 Recordatorio: Reserva en ${emailData.salaNumero} - 1 hora restante`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
-            .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .header { background-color: #BEAF87; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
-            .content { padding: 20px; }
-            .info-box { background-color: #f9f9f9; padding: 15px; border-left: 4px solid #BEAF87; margin: 15px 0; }
-            .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>⏰ Recordatorio de Reserva</h1>
-            </div>
-            <div class="content">
-              <p>Hola,</p>
-              <p>Te recordamos que tu reserva está programada para <strong>dentro de 1 hora</strong>.</p>
-              
-              <div class="info-box">
-                <h3>📋 Detalles de la Reserva:</h3>
-                <ul style="list-style: none; padding-left: 0;">
-                  <li>🏢 <strong>Sala:</strong> ${emailData.salaNumero}</li>
-                  <li>📅 <strong>Fecha:</strong> ${emailData.fecha}</li>
-                  <li>⏰ <strong>Hora:</strong> ${emailData.horaInicio}</li>
-                  <li>📝 <strong>Motivo:</strong> ${emailData.motivo}</li>
-                </ul>
-              </div>
-              
-              <p>¡Te esperamos!</p>
-            </div>
-            <div class="footer">
-              <p>Este es un mensaje automático, por favor no respondas a este correo.</p>
-            </div>
+    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+    
+    sendSmtpEmail.sender = { 
+      name: 'Century 21 Reservas', 
+      email: process.env.EMAIL_USER || 'abcitcentury21@gmail.com'
+    };
+    
+    sendSmtpEmail.to = [{ 
+      email: emailData.usuarioEmail,
+      name: emailData.usuarioEmail.split('@')[0]
+    }];
+    
+    sendSmtpEmail.subject = `🔔 Recordatorio: Reserva en ${emailData.salaNumero} - 1 hora restante`;
+    
+    sendSmtpEmail.htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+          .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          .header { background-color: #BEAF87; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+          .content { padding: 20px; }
+          .info-box { background-color: #f9f9f9; padding: 15px; border-left: 4px solid #BEAF87; margin: 15px 0; }
+          .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>⏰ Recordatorio de Reserva</h1>
           </div>
-        </body>
-        </html>
-      `
-    });
+          <div class="content">
+            <p>Hola,</p>
+            <p>Te recordamos que tu reserva está programada para <strong>dentro de 1 hora</strong>.</p>
+            
+            <div class="info-box">
+              <h3>📋 Detalles de la Reserva:</h3>
+              <ul style="list-style: none; padding-left: 0;">
+                <li>🏢 <strong>Sala:</strong> ${emailData.salaNumero}</li>
+                <li>📅 <strong>Fecha:</strong> ${emailData.fecha}</li>
+                <li>⏰ <strong>Hora:</strong> ${emailData.horaInicio}</li>
+                <li>📝 <strong>Motivo:</strong> ${emailData.motivo}</li>
+              </ul>
+            </div>
+            
+            <p>¡Te esperamos!</p>
+          </div>
+          <div class="footer">
+            <p>Este es un mensaje automático, por favor no respondas a este correo.</p>
+            <p style="color: #999; font-size: 10px; margin-top: 10px;">Century 21 - Sistema de Reservas</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
 
-    if (error) {
-      console.error(`❌ Error enviando email a ${emailData.usuarioEmail}:`, error);
-      return false;
-    }
-
-    console.log(`✅ Email enviado correctamente a ${emailData.usuarioEmail}`, data);
+    const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log(`✅ Email enviado correctamente a ${emailData.usuarioEmail}`, result.messageId);
     return true;
+    
   } catch (error) {
-    console.error(`❌ Error enviando email a ${emailData.usuarioEmail}:`, error);
+    console.error(`❌ Error enviando email a ${emailData.usuarioEmail}:`, error.response ? error.response.body : error);
     return false;
   }
 };
@@ -118,9 +136,7 @@ cron.schedule('* * * * *', () => {
 
 // ========== ENDPOINTS API ==========
 
-// 1️⃣ Endpoint para programar un email (llamado desde React Native)
-// email-server-c21/server.js - Endpoint /programar-email CORREGIDO
-
+// 1️⃣ Endpoint para programar un email
 app.post('/programar-email', (req, res) => {
   try {
     console.log('📥 Recibiendo petición /programar-email con datos:', req.body);
@@ -148,23 +164,19 @@ app.post('/programar-email', (req, res) => {
       });
     }
 
-    // 🔥 CORRECCIÓN CRÍTICA:
-    // El frontend envía la hora LOCAL de Argentina (GMT-3)
-    // Necesitamos convertirla a UTC SUMANDO 3 horas
-    
-    // 1️⃣ Crear fecha con los valores locales de Argentina
+    // Crear fecha con los valores locales de Argentina
     const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
     console.log('🇦🇷 Fecha local Argentina:', fechaReservaLocal.toString());
     
-    // 2️⃣ Convertir a UTC sumando 3 horas (Argentina es UTC-3)
+    // Convertir a UTC sumando 3 horas (Argentina es UTC-3)
     const fechaReservaUTC = new Date(fechaReservaLocal.getTime() + (3 * 60 * 60 * 1000));
     console.log('🌍 Fecha UTC:', fechaReservaUTC.toISOString());
 
-    // 3️⃣ Calcular fecha de envío (1 hora antes en UTC)
+    // Calcular fecha de envío (1 hora antes en UTC)
     const fechaEnvio = new Date(fechaReservaUTC.getTime() - (60 * 60 * 1000));
     console.log('📧 Fecha de envío (1h antes, UTC):', fechaEnvio.toISOString());
 
-    // 4️⃣ Verificar que la fecha de envío sea futura
+    // Verificar que la fecha de envío sea futura
     const ahora = new Date();
     console.log('🕐 Fecha actual (UTC):', ahora.toISOString());
     
@@ -329,37 +341,9 @@ app.get('/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     emailsProgramados: emailsProgramados.length,
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    brevoConfigured: !!process.env.BREVO_API_KEY
   });
-});
-
-// 6️⃣ Endpoint de prueba de email
-app.post('/test-email', async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const testData = {
-      usuarioEmail: email || process.env.EMAIL_USER,
-      salaNumero: 'Sala de Prueba',
-      fecha: new Date().toLocaleDateString('es-AR'),
-      horaInicio: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-      motivo: 'Email de prueba del sistema'
-    };
-
-    const enviado = await enviarEmailRecordatorio(testData);
-
-    res.json({
-      success: enviado,
-      message: enviado ? 'Email de prueba enviado correctamente' : 'Error al enviar email de prueba'
-    });
-
-  } catch (error) {
-    console.error('❌ Error en test-email:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
 });
 
 // Iniciar servidor
@@ -371,7 +355,8 @@ app.listen(PORT, () => {
 ║  📡 Puerto: ${PORT}                                    
 ║  ⏰ Cron activo: verificación cada minuto              ║
 ║  📧 Emails programados: ${emailsProgramados.length}                              ║
-║  📅 Fecha: ${new Date().toLocaleString('es-AR')}       
+║  📅 Fecha: ${new Date().toLocaleString('es-AR')}
+║  🔐 Brevo: ${process.env.BREVO_API_KEY ? '✅ Configurado' : '❌ Falta API Key'}       
 ╚════════════════════════════════════════════════════════╝
   `);
 });
