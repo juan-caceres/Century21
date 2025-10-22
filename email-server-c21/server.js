@@ -17,18 +17,26 @@ let emailsProgramados = [];
 
 // Configurar transportador de nodemailer para Gmail
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // true para 465, false para otros puertos
+  service: 'gmail', // 👈 Usa 'service' en lugar de host/port manual
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    pass: process.env.EMAIL_PASS // 👈 Debe ser "App Password" de Google, NO tu contraseña normal
   },
-  tls: {
-    rejectUnauthorized: false
-  },
-  connectionTimeout: 10000, // 10 segundos
-  greetingTimeout: 10000
+  // Opciones de timeout más generosas
+  connectionTimeout: 30000, // 30 segundos
+  greetingTimeout: 30000,
+  socketTimeout: 30000
+});
+
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ Error verificando conexión SMTP:', error);
+    console.error('🔍 Verifica tus credenciales en Render:');
+    console.error('   - EMAIL_USER debe ser tu email completo (ej: tumail@gmail.com)');
+    console.error('   - EMAIL_PASS debe ser una "App Password" de Google, no tu contraseña normal');
+  } else {
+    console.log('✅ Servidor SMTP listo para enviar emails');
+  }
 });
 
 // ========== FUNCIONES AUXILIARES ==========
@@ -163,9 +171,9 @@ app.post('/programar-email', (req, res) => {
     // Pero necesitamos ajustar manualmente a Argentina
     const fechaReservaUTC = new Date(Date.UTC(anio, mes - 1, dia, hora, minuto));
     // Ajustamos sumando 3 horas porque Argentina está en UTC-3
-    fechaReservaUTC.setHours(fechaReservaUTC.getHours() + 3);
+    fechaReservaUTC.setHours(fechaReservaUTC.getHours() - 3);
     
-    console.log('📅 Fecha de reserva (UTC ajustada):', fechaReservaUTC.toISOString());
+    console.log('📅 Fecha de reserva (UTC):', fechaReservaUTC.toISOString());
 
     // Calcular fecha de envío (1 hora antes)
     const fechaEnvio = new Date(fechaReservaUTC.getTime() - 60 * 60 * 1000);
