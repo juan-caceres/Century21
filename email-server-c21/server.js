@@ -31,9 +31,12 @@ if (!process.env.BREVO_API_KEY) {
 
 // ========== FUNCIONES AUXILIARES ==========
 
-// Función para enviar email de recordatorio
+// Función para enviar email de recordatorio - VERSIÓN CORREGIDA
 const enviarEmailRecordatorio = async (emailData) => {
   try {
+    console.log('📧 Iniciando envío de email con Brevo...');
+    console.log('📧 Destinatario:', emailData.usuarioEmail);
+    
     const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
     
     sendSmtpEmail.sender = { 
@@ -91,12 +94,32 @@ const enviarEmailRecordatorio = async (emailData) => {
       </html>
     `;
 
+    console.log('📤 Enviando email a través de Brevo API...');
     const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log(`✅ Email enviado correctamente a ${emailData.usuarioEmail}`, result.messageId);
+    
+    console.log(`✅ Email enviado correctamente a ${emailData.usuarioEmail}`);
+    console.log('📬 Message ID:', result.messageId);
     return true;
     
   } catch (error) {
-    console.error(`❌ Error enviando email a ${emailData.usuarioEmail}:`, error.response ? error.response.body : error);
+    console.error('❌ ERROR DETALLADO AL ENVIAR EMAIL:');
+    console.error('📧 Email destino:', emailData.usuarioEmail);
+    
+    // Mostrar diferentes tipos de errores
+    if (error.response) {
+      console.error('🔴 Error de respuesta de Brevo:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        body: error.response.body,
+        text: error.response.text
+      });
+    } else if (error.request) {
+      console.error('🔴 No se recibió respuesta:', error.request);
+    } else {
+      console.error('🔴 Error configurando la petición:', error.message);
+    }
+    
+    console.error('🔴 Stack completo:', error.stack);
     return false;
   }
 };
