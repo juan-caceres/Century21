@@ -1,41 +1,50 @@
-// email-server-c21/server.js - Backend para Century 21 con Brevo
+// email-server-c21/server.js - Backend Century 21 con Brevo + Firestore
 const express = require('express');
 const SibApiV3Sdk = require('@getbrevo/brevo');
 const cron = require('node-cron');
 const cors = require('cors');
 require('dotenv').config();
 
+// Agregar Firebase Admin SDK
+const admin = require('firebase-admin');
+
+admin.initializeApp({
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  })
+});
+
+const db = admin.firestore();
+
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Array para almacenar emails programados
+// Array en memoria (respaldo temporal)
 let emailsProgramados = [];
 
-//  CONFIGURAR BREVO
+// CONFIGURACION BREVO
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 apiInstance.setApiKey(
   SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey,
   process.env.BREVO_API_KEY
 );
 
-// Verificar configuración al iniciar
 if (!process.env.BREVO_API_KEY) {
-  console.error('❌ ERROR: Falta BREVO_API_KEY en las variables de entorno');
+  console.error('❌ ERROR: Falta BREVO_API_KEY');
 } else {
-  console.log('✅ Brevo API Key configurada correctamente');
+  console.log('✅ Brevo API Key configurada');
 }
 
 // ========== FUNCIONES AUXILIARES ==========
 
-// Función para enviar email de recordatorio - VERSIÓN CORREGIDA
 const enviarEmailRecordatorio = async (emailData) => {
   try {
-    console.log('📧 Iniciando envío de email con Brevo...');
-    console.log('📧 Destinatario:', emailData.usuarioEmail);
+    console.log('📧 Enviando email a:', emailData.usuarioEmail);
     
     const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
     
@@ -94,157 +103,139 @@ const enviarEmailRecordatorio = async (emailData) => {
       </html>
     `;
 
-    console.log('📤 Enviando email a través de Brevo API...');
     const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    
-    console.log(`✅ Email enviado correctamente a ${emailData.usuarioEmail}`);
-    console.log('📬 Message ID:', result.body?.messageId || result.messageId || 'N/A');
+    console.log(`✅ Email enviado a ${emailData.usuarioEmail}`);
     return true;
     
   } catch (error) {
-    console.error('❌ ERROR DETALLADO AL ENVIAR EMAIL:');
-    console.error('📧 Email destino:', emailData.usuarioEmail);
-    
-    // Mostrar diferentes tipos de errores
-    if (error.response) {
-      console.error('🔴 Error de respuesta de Brevo:', {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        body: error.response.body,
-        text: error.response.text
-      });
-    } else if (error.request) {
-      console.error('🔴 No se recibió respuesta:', error.request);
-    } else {
-      console.error('🔴 Error configurando la petición:', error.message);
-    }
-    
-    console.error('🔴 Stack completo:', error.stack);
+    console.error('❌ Error enviando email:', error.message);
     return false;
   }
 };
 
-// Función para verificar y enviar emails programados
-const verificarYEnviarEmails = () => {
-  const ahora = new Date();
-  
-  emailsProgramados = emailsProgramados.filter(email => {
-    const fechaEnvio = new Date(email.fechaEnvio);
-    
-    // Si ya es hora de enviar y no se ha enviado
-    if (ahora >= fechaEnvio && !email.enviado) {
-      console.log(`📧 Enviando email programado para ${email.usuarioEmail}...`);
-      enviarEmailRecordatorio(email);
-      email.enviado = true;
-      return false; // Eliminar de la lista
+// Procesar emails pendientes desde Firestore
+const procesarEmailsPendientes = async () => {
+  try {
+    const ahora = new Date();
+    console.log(`⏰ Procesando emails pendientes en Firestore...`);
+
+    // Buscar emails pendientes cuya fecha de envío ya pasó
+    const emailsRef = db.collection('emailsProgramados');
+    const snapshot = await emailsRef
+      .where('estado', '==', 'pendiente')
+      .where('fechaEnvio', '<=', ahora)
+      .get();
+
+    if (snapshot.empty) {
+      console.log('✅ No hay emails pendientes para enviar');
+      return;
     }
-    
-    // Si la fecha ya pasó (la reserva ya ocurrió), eliminar
-    const fechaReserva = new Date(email.fechaReserva);
-    if (ahora > fechaReserva) {
-      console.log(`🗑️ Eliminando email vencido de ${email.usuarioEmail}`);
-      return false;
+
+    console.log(`📬 Se encontraron ${snapshot.size} emails para enviar`);
+
+    // Procesar cada email
+    for (const doc of snapshot.docs) {
+      const emailData = doc.data();
+      
+      console.log(`📤 Enviando email a ${emailData.usuarioEmail}...`);
+      
+      const enviado = await enviarEmailRecordatorio({
+        usuarioEmail: emailData.usuarioEmail,
+        salaNumero: emailData.salaNumero,
+        fecha: emailData.fecha,
+        horaInicio: emailData.horaInicio,
+        motivo: emailData.motivo
+      });
+
+      if (enviado) {
+        // Marcar como enviado
+        await emailsRef.doc(doc.id).update({
+          estado: 'enviado',
+          enviadoEn: new Date()
+        });
+        console.log(`✅ Email procesado y marcado como enviado`);
+      } else {
+        // Marcar como fallido
+        await emailsRef.doc(doc.id).update({
+          estado: 'fallido',
+          intentos: admin.firestore.FieldValue.increment(1)
+        });
+        console.log(`❌ Email marcado como fallido`);
+      }
     }
-    
-    return true; // Mantener en la lista
-  });
+
+  } catch (error) {
+    console.error('❌ Error procesando emails desde Firestore:', error);
+  }
 };
 
-// Ejecutar verificación cada minuto
+// CRON JOB: Verificar emails cada minuto
 cron.schedule('* * * * *', () => {
-  console.log(`⏰ [${new Date().toISOString()}] Verificando emails programados...`);
-  console.log(`📊 Emails pendientes: ${emailsProgramados.length}`);
-  verificarYEnviarEmails();
+  console.log(`⏰ [${new Date().toISOString()}] Verificando emails...`);
+  procesarEmailsPendientes();
 });
 
 // ========== ENDPOINTS API ==========
 
-// 1️⃣ Endpoint para programar un email
-app.post('/programar-email', (req, res) => {
+// 1️⃣ Programar email (ahora guarda DIRECTO en Firestore)
+app.post('/programar-email', async (req, res) => {
   try {
-    console.log('📥 Recibiendo petición /programar-email con datos:', req.body);
+    console.log('📥 Recibiendo petición /programar-email');
     
     const { reservaId, usuarioEmail, salaNumero, fecha, horaInicio, motivo } = req.body;
 
     if (!reservaId || !usuarioEmail || !salaNumero || !fecha || !horaInicio) {
-      console.log('❌ Faltan datos requeridos');
       return res.status(400).json({
         success: false,
-        error: 'Faltan datos requeridos',
-        details: 'Se requiere: reservaId, usuarioEmail, salaNumero, fecha, horaInicio'
+        error: 'Faltan datos requeridos'
       });
     }
 
     const [anio, mes, dia] = fecha.split('-').map(Number);
     const [hora, minuto] = horaInicio.split(':').map(Number);
 
-    if (isNaN(anio) || isNaN(mes) || isNaN(dia) || isNaN(hora) || isNaN(minuto)) {
-      console.log('❌ Error parseando fecha/hora');
-      return res.status(400).json({
-        success: false,
-        error: 'Formato de fecha u hora inválido',
-        details: `Recibido - Fecha: ${fecha}, Hora: ${horaInicio}`
-      });
-    }
-
-    // Crear fecha con los valores locales de Argentina
+    // Crear fecha local Argentina
     const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
-    console.log('🇦🇷 Fecha local Argentina:', fechaReservaLocal.toString());
     
-    // Convertir a UTC sumando 3 horas (Argentina es UTC-3)
+    // Convertir a UTC (Argentina es UTC-3)
     const fechaReservaUTC = new Date(fechaReservaLocal.getTime() + (3 * 60 * 60 * 1000));
-    console.log('🌍 Fecha UTC:', fechaReservaUTC.toISOString());
-
-    // Calcular fecha de envío (1 hora antes en UTC)
+    
+    // Fecha de envío: 1 hora antes
     const fechaEnvio = new Date(fechaReservaUTC.getTime() - (60 * 60 * 1000));
-    console.log('📧 Fecha de envío (1h antes, UTC):', fechaEnvio.toISOString());
 
-    // Verificar que la fecha de envío sea futura
     const ahora = new Date();
-    console.log('🕐 Fecha actual (UTC):', ahora.toISOString());
     
     if (fechaEnvio <= ahora) {
-      console.log('⚠️ La fecha de envío ya pasó - NO SE PROGRAMA');
       return res.status(400).json({
         success: false,
-        error: 'La fecha de envío debe ser futura',
-        details: `Fecha envío: ${fechaEnvio.toISOString()}, Ahora: ${ahora.toISOString()}`
+        error: 'La fecha de envío debe ser futura'
       });
     }
 
-    const emailProgramado = {
+    // GUARDAR EN FIRESTORE
+    const emailDoc = {
       reservaId,
       usuarioEmail,
       salaNumero,
       fecha,
       horaInicio,
       motivo: motivo || 'Sin motivo especificado',
-      fechaReserva: fechaReservaUTC.toISOString(),
-      fechaEnvio: fechaEnvio.toISOString(),
-      enviado: false,
-      creadoEn: new Date().toISOString()
+      fechaReserva: admin.firestore.Timestamp.fromDate(fechaReservaUTC),
+      fechaEnvio: admin.firestore.Timestamp.fromDate(fechaEnvio),
+      estado: 'pendiente',
+      intentos: 0,
+      creadoEn: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    emailsProgramados.push(emailProgramado);
+    const docRef = await db.collection('emailsProgramados').add(emailDoc);
 
-    console.log(`✅ Email programado exitosamente`);
-    console.log(`   - Usuario: ${usuarioEmail}`);
-    console.log(`   - Sala: ${salaNumero}`);
-    console.log(`   - Reserva Argentina: ${horaInicio} del ${fecha}`);
-    console.log(`   - Envío UTC: ${fechaEnvio.toISOString()}`);
-    console.log(`   - Total emails pendientes: ${emailsProgramados.length}`);
+    console.log(`✅ Email guardado en Firestore con ID: ${docRef.id}`);
 
     res.json({
       success: true,
-      message: 'Email programado correctamente',
-      fechaEnvio: fechaEnvio.toISOString(),
-      emailsPendientes: emailsProgramados.length,
-      debug: {
-        fechaReservaLocal: fechaReservaLocal.toISOString(),
-        fechaReservaUTC: fechaReservaUTC.toISOString(),
-        fechaEnvio: fechaEnvio.toISOString(),
-        ahora: ahora.toISOString()
-      }
+      message: 'Email programado correctamente en Firestore',
+      emailId: docRef.id,
+      fechaEnvio: fechaEnvio.toISOString()
     });
 
   } catch (error) {
@@ -257,8 +248,8 @@ app.post('/programar-email', (req, res) => {
   }
 });
 
-// 2️⃣ Endpoint para cancelar un email programado
-app.post('/cancelar-email', (req, res) => {
+// 2️⃣ Cancelar email programado
+app.post('/cancelar-email', async (req, res) => {
   try {
     const { reservaId } = req.body;
 
@@ -269,23 +260,32 @@ app.post('/cancelar-email', (req, res) => {
       });
     }
 
-    const indexAntes = emailsProgramados.length;
-    emailsProgramados = emailsProgramados.filter(e => e.reservaId !== reservaId);
-    const indexDespues = emailsProgramados.length;
+    // Buscar en Firestore
+    const snapshot = await db.collection('emailsProgramados')
+      .where('reservaId', '==', reservaId)
+      .where('estado', '==', 'pendiente')
+      .get();
 
-    if (indexAntes > indexDespues) {
-      console.log(`✅ Email cancelado para reserva ${reservaId}`);
-      res.json({
-        success: true,
-        message: 'Email cancelado correctamente'
-      });
-    } else {
-      console.log(`⚠️ No se encontró email para reserva ${reservaId}`);
-      res.json({
+    if (snapshot.empty) {
+      return res.json({
         success: false,
-        message: 'Email no encontrado (posiblemente ya fue enviado)'
+        message: 'Email no encontrado o ya fue enviado'
       });
     }
+
+    // Eliminar todos los documentos encontrados
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    console.log(`✅ Email cancelado para reserva ${reservaId}`);
+    
+    res.json({
+      success: true,
+      message: 'Email cancelado correctamente'
+    });
 
   } catch (error) {
     console.error('❌ Error cancelando email:', error);
@@ -297,7 +297,7 @@ app.post('/cancelar-email', (req, res) => {
   }
 });
 
-// 3️⃣ Endpoint para enviar email inmediatamente
+// 3️⃣ Enviar email inmediatamente
 app.post('/enviar-recordatorio', async (req, res) => {
   try {
     const { usuarioEmail, salaNumero, fecha, horaInicio, motivo } = req.body;
@@ -319,17 +319,10 @@ app.post('/enviar-recordatorio', async (req, res) => {
 
     const enviado = await enviarEmailRecordatorio(emailData);
 
-    if (enviado) {
-      res.json({
-        success: true,
-        message: 'Email enviado correctamente'
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: 'Error al enviar email'
-      });
-    }
+    res.json({
+      success: enviado,
+      message: enviado ? 'Email enviado correctamente' : 'Error al enviar email'
+    });
 
   } catch (error) {
     console.error('❌ Error enviando email inmediato:', error);
@@ -341,45 +334,72 @@ app.post('/enviar-recordatorio', async (req, res) => {
   }
 });
 
-// 4️⃣ Endpoint para obtener emails programados
-app.get('/emails-programados', (req, res) => {
-  res.json({
-    success: true,
-    total: emailsProgramados.length,
-    emails: emailsProgramados.map(e => ({
-      reservaId: e.reservaId,
-      usuarioEmail: e.usuarioEmail,
-      salaNumero: e.salaNumero,
-      fecha: e.fecha,
-      horaInicio: e.horaInicio,
-      fechaEnvio: e.fechaEnvio,
-      enviado: e.enviado
-    }))
-  });
+// 4️⃣ Obtener emails programados desde Firestore
+app.get('/emails-programados', async (req, res) => {
+  try {
+    const snapshot = await db.collection('emailsProgramados')
+      .where('estado', '==', 'pendiente')
+      .orderBy('fechaEnvio', 'asc')
+      .get();
+
+    const emails = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      fechaEnvio: doc.data().fechaEnvio.toDate().toISOString()
+    }));
+
+    res.json({
+      success: true,
+      total: emails.length,
+      emails
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo emails:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
-// 5️⃣ Endpoint de salud
+// 5️⃣ Endpoint de salud (para cron-job.org)
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    emailsProgramados: emailsProgramados.length,
     uptime: process.uptime(),
-    brevoConfigured: !!process.env.BREVO_API_KEY
+    brevoConfigured: !!process.env.BREVO_API_KEY,
+    firebaseConfigured: !!admin.apps.length
   });
 });
 
-// Iniciar servidor
+// Endpoint para procesar emails manualmente
+app.post('/procesar-emails-pendientes', async (req, res) => {
+  try {
+    await procesarEmailsPendientes();
+    res.json({
+      success: true,
+      message: 'Procesamiento completado'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════════════════════════╗
-║  🚀 Servidor Century 21 iniciado correctamente        ║
+║  🚀 Servidor Century 21 con Firestore                 ║
 ╠════════════════════════════════════════════════════════╣
 ║  📡 Puerto: ${PORT}                                    
-║  ⏰ Cron activo: verificación cada minuto              ║
-║  📧 Emails programados: ${emailsProgramados.length}                              ║
+║  ⏰ Cron activo: cada minuto                           ║
 ║  📅 Fecha: ${new Date().toLocaleString('es-AR')}
-║  🔐 Brevo: ${process.env.BREVO_API_KEY ? '✅ Configurado' : '❌ Falta API Key'}       
+║  🔐 Brevo: ${process.env.BREVO_API_KEY ? '✅' : '❌'}       
+║  🔥 Firebase: ${admin.apps.length ? '✅' : '❌'}       
 ╚════════════════════════════════════════════════════════╝
   `);
 });
