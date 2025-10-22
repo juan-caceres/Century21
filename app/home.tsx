@@ -3,13 +3,14 @@ import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, Dimensions, 
 import { useFonts } from "expo-font";
 import React, { useEffect, useState } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList, useAuth } from "../App";
 import { db } from "../firebase";
 import { collection,onSnapshot, QueryDocumentSnapshot, DocumentData, query, orderBy } from "firebase/firestore";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import * as Notifications from 'expo-notifications';
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { registerForPushNotificationsAsync } from "./servicios/notifications";
+import { RootStackParamList } from "../app/types/navigation";
+import { useAuth } from "./context/authContext";
 
 
 
@@ -33,6 +34,9 @@ export default function Home({ navigation }: Props) {
   }, [user]);
 
   useEffect(() => {
+
+    if (!user) return;
+
     const salasRef = collection(db, "salas");
     const q = query(salasRef, orderBy("createdAt", "asc")/*,orderBy("updatedAt", "desc")*/); // ordenar por fecha de creación ascendente
 
@@ -46,7 +50,7 @@ export default function Home({ navigation }: Props) {
     });
 
     return unsubscribe;
-  }, []);
+  }, [user]);
 
   // Carga de fuente personalizada
   const [fontsLoaded] = useFonts({
@@ -145,10 +149,6 @@ export default function Home({ navigation }: Props) {
           )}
         />
       )}
-
-      {/* Botón para lanzar notificación */}
-      <Text style={{ marginTop: 20, fontSize: 16, color: "#BEAF87", textAlign: "center" }}>Bienvenido {user?.email} probemos notificacion</Text>
-      <Button title="Enviar Notificación" onPress={sendNotification} />
     </View>
   );
 }

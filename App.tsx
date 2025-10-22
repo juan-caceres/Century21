@@ -17,16 +17,8 @@ import { getDoc, doc, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase";
 import GestionSalas from "./app/gestionSalas";
 import * as Notifications from 'expo-notifications';
-
-export type RootStackParamList = {
-  Login: undefined;
-  Registro: undefined;
-  OlvidePassword: undefined;
-  Home: undefined;
-  Sala: { numero: string };
-  Usuarios: undefined;
-  GestionSalas: undefined;
-};
+import { RootStackParamList } from "./app/types/navigation";
+import { AuthProvider, useAuth } from "./app/context/authContext";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -39,24 +31,6 @@ Notifications.setNotificationHandler({
 });
 
 const Stack = createStackNavigator<RootStackParamList>();
-const AuthContext = createContext<{
-  user: any;
-  setUser: React.Dispatch<React.SetStateAction<any>>;
-  role: string | null;
-  setRole: React.Dispatch<React.SetStateAction<string | null>>;
-  blockNavigation: boolean;
-  setBlockNavigation: React.Dispatch<React.SetStateAction<boolean>>;
-  setSessionPending: React.Dispatch<React.SetStateAction<boolean>>;
-}>({
-  user: null,
-  setUser: () => {},
-  role: null,
-  setRole: () => {},
-  blockNavigation: false,
-  setBlockNavigation: () => {},
-  setSessionPending: () => {},
-});
-export const useAuth = () => useContext(AuthContext);
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -298,7 +272,7 @@ export default function App() {
   const shouldShowAuthScreens = !user || blockNavigation || !role;
 
   return (
-    <AuthContext.Provider value={{ user, setUser, role, setRole, blockNavigation, setBlockNavigation, setSessionPending }}>
+    <AuthProvider>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {shouldShowAuthScreens ? (
@@ -397,7 +371,7 @@ export default function App() {
           </View>
         </View>
       </Modal>
-    </AuthContext.Provider>
+    </AuthProvider>
   );
 }
 

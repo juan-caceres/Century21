@@ -6,9 +6,12 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList, useAuth } from "../App";
+import { useAuth } from "../app/context/authContext";
+import { RootStackParamList } from "../app/types/navigation";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { registerForPushNotificationsAsync } from "./servicios/notifications";
+
+
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login">;
 type Props = { navigation: LoginScreenNavigationProp; route?: any };
@@ -22,6 +25,8 @@ export default function Login({ navigation, route }: Props) {
   const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setBlockNavigation } = useAuth();
+
+  const [showPassword, setShowPassword] = useState(false);
 
   const setSessionPending = route?.params?.setSessionPending || (() => {});
 
@@ -101,8 +106,10 @@ export default function Login({ navigation, route }: Props) {
       const userCredential = await signInWithEmailAndPassword(auth, emailToLogin, password);
       const user = userCredential.user;
 
-      //actualizar token de notificaciones del usuario
-      await registerForPushNotificationsAsync(user.uid);
+      if (user) {
+            registerForPushNotificationsAsync(user.uid);
+          }
+
       console.log("✅ Login exitoso en Auth, verificando Firestore...");
 
       const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -144,7 +151,7 @@ export default function Login({ navigation, route }: Props) {
         return;
       }
       //usuario valido, actualiza token de notificaciones
-      await registerForPushNotificationsAsync(user.uid);
+      
       console.log("✅ Login completamente exitoso - Usuario activo");
       
       if (isEliminado) {
@@ -240,10 +247,19 @@ export default function Login({ navigation, route }: Props) {
           placeholder="Contraseña"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
+          secureTextEntry={!showPassword}
           style={[styles.input, styles.fontTypold]}
           placeholderTextColor="#aaa"
         />
+
+        {/* Botón para mostrar/ocultar */}
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Icon
+            name={showPassword ? "eye-off-outline" : "eye-outline"} // cambia ícono según el estado
+            size={20}
+            color="#BEAF87"
+          />
+      </TouchableOpacity>
       </View>
       {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
 
