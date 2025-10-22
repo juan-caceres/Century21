@@ -136,13 +136,14 @@ cron.schedule('* * * * *', () => {
 // ========== ENDPOINTS API ==========
 
 // 1️⃣ Endpoint para programar un email (llamado desde React Native)
+// email-server-c21/server.js - Endpoint /programar-email CORREGIDO
+
 app.post('/programar-email', (req, res) => {
   try {
     console.log('📥 Recibiendo petición /programar-email con datos:', req.body);
     
     const { reservaId, usuarioEmail, salaNumero, fecha, horaInicio, motivo } = req.body;
 
-    // Validar datos
     if (!reservaId || !usuarioEmail || !salaNumero || !fecha || !horaInicio) {
       console.log('❌ Faltan datos requeridos');
       return res.status(400).json({
@@ -152,11 +153,9 @@ app.post('/programar-email', (req, res) => {
       });
     }
 
-    // Parsear fecha y hora
     const [anio, mes, dia] = fecha.split('-').map(Number);
     const [hora, minuto] = horaInicio.split(':').map(Number);
 
-    // ✅ Verificar que el parseo fue exitoso
     if (isNaN(anio) || isNaN(mes) || isNaN(dia) || isNaN(hora) || isNaN(minuto)) {
       console.log('❌ Error parseando fecha/hora');
       return res.status(400).json({
@@ -166,20 +165,23 @@ app.post('/programar-email', (req, res) => {
       });
     }
 
-    // 🔥 CREAR FECHA EN HORA LOCAL DE ARGENTINA (UTC-3)
-    // En lugar de usar Date.UTC, usamos el constructor normal que interpreta en hora local del servidor
-    // Pero necesitamos ajustar manualmente a Argentina
-    const fechaReservaUTC = new Date(Date.UTC(anio, mes - 1, dia, hora, minuto));
-    // Ajustamos sumando 3 horas porque Argentina está en UTC-3
-    fechaReservaUTC.setHours(fechaReservaUTC.getHours() - 3);
+    // 🔥 CORRECCIÓN CRÍTICA:
+    // El frontend envía la hora LOCAL de Argentina (GMT-3)
+    // Necesitamos convertirla a UTC SUMANDO 3 horas
     
-    console.log('📅 Fecha de reserva (UTC):', fechaReservaUTC.toISOString());
+    // 1️⃣ Crear fecha con los valores locales de Argentina
+    const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
+    console.log('🇦🇷 Fecha local Argentina:', fechaReservaLocal.toString());
+    
+    // 2️⃣ Convertir a UTC sumando 3 horas (Argentina es UTC-3)
+    const fechaReservaUTC = new Date(fechaReservaLocal.getTime() + (3 * 60 * 60 * 1000));
+    console.log('🌍 Fecha UTC:', fechaReservaUTC.toISOString());
 
-    // Calcular fecha de envío (1 hora antes)
-    const fechaEnvio = new Date(fechaReservaUTC.getTime() - 60 * 60 * 1000);
+    // 3️⃣ Calcular fecha de envío (1 hora antes en UTC)
+    const fechaEnvio = new Date(fechaReservaUTC.getTime() - (60 * 60 * 1000));
     console.log('📧 Fecha de envío (1h antes, UTC):', fechaEnvio.toISOString());
 
-    // Verificar que la fecha de envío sea futura
+    // 4️⃣ Verificar que la fecha de envío sea futura
     const ahora = new Date();
     console.log('🕐 Fecha actual (UTC):', ahora.toISOString());
     
@@ -192,7 +194,6 @@ app.post('/programar-email', (req, res) => {
       });
     }
 
-    // Crear objeto de email programado
     const emailProgramado = {
       reservaId,
       usuarioEmail,
@@ -211,7 +212,8 @@ app.post('/programar-email', (req, res) => {
     console.log(`✅ Email programado exitosamente`);
     console.log(`   - Usuario: ${usuarioEmail}`);
     console.log(`   - Sala: ${salaNumero}`);
-    console.log(`   - Envío programado para: ${fechaEnvio.toLocaleString('es-AR')}`);
+    console.log(`   - Reserva Argentina: ${horaInicio} del ${fecha}`);
+    console.log(`   - Envío UTC: ${fechaEnvio.toISOString()}`);
     console.log(`   - Total emails pendientes: ${emailsProgramados.length}`);
 
     res.json({
@@ -220,7 +222,8 @@ app.post('/programar-email', (req, res) => {
       fechaEnvio: fechaEnvio.toISOString(),
       emailsPendientes: emailsProgramados.length,
       debug: {
-        fechaReserva: fechaReservaUTC.toISOString(),
+        fechaReservaLocal: fechaReservaLocal.toISOString(),
+        fechaReservaUTC: fechaReservaUTC.toISOString(),
         fechaEnvio: fechaEnvio.toISOString(),
         ahora: ahora.toISOString()
       }
