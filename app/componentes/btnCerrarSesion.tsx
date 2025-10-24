@@ -5,7 +5,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../../firebase";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
 import { useAuth } from "../context/authContext";
-
+import { clearPushToken } from "../servicios/notifications";
 type RootStackParamList = {
   Login: undefined;
 };
@@ -15,6 +15,7 @@ export default function BtnCerrarSesion() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [modalVisible, setModalVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const {user} = useAuth();
 
   useEffect(() => {
     if (modalVisible) {
@@ -32,6 +33,9 @@ export default function BtnCerrarSesion() {
   const { setUser } = useAuth();
 
   const handleLogout = async () => {
+
+    clearPushToken(user.uid); // Limpiar el token de notificaciones antes de cerrar sesión
+
     await signOut(auth);
     setUser(null);
     setModalVisible(false);
@@ -155,3 +159,4 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 });
+
