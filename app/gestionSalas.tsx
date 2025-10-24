@@ -1,7 +1,7 @@
 //app/gestionSalas.tsx
 import { db } from "../firebase";
 import React, {useEffect,useState} from "react";
-import { View, Text, TextInput,Dimensions ,TouchableOpacity, FlatList, StyleSheet, Alert, Modal } from "react-native";
+import { View, Text, TextInput,Dimensions ,TouchableOpacity, FlatList, StyleSheet, Alert, KeyboardAvoidingView, Platform, Modal } from "react-native";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -203,6 +203,11 @@ export default function GestionSalas(){
     };
 
     return (
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
+        >
         <View style={styles.container}>
             
             {/* Header */}
@@ -397,6 +402,7 @@ export default function GestionSalas(){
                 </View>
             </Modal>
         </View>
+    </KeyboardAvoidingView>
     );
 }
 

@@ -1,6 +1,6 @@
 //app/registro.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator,KeyboardAvoidingView, Platform , Alert } from "react-native";
 import { useFonts } from "expo-font";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth, db } from "../firebase";
@@ -23,6 +23,8 @@ export default function Registro({ navigation }: Props) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Estados para mensajes de error
   const [errorEmail, setErrorEmail] = useState("");
@@ -38,9 +40,15 @@ export default function Registro({ navigation }: Props) {
 
   if (!fontsLoaded) {
     return (
+      <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
+          >
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#BEAF87" />
       </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -197,10 +205,17 @@ export default function Registro({ navigation }: Props) {
           placeholder="Contraseña"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
+          secureTextEntry={!showPassword}
           style={styles.input}
           placeholderTextColor="#aaa"
         />
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Icon
+            name={showPassword ? "eye-off-outline" : "eye-outline"}
+            size={20}
+            color="#BEAF87"
+          />
+        </TouchableOpacity>
       </View>
       {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
 
@@ -211,10 +226,17 @@ export default function Registro({ navigation }: Props) {
           placeholder="Confirmar Contraseña"
           value={confirm}
           onChangeText={setConfirm}
-          secureTextEntry
+          secureTextEntry={!showConfirmPassword}
           style={styles.input}
           placeholderTextColor="#aaa"
         />
+        <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+          <Icon
+            name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+            size={20}
+            color="#BEAF87"
+          />
+        </TouchableOpacity>
       </View>
       {errorConfirm ? <Text style={styles.errorText}>{errorConfirm}</Text> : null}
 

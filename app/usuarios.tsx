@@ -1,6 +1,6 @@
 //app/usuarios.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet,Button, Dimensions, Modal, TextInput } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet,Button, Dimensions, KeyboardAvoidingView, Platform, Modal, TextInput } from "react-native";
 import { db } from "../firebase";
 import { collection, getDocs, updateDoc, doc, DocumentData, query, where } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -369,6 +369,11 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   const usuariosEliminados = usuarios.filter(u => u.eliminado).length;
 
   return (
+    <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
+            >
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -815,6 +820,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         </View>
       </Modal>
     </View>
+    </KeyboardAvoidingView>
   );
 };
 
