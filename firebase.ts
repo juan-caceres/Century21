@@ -16,7 +16,7 @@ const firebaseConfig = {
 
 const appFirebase = !getApps().length ? initializeApp(firebaseConfig) : getApp(); //evitamos inicializar varias veces
 const auth = initializeAuth(appFirebase, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
 });
 const db = getFirestore(appFirebase);
 
