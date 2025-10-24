@@ -43,6 +43,11 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   // Estado para edición de Nombre usuario
   const [nuevoUsername, setNuevoUsername] = useState('');
   const [errorUsername, setErrorUsername] = useState('');
+  const [usernameOriginal, setUsernameOriginal] = useState('');
+  
+  // Estados para modales de confirmación
+  const [modalCancelVisible, setModalCancelVisible] = useState(false);
+  const [modalConfirmSaveVisible, setModalConfirmSaveVisible] = useState(false);
 
   const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
     setMessage({ text, type });
@@ -117,6 +122,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
       setSelectedUser(user);
       if (type === 'editUsername') {
         setNuevoUsername(user.username);
+        setUsernameOriginal(user.username);
         setErrorUsername('');
       }
     }
@@ -129,7 +135,64 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
     setModalType(null);
     setSelectedUser(null);
     setNuevoUsername('');
+    setUsernameOriginal('');
     setErrorUsername('');
+  };
+
+  // Función para manejar el intento de cancelar
+  const handleCancelEdit = () => {
+    // Si hay cambios, mostrar modal de confirmación
+    if (nuevoUsername.trim() !== usernameOriginal) {
+      setModalCancelVisible(true);
+    } else {
+      // Si no hay cambios, cerrar directamente
+      closeModal();
+    }
+  };
+
+  // Función para confirmar la cancelación
+  const confirmarCancelacion = () => {
+    setModalCancelVisible(false);
+    closeModal();
+  };
+
+  // Función para rechazar la cancelación
+  const rechazarCancelacion = () => {
+    setModalCancelVisible(false);
+  };
+
+  // Función para manejar el intento de guardar
+  const handleSaveEdit = async () => {
+    const isValid = await validarUsername(nuevoUsername.trim());
+    if (!isValid) {
+      return;
+    }
+    // Si la validación es exitosa, mostrar modal de confirmación
+    setModalConfirmSaveVisible(true);
+  };
+
+  // Función para confirmar el guardado
+  const confirmarGuardado = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      await updateDoc(doc(db, "users", selectedUser.id), { 
+        username: nuevoUsername.trim()
+      });
+      showMessage("✅ Nombre de Usuario actualizado correctamente", "success");
+      setModalConfirmSaveVisible(false);
+      fetchUsuarios();
+      closeModal();
+    } catch (e) {
+      console.log("Error actualizando username:", e);
+      showMessage("Error al actualizar el nombre de usuario", "error");
+      setModalConfirmSaveVisible(false);
+    }
+  };
+
+  // Función para cancelar el guardado
+  const cancelarGuardado = () => {
+    setModalConfirmSaveVisible(false);
   };
 
   const validarUsername = async (username: string): Promise<boolean> => {
@@ -205,23 +268,13 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
           }
           break;
         case 'reactivate':
-          // NUEVO - Reactivar usuario eliminado
           await updateDoc(doc(db, "users", selectedUser.id), { eliminado: false });
           showMessage("✅ Usuario reactivado correctamente", "success");
           fetchUsuarios();
           closeModal();
           break;
         case 'editUsername':
-          const isValid = await validarUsername(nuevoUsername.trim());
-          if (!isValid) {
-            return;
-          }
-          await updateDoc(doc(db, "users", selectedUser.id), { 
-            username: nuevoUsername.trim()
-          });
-          showMessage("✅ Nombre de Usuario actualizado correctamente", "success");
-          fetchUsuarios();
-          closeModal();
+          await handleSaveEdit();
           break;
       }
     } catch (e) {
@@ -327,10 +380,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
 
         </TouchableOpacity>
 
-        
-        
-        <Text style={styles.title}>Gestión de Usuarios</Text>
-     
+        <Text style={styles.title}>Gestión de Usuarios</Text>     
         
       </View>
 
@@ -623,7 +673,6 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
                 >
                   <Text style={[styles.textoInfo, { color: '#fff' }]}>Entendido</Text>
                 </TouchableOpacity>
-
                 
               </>
             ) : (
@@ -679,13 +728,89 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
                   
                   <TouchableOpacity
                     style={[styles.modalButton, styles.cancelModalButton]}
-                    onPress={closeModal}
+                    onPress={modalType === 'editUsername' ? handleCancelEdit : closeModal}
                   >
                     <Text style={styles.cancelModalButtonText}>Cancelar</Text>
                   </TouchableOpacity>
                 </View>
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de confirmación de cancelación */}
+      <Modal visible={modalCancelVisible} transparent animationType="fade">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="warning" size={48} color="#ff9800" />
+            </View>
+            <Text style={styles.modalTitle}>¿Cancelar edición?</Text>
+            <Text style={styles.infoModalText}>
+              Si cancelas ahora, <Text style={{ fontWeight: 'bold', color: '#ff9800' }}>se perderán los cambios</Text> que realizaste en el nombre de usuario.
+            </Text>
+            <Text style={styles.infoModalText}>
+              ¿Estás seguro de que deseas cancelar?
+            </Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#ff6b6b' }]}
+                onPress={confirmarCancelacion}
+              >
+                <Text style={styles.modalButtonText}>Sí, cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
+                onPress={rechazarCancelacion}
+              >
+                <Text style={styles.modalButtonText}>No, continuar editando</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de confirmación de guardado */}
+      <Modal visible={modalConfirmSaveVisible} transparent animationType="fade">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
+            </View>
+            <Text style={styles.modalTitle}>¿Confirmar cambio?</Text>
+            <Text style={styles.infoModalText}>
+              ¿Estás seguro de que quieres cambiar el nombre de usuario?
+            </Text>
+            <View style={styles.usernameChangeBox}>
+              <View style={styles.usernameChangeRow}>
+                <Text style={styles.usernameChangeLabel}>De:</Text>
+                <Text style={styles.usernameOld}>@{usernameOriginal}</Text>
+              </View>
+              <Ionicons name="arrow-down" size={24} color="#BEAF87" style={{ marginVertical: 8 }} />
+              <View style={styles.usernameChangeRow}>
+                <Text style={styles.usernameChangeLabel}>A:</Text>
+                <Text style={styles.usernameNew}>@{nuevoUsername.trim()}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
+                onPress={confirmarGuardado}
+              >
+                <Text style={styles.modalButtonText}>Sí, confirmar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelModalButton]}
+                onPress={cancelarGuardado}
+              >
+                <Text style={styles.cancelModalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -760,6 +885,11 @@ const styles = StyleSheet.create({
   textoInfo:{ fontSize:16, fontWeight:"bold" },
   cancelModalButton: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#BEAF87", },
   cancelModalButtonText: { color: "#BEAF87", fontWeight: "bold", fontSize: 16, },
+  usernameChangeBox: { backgroundColor: "#2e2e2e", padding: 20, borderRadius: 12, marginVertical: 15, width: "100%", alignItems: "center", borderWidth: 1, borderColor: "#BEAF87",},
+  usernameChangeRow: { flexDirection: "row", alignItems: "center", gap: 10,},
+  usernameChangeLabel: { color: "#888", fontSize: 14, fontWeight: "600", },
+  usernameOld: { color: "#ff6b6b", fontSize: 16, fontWeight: "bold", textDecorationLine: "line-through",},
+  usernameNew: { color: "#4CAF50", fontSize: 16, fontWeight: "bold",},
 });
 
 export default Usuarios;

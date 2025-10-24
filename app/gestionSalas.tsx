@@ -6,6 +6,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimest
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from '@react-navigation/stack';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Ionicons } from "@expo/vector-icons";
 
 type RootStackParamList = {
     Home: undefined;
@@ -20,8 +21,13 @@ export default function GestionSalas(){
     const [tv, setTv] = useState(false);
     const [editId, setEditId] = useState<string | null>(null);
     
+    // Estados originales para comparar
+    const [nombreOriginal, setNombreOriginal] = useState("");
+    const [capacidadOriginal, setCapacidadOriginal] = useState("");
+    const [tvOriginal, setTvOriginal] = useState(false);
+    
     const [modalVisible, setModalVisible] = useState(false);
-    const [modalType, setModalType] = useState<'edit' | 'delete' | null>(null);
+    const [modalType, setModalType] = useState<'edit' | 'delete' | 'cancelEdit' | null>(null);
     const [salaSeleccionada, setSalaSeleccionada] = useState<any>(null);
     
     const [feedbackMessage, setFeedbackMessage] = useState<{text: string; type: "success" | "error"} | null>(null);
@@ -73,6 +79,18 @@ export default function GestionSalas(){
             showMessage("Por favor complete todos los campos.", "error");
             return;
         }
+        
+        // Verificar si hay cambios
+        const hayCambios = 
+            nombre !== nombreOriginal || 
+            capacidad !== capacidadOriginal || 
+            tv !== tvOriginal;
+        
+        if (!hayCambios) {
+            showMessage("❌ No se realizaron cambios en la sala", "error");
+            return;
+        }
+        
         const sala = salas.find(s => s.id === editId);
         setSalaSeleccionada(sala);
         setModalType('edit');
@@ -94,6 +112,10 @@ export default function GestionSalas(){
             setNombre("");
             setCapacidad("");
             setTv(false);
+            // Limpiar valores originales
+            setNombreOriginal("");
+            setCapacidadOriginal("");
+            setTvOriginal(false);
             setModalVisible(false);
         } catch (error) {
             showMessage("No se pudo editar la sala.", "error");
@@ -132,6 +154,40 @@ export default function GestionSalas(){
         setNombre(sala.nombre);
         setCapacidad(sala.capacidad.toString());
         setTv(sala.tv);
+        // Guardar valores originales
+        setNombreOriginal(sala.nombre);
+        setCapacidadOriginal(sala.capacidad.toString());
+        setTvOriginal(sala.tv);
+    };
+
+    // Función para manejar el intento de cancelar
+    const handleCancelarEdicion = () => {
+        // Verificar si hay cambios
+        const hayCambios = 
+            nombre !== nombreOriginal || 
+            capacidad !== capacidadOriginal || 
+            tv !== tvOriginal;
+        
+        if (hayCambios) {
+            // Si hay cambios, mostrar modal de confirmación
+            setModalType('cancelEdit');
+            setModalVisible(true);
+        } else {
+            // Si no hay cambios, cancelar directamente
+            cancelarEdicion();
+        }
+    };
+
+    // Confirmar cancelación (descarta cambios)
+    const confirmarCancelacion = () => {
+        cancelarEdicion();
+        setModalVisible(false);
+    };
+
+    // Rechazar cancelación (vuelve a la edición)
+    const rechazarCancelacion = () => {
+        setModalVisible(false);
+        setModalType(null);
     };
 
     // Cancelar edición
@@ -140,6 +196,10 @@ export default function GestionSalas(){
         setNombre("");
         setCapacidad("");
         setTv(false);
+        // Limpiar valores originales
+        setNombreOriginal("");
+        setCapacidadOriginal("");
+        setTvOriginal(false);
     };
 
     return (
@@ -210,7 +270,7 @@ export default function GestionSalas(){
                 {editId && (
                     <TouchableOpacity
                         style={styles.cancelButton}
-                        onPress={cancelarEdicion}
+                        onPress={handleCancelarEdicion}
                     >
                         <Text style={styles.cancelButtonText}>Cancelar</Text>
                     </TouchableOpacity>
@@ -303,6 +363,36 @@ export default function GestionSalas(){
                                 </View>
                             </>
                         )}
+
+                        {/* Modal de confirmación de cancelación */}
+                        {modalType === 'cancelEdit' && (
+                            <>
+                                <View style={styles.iconContainer}>
+                                    <Ionicons name="warning" size={48} color="#ff9800" />
+                                </View>
+                                <Text style={styles.modalTitle}>¿Cancelar edición?</Text>
+                                <Text style={styles.modalMessage}>
+                                    Si cancelas ahora, <Text style={{ fontWeight: 'bold', color: '#ff9800' }}>se perderán los cambios</Text> que realizaste en la sala.
+                                </Text>
+                                <Text style={styles.modalMessage}>
+                                    ¿Estás seguro de que deseas cancelar?
+                                </Text>
+                                <View style={styles.modalButtons}>
+                                    <TouchableOpacity
+                                        style={[styles.modalButton, styles.deleteModalButton]}
+                                        onPress={confirmarCancelacion}
+                                    >
+                                        <Text style={styles.modalButtonText}>Sí, cancelar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.modalButton, styles.confirmButton]}
+                                        onPress={rechazarCancelacion}
+                                    >
+                                        <Text style={styles.modalButtonText}>No, continuar editando</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        )}
                     </View>
                 </View>
             </Modal>
@@ -352,4 +442,5 @@ const styles = StyleSheet.create({
     cancelModalButton: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#BEAF87" },
     modalButtonText: { color: "#000", fontWeight: "bold", fontSize: 16 },
     cancelModalText: { color: "#BEAF87", fontWeight: "bold", fontSize: 16 },
+    iconContainer: { marginBottom: 15 },
 });
