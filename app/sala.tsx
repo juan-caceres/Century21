@@ -224,23 +224,36 @@ export default function Sala({ navigation, route }: Props) {
 
 // Función para convertir reservas al formato del calendario
 const convertirReservasParaCalendario = () => {
-  const reservasConvertidas = reservasSemana.map(reserva => {
-    // Parsear la fecha en partes
-    const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
-    const [hora, minuto] = reserva.horaInicio.split(':').map(Number);
-    const [horaF, minutoF] = reserva.horaFin.split(':').map(Number);
-    
-    // Crear fechas usando constructor de Date (zona horaria local)
-    const fechaInicio = new Date(anio, mes - 1, dia, hora, minuto);
-    const fechaFin = new Date(anio, mes - 1, dia, horaF, minutoF);
+  // Obtener la fecha de hoy sin hora (medianoche)
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  const reservasConvertidas = reservasSemana
+    .filter(reserva => {
+      // Parsear la fecha de la reserva
+      const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
+      const fechaReserva = new Date(anio, mes - 1, dia);
+      fechaReserva.setHours(0, 0, 0, 0);
+      
+      // Solo incluir reservas de hoy en adelante
+      return fechaReserva >= hoy;
+    })
+    .map(reserva => {
+      // Parsear la fecha en partes
+      const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
+      const [hora, minuto] = reserva.horaInicio.split(':').map(Number);
+      const [horaF, minutoF] = reserva.horaFin.split(':').map(Number);
+      
+      const fechaInicio = new Date(anio, mes - 1, dia, hora, minuto);
+      const fechaFin = new Date(anio, mes - 1, dia, horaF, minutoF);
 
-    return {
-      id: reserva.id,
-      titulo: reserva.motivo,
-      inicio: fechaInicio,
-      fin: fechaFin,
-    };
-  });
+      return {
+        id: reserva.id,
+        titulo: reserva.motivo,
+        inicio: fechaInicio,
+        fin: fechaFin,
+      };
+    });
   
   return reservasConvertidas;
 };
@@ -300,6 +313,17 @@ const convertirReservasParaCalendario = () => {
     }
     if (!selectedDay) return;
 
+    // Verificar si el horario ya pasó
+    const [anio, mes, dia] = selectedDay.split('-').map(Number);
+    const [hora, minuto] = horaInicio.split(':').map(Number);
+    const fechaHoraReserva = new Date(anio, mes - 1, dia, hora, minuto);
+    const ahora = new Date();
+
+    if (fechaHoraReserva <= ahora) {
+      showMessage("No se pueden crear reservas en horarios pasados.", "error");
+      return;
+    }
+
     const solapa = await existeSolapamientoEnFirestore(
       selectedDay, numero, horaInicio, horaFin, editingReservaId ?? undefined
     );
@@ -351,9 +375,6 @@ const convertirReservasParaCalendario = () => {
         });
         
         showMessage("Reserva creada correctamente.", "success");
-
-      
-        
 
         await programarEmailConReintentos({
           reservaId: docRef.id,
@@ -875,8 +896,8 @@ async function cancelarEmailProgramado(reservaId: string) {
                 placeholder="Seleccionar hora de fin"
               /> 
 
-              {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después */}
-             {/*  <Text style={styles.formLabel}>Hora de inicio</Text>
+            {/*  {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después
+               <Text style={styles.formLabel}>Hora de inicio</Text>
               <TextInput
                 style={styles.input}
                 placeholder="HH:MM (ej: 14:30)"
