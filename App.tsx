@@ -4,6 +4,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import React, { useEffect, useState, createContext, useContext, useRef } from "react";
 import { ActivityIndicator, View, Platform, Modal, Text, TouchableOpacity, StyleSheet } from "react-native";
+import * as NavigationBar from 'expo-navigation-bar';
+import * as SystemUI from 'expo-system-ui';
 import Login from "./app/login";
 import Home from "./app/home";
 import Registro from "./app/registro";
@@ -42,6 +44,35 @@ export default function App() {
   const [fontsLoaded] = useFonts({Typold: require('./assets/Typold-Bold.ttf'),});
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  
+  useEffect(() => {
+    const setupSystemUI = async () => {
+      if (Platform.OS === 'android') {
+        try {
+          // Configurar la barra de navegación (botones de Android)
+          await NavigationBar.setBackgroundColorAsync('#000000'); // Fondo negro
+          await NavigationBar.setButtonStyleAsync('light'); // Botones blancos
+          
+          // Activar modo inmersivo sticky
+          await NavigationBar.setVisibilityAsync('hidden');
+          await NavigationBar.setBehaviorAsync('overlay-swipe');
+          
+          console.log('✅ Modo inmersivo activado en Android');
+        } catch (error) {
+          console.log('⚠️ Error configurando barras del sistema:', error);
+        }
+      }
+      
+      // Configurar color de fondo raíz
+      try {
+        await SystemUI.setBackgroundColorAsync('#ffffff');
+      } catch (error) {
+        console.log('⚠️ Error configurando background color:', error);
+      }
+    };
+
+    setupSystemUI();
+  }, []);
   
   useEffect(() => {
   console.log('📱 Configurando listeners de notificaciones...');
@@ -295,7 +326,8 @@ export default function App() {
             </>
           )}
         </Stack.Navigator>
-        <StatusBar style="light" />
+        {/* StatusBar con estilo oscuro para que se vea en fondo blanco */}
+        <StatusBar style="dark" backgroundColor="#ffffff" />
       </NavigationContainer>
 
       {/* Modal de cuenta eliminada permanentemente */}
