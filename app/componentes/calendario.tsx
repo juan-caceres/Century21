@@ -74,6 +74,28 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     return fechaComparar < hoy;
   };
 
+  // Verificar si un horario específico ya pasó
+  const esHorarioPasado = (fecha: Date, horaIndex: number) => {
+    const ahora = new Date();
+    const fechaComparar = new Date(fecha);
+    fechaComparar.setHours(0, 0, 0, 0);
+    
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    // Si es un día pasado, todo el horario está pasado
+    if (fechaComparar < hoy) return true;
+    
+    // Si es un día futuro, ningún horario está pasado
+    if (fechaComparar > hoy) return false;
+    
+    // Si es hoy, comparar hora actual con la hora del slot
+    const horaSlot = HORAS_INICIO + horaIndex;
+    const horaActual = ahora.getHours();
+    
+    return horaSlot <= horaActual;
+  };
+
   const generarHoras = () => {
     const horas = [];
     for (let i = HORAS_INICIO; i <= HORAS_FIN; i++) { 
@@ -96,20 +118,20 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
     setSemanaActual(nuevaFecha);
   };
 
-// Reservas para un día específico
-const obtenerReservasDelDia = (fecha: Date) => {
-  const año = fecha.getFullYear();
-  const mes = fecha.getMonth();
-  const dia = fecha.getDate();
-  
-  return reservas.filter(reserva => {
-    const reservaAño = reserva.inicio.getFullYear();
-    const reservaMes = reserva.inicio.getMonth();
-    const reservaDia = reserva.inicio.getDate();
+  // Reservas para un día específico
+  const obtenerReservasDelDia = (fecha: Date) => {
+    const año = fecha.getFullYear();
+    const mes = fecha.getMonth();
+    const dia = fecha.getDate();
     
-    return reservaAño === año && reservaMes === mes && reservaDia === dia;
-  });
-};
+    return reservas.filter(reserva => {
+      const reservaAño = reserva.inicio.getFullYear();
+      const reservaMes = reserva.inicio.getMonth();
+      const reservaDia = reserva.inicio.getDate();
+      
+      return reservaAño === año && reservaMes === mes && reservaDia === dia;
+    });
+  };
 
   const formatearFecha = (fecha: Date) => {
     const diaSemana = fecha.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
@@ -139,55 +161,56 @@ const obtenerReservasDelDia = (fecha: Date) => {
     }
   };
 
-// Render de evento en el calendario
-const renderizarEvento = (reserva: Reserva, fecha: Date) => {
-  const horaInicio = reserva.inicio.getHours();
-  const minutosInicio = reserva.inicio.getMinutes();
-  const horaFin = reserva.fin.getHours();
-  const minutosFin = reserva.fin.getMinutes();
-  
-  const topPosition = ((horaInicio - HORAS_INICIO) + minutosInicio / 60) * ALTURA_HORA;
-  const duration = ((horaFin - horaInicio) + (minutosFin - minutosInicio) / 60) * ALTURA_HORA;
-  
-  const tituloFontSize = isSmallDevice ? 8 : isMediumDevice ? 9 : 10;
-  const horaFontSize = isSmallDevice ? 7 : isMediumDevice ? 8 : 9;
-  
-  return (
-    <View
-      key={reserva.id}
-      style={[
-        styles.evento,
-        {
-          top: topPosition,
-          height: Math.max(duration, 20),
-          padding: isSmallDevice ? 3 : isMediumDevice ? 4 : 5,
-        }
-      ]}
-    >
-      <Text style={[styles.eventoTexto, { fontSize: tituloFontSize }]} numberOfLines={isSmallDevice ? 1 : 2}>
-        {reserva.titulo}
-      </Text>
-      <Text style={[styles.eventoHora, { fontSize: horaFontSize }]}>
-        {`${horaInicio.toString().padStart(2, '0')}:${minutosInicio.toString().padStart(2, '0')}`}
-      </Text>
-    </View>
-  );
-};
+  // Render de evento en el calendario
+  const renderizarEvento = (reserva: Reserva, fecha: Date) => {
+    const horaInicio = reserva.inicio.getHours();
+    const minutosInicio = reserva.inicio.getMinutes();
+    const horaFin = reserva.fin.getHours();
+    const minutosFin = reserva.fin.getMinutes();
+    
+    const topPosition = ((horaInicio - HORAS_INICIO) + minutosInicio / 60) * ALTURA_HORA;
+    const duration = ((horaFin - horaInicio) + (minutosFin - minutosInicio) / 60) * ALTURA_HORA;
+    
+    const tituloFontSize = isSmallDevice ? 8 : isMediumDevice ? 9 : 10;
+    const horaFontSize = isSmallDevice ? 7 : isMediumDevice ? 8 : 9;
+    
+    return (
+      <View
+        key={reserva.id}
+        style={[
+          styles.evento,
+          {
+            top: topPosition,
+            height: Math.max(duration, 20),
+            padding: isSmallDevice ? 3 : isMediumDevice ? 4 : 5,
+          }
+        ]}
+      >
+        <Text style={[styles.eventoTexto, { fontSize: tituloFontSize }]} numberOfLines={isSmallDevice ? 1 : 2}>
+          {reserva.titulo}
+        </Text>
+        <Text style={[styles.eventoHora, { fontSize: horaFontSize }]}>
+          {`${horaInicio.toString().padStart(2, '0')}:${minutosInicio.toString().padStart(2, '0')}`}
+        </Text>
+      </View>
+    );
+  };
 
-// FUNCIÓN PARA MANEJAR EL TOQUE EN LAS CELDAS
-const manejarToqueCelda = (dia: Date, horaIndex: number) => {
-  const esPasado = esDiaPasado(dia);
-  
-  if (esPasado) {
-    alert("No se pueden seleccionar días anteriores.");
-    return;
-  }
+  // Manejar toque en celdas con validación de horarios pasados
+  const manejarToqueCelda = (dia: Date, horaIndex: number) => {
+    const esPasado = esDiaPasado(dia);
+    const horarioPasado = esHorarioPasado(dia, horaIndex);
+    
+    if (esPasado || horarioPasado) {
+      alert("No se pueden seleccionar horarios anteriores.");
+      return;
+    }
 
-  const fechaHora = new Date(dia);
-  fechaHora.setHours(0, 0, 0, 0);
-  
-  alSeleccionarHorario(fechaHora);
-};
+    const fechaHora = new Date(dia);
+    fechaHora.setHours(0, 0, 0, 0);
+    
+    alSeleccionarHorario(fechaHora);
+  };
 
   const botonNavSize = isSmallDevice ? 32 : isMediumDevice ? 36 : 40;
   const tituloFontSize = isSmallDevice ? 11 : isMediumDevice ? 13 : 15;
@@ -276,21 +299,25 @@ const manejarToqueCelda = (dia: Date, horaIndex: number) => {
               return (
                 <View key={diaIndex} style={styles.columnaDia}>
                   {/* Celdas para cada hora */}
-                  {Array.from({ length: 11 }, (_, horaIndex) => (
-                    <TouchableOpacity
-                      key={`celda-${diaIndex}-${horaIndex}`}
-                      style={[
-                        styles.celdaHora,
-                        { height: ALTURA_HORA },
-                        esPasado && styles.celdaPasada
-                      ]}
-                      onPress={() => manejarToqueCelda(dia, horaIndex)}
-                      disabled={esPasado}
-                      activeOpacity={esPasado ? 1 : 0.3}
-                    >
-                      <View style={styles.lineaDivision} />
-                    </TouchableOpacity>
-                  ))}
+                  {Array.from({ length: 11 }, (_, horaIndex) => {
+                    const horarioPasado = esHorarioPasado(dia, horaIndex);
+                    
+                    return (
+                      <TouchableOpacity
+                        key={`celda-${diaIndex}-${horaIndex}`}
+                        style={[
+                          styles.celdaHora,
+                          { height: ALTURA_HORA },
+                          (esPasado || horarioPasado) && styles.celdaPasada
+                        ]}
+                        onPress={() => manejarToqueCelda(dia, horaIndex)}
+                        disabled={esPasado || horarioPasado}
+                        activeOpacity={(esPasado || horarioPasado) ? 1 : 0.3}
+                      >
+                        <View style={styles.lineaDivision} />
+                      </TouchableOpacity>
+                    );
+                  })}
                   
                   {/* Render de eventos del día */}
                   <View style={styles.eventosContainer} pointerEvents="none">
@@ -332,3 +359,7 @@ const styles = StyleSheet.create({
   eventoTexto: { color: '#ffffff', fontWeight: 'bold', marginBottom: 1, },
   eventoHora: { color: '#ffffff', opacity: 0.9, },
 });
+
+function alert(arg0: string) {
+  throw new Error("Function not implemented.");
+}
