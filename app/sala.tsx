@@ -176,31 +176,44 @@ export default function Sala({ navigation, route }: Props) {
     return fechas;
   };
 
-  const suscribirReservasSemana = () => {
-    const fechasSemana = obtenerFechasSemana();
-    const reservasRef = collection(db, "reservas");
+const suscribirReservasSemana = () => {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  const fechaMinima = hoy.toISOString().split('T')[0];
+  
+  const reservasRef = collection(db, "reservas");
 
-    const q = query(
-      reservasRef,
-      where("sala", "==", numero),
-      where("fecha", "in", fechasSemana)
-    );
+  // Query que trae TODAS las reservas desde hoy en adelante
+  const q = query(
+    reservasRef,
+    where("sala", "==", numero),
+    where("fecha", ">=", fechaMinima),
+    orderBy("fecha", "asc")
+  );
 
-    return onSnapshot(q, (snap) => {
-      const todasLasReservas: Reserva[] = snap.docs.map((d) => {
-        const data = d.data() as any;
-        return {
-          id: d.id,
-          ...data,
-          horaInicio: normalizeTimeSafe(data.horaInicio),
-          horaFin: normalizeTimeSafe(data.horaFin),
-        };
-      });
-
-      todasLasReservas.sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
-      setReservasSemana(todasLasReservas);
+  return onSnapshot(q, (snap) => {
+    const todasLasReservas: Reserva[] = snap.docs.map((d) => {
+      const data = d.data() as any;
+      return {
+        id: d.id,
+        ...data,
+        horaInicio: normalizeTimeSafe(data.horaInicio),
+        horaFin: normalizeTimeSafe(data.horaFin),
+      };
     });
-  };
+
+    // Ordenar por fecha y hora
+    todasLasReservas.sort((a, b) => {
+      if (a.fecha !== b.fecha) {
+        return a.fecha.localeCompare(b.fecha);
+      }
+      return timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio);
+    });
+    
+    setReservasSemana(todasLasReservas);
+  });
+};
 
   const suscribirReservasDia = (fecha: string) => {
     const reservasRef = collection(db, "reservas");
@@ -224,22 +237,17 @@ export default function Sala({ navigation, route }: Props) {
 
 // Función para convertir reservas al formato del calendario
 const convertirReservasParaCalendario = () => {
-  // Obtener la fecha de hoy sin hora (medianoche)
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
   
   const reservasConvertidas = reservasSemana
     .filter(reserva => {
-      // Parsear la fecha de la reserva
       const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
       const fechaReserva = new Date(anio, mes - 1, dia);
       fechaReserva.setHours(0, 0, 0, 0);
-      
-      // Solo incluir reservas de hoy en adelante
       return fechaReserva >= hoy;
     })
     .map(reserva => {
-      // Parsear la fecha en partes
       const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
       const [hora, minuto] = reserva.horaInicio.split(':').map(Number);
       const [horaF, minutoF] = reserva.horaFin.split(':').map(Number);
