@@ -1,7 +1,7 @@
 //App.tsx
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack";
+import { createStackNavigator,CardStyleInterpolators } from "@react-navigation/stack";
 import React, { useEffect, useState, createContext, useContext, useRef } from "react";
 import { ActivityIndicator, View, Platform, Modal, Text, TouchableOpacity, StyleSheet } from "react-native";
 import * as NavigationBar from 'expo-navigation-bar';
@@ -316,13 +316,7 @@ export default function App() {
               <Stack.Screen name="Home" component={Home} />
               <Stack.Screen name="GestionSalas" component={GestionSalas} />
               <Stack.Screen name="Usuarios" component={Usuarios} />
-              <Stack.Screen name="Sala" component={Sala} options={{
-                animation:'fade_from_right',
-                transitionSpec:{
-                  open: {animation: 'timing', config: {duration: 300}},
-                  close: {animation: 'timing', config: {duration: 200}},
-                },
-              }} />
+              <Stack.Screen name="Sala" component={Sala} options={{animation:'scale_from_center'}}/>
             </>
           )}
         </Stack.Navigator>
