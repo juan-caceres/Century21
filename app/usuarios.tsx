@@ -771,7 +771,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
                 style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
                 onPress={rechazarCancelacion}
               >
-                <Text style={styles.modalButtonText}>No, continuar editando</Text>
+                <Text style={styles.modalButtonText}>No, seguir editando</Text>
               </TouchableOpacity>
             </View>
           </View>
