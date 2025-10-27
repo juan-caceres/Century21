@@ -186,7 +186,7 @@ export default function Registro({ navigation }: Props) {
       <View style={[styles.inputContainer, errorUsername ? styles.inputError : null]}>
         <Icon name="at" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
         <TextInput
-          placeholder="Nombre de Usuario (3-20 caracteres)"
+          placeholder="Nombre de Usuario"
           value={username}
           onChangeText={setUsername}
           style={styles.input}
@@ -196,6 +196,7 @@ export default function Registro({ navigation }: Props) {
           maxLength={20}
         />
       </View>
+      <Text style={styles.helpText}>3-20 caracteres • Letras, números y guion bajo (_)</Text>
       {errorUsername ? <Text style={styles.errorText}>{errorUsername}</Text> : null}
 
       {/* Contraseña */}
@@ -217,6 +218,7 @@ export default function Registro({ navigation }: Props) {
           />
         </TouchableOpacity>
       </View>
+      <Text style={styles.helpText}>Debe contener, al menos, una Mayúscula, una Minúscula y un Número</Text>
       {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
 
       {/* Confirmar contraseña */}
@@ -263,6 +265,7 @@ const styles = StyleSheet.create({
   inputContainer: { flexDirection: "row", alignItems: "center", width: "90%", borderWidth: 1, borderColor: "#BEAF87", backgroundColor: "#1a1a1a", borderRadius: 8, paddingHorizontal: 10, marginBottom: 10 },
   input: { flex: 1, color: "#fff", height: 48, fontSize: 16 },
   inputError: { borderColor: "red" },
+  helpText: { color: "#888", fontSize: 12, alignSelf: "flex-start", marginLeft: "5%", marginTop: -5, marginBottom: 10, },
   errorText: { color: "red", alignSelf: "flex-start", marginLeft: "5%", marginBottom: 5, fontSize: 13 },
   button: { backgroundColor: "#BEAF87", padding: 15, borderRadius: 8, width: "90%", marginTop: 10 },
   buttonText: { color: "#252526", textAlign: "center", fontSize: 18, fontWeight: "bold" },
