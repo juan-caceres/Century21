@@ -781,6 +781,7 @@ export default function Sala({ navigation, route }: Props) {
                 placeholder="Motivo de la reserva"
                 placeholderTextColor="#888"
                 value={motivo}
+                maxLength={100}
                 onChangeText={setMotivo}
                 multiline={true}
                 numberOfLines={2}
