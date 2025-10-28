@@ -348,62 +348,66 @@ export default function Sala({ navigation, route }: Props) {
         }
 
       } else {
-        // Solo crear reserva - Firebase Functions automáticamente programa el email
-        await addDoc(collection(db, "reservas"), {
-          sala: numero,
-          fecha: selectedDay,
-          horaInicio: normalizeTime(horaInicio),
-          horaFin: normalizeTime(horaFin),
-          motivo: motivo.trim(),
-          usuarioId,
-          usuarioEmail,
-          creado: serverTimestamp(),
-        });
-        
-        showMessage("Reserva creada correctamente.", "success");
-        
-        // Programar notificación local
-        try {
-          const [anio, mes, dia] = selectedDay.split('-').map(Number);
-          const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
+  // Solo crear reserva - Firebase Functions automáticamente programa el email
+  await addDoc(collection(db, "reservas"), {
+    sala: numero,
+    fecha: selectedDay,
+    horaInicio: normalizeTime(horaInicio),
+    horaFin: normalizeTime(horaFin),
+    motivo: motivo.trim(),
+    usuarioId,
+    usuarioEmail,
+    creado: serverTimestamp(),
+  });
+  
+  showMessage("Reserva creada correctamente.", "success");
+  
+  // Programar notificación local
+  try {
+    const [anio, mes, dia] = selectedDay.split('-').map(Number);
+    const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
 
-          const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
+    // 🔧 CORRECCIÓN: La hora ingresada es hora local de Argentina
+    // Crear fecha en hora local primero
+    const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
+    
+    // Calcular notificación 1 hora antes (en hora local)
+    const fechaNotificacionLocal = new Date(fechaReservaLocal);
+    fechaNotificacionLocal.setMinutes(fechaNotificacionLocal.getMinutes() - 60);
 
-          const fechaNotificacionLocal = new Date(fechaReservaLocal);
-          fechaNotificacionLocal.setMinutes(fechaNotificacionLocal.getMinutes() - 60);
+    console.log("Fecha reserva local:", fechaReservaLocal.toString());
+    console.log("Fecha notificación local:", fechaNotificacionLocal.toString());
+    console.log("Ahora:", new Date().toString());
 
-          console.log("Fecha reserva:", fechaReservaLocal.toString());
-          console.log("Fecha notificación:", fechaNotificacionLocal.toString());
+    if (fechaNotificacionLocal > new Date()) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
+          body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+          data: {
+            usuarioEmail,
+            salaNumero: salaInfo?.nombre || numero,
+            motivo: motivo.trim(),
+            horaInicio: normalizeTime(horaInicio),
+            fecha: selectedDay,
+          },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: fechaNotificacionLocal,
+        } as Notifications.DateTriggerInput,
+      });
 
-          if (fechaNotificacionLocal > new Date()) {
-            await Notifications.scheduleNotificationAsync({
-              content: {
-                title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
-                body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
-                sound: true,
-                priority: Notifications.AndroidNotificationPriority.HIGH,
-                data: {
-                  usuarioEmail,
-                  salaNumero: salaInfo?.nombre || numero,
-                  motivo: motivo.trim(),
-                  horaInicio: normalizeTime(horaInicio),
-                  fecha: selectedDay,
-                },
-              },
-              trigger: {
-                type: Notifications.SchedulableTriggerInputTypes.DATE,
-                date: fechaNotificacionLocal,
-              } as Notifications.DateTriggerInput,
-            });
-
-            console.log("✅ Notificación programada para:", fechaNotificacionLocal.toLocaleString());
-          } else {
-            console.log("⚠️ La hora de notificación ya pasó. No se programó.");
-          }
-        } catch (notifErr) {
-          console.log("❌ Error al programar notificación local:", notifErr);
-        }
-      }
+      console.log("✅ Notificación local programada para:", fechaNotificacionLocal.toLocaleString());
+    } else {
+      console.log("⚠️ La hora de notificación ya pasó. No se programó.");
+    }
+  } catch (notifErr) {
+    console.log("❌ Error al programar notificación local:", notifErr);
+  }
+}
 
       setHoraInicio("");
       setHoraFin("");
@@ -753,8 +757,8 @@ export default function Sala({ navigation, route }: Props) {
                 placeholder="Seleccionar hora de fin"
               />
 
-              {/*  {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después
-               <Text style={styles.formLabel}>Hora de inicio</Text>
+                {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después */}
+              {/* <Text style={styles.formLabel}>Hora de inicio</Text>
               <TextInput
                 style={styles.input}
                 placeholder="HH:MM (ej: 14:30)"
@@ -762,10 +766,10 @@ export default function Sala({ navigation, route }: Props) {
                 value={horaInicio}
                 onChangeText={setHoraInicio}
                 keyboardType="default"
-              />
+              />*/}
 
-              {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después
-              <Text style={styles.formLabel}>Hora de fin</Text>
+              {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después*/}
+              {/*<Text style={styles.formLabel}>Hora de fin</Text>
               <TextInput
                 style={styles.input}
                 placeholder="HH:MM (ej: 16:00)"
