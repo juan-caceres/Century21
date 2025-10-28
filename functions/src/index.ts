@@ -5,6 +5,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onCall } from "firebase-functions/v2/https";
 import * as admin from 'firebase-admin';
 import * as nodemailer from 'nodemailer';
+import { defineSecret } from "firebase-functions/params";
 
 // Inicializar Firebase Admin
 admin.initializeApp();
@@ -16,21 +17,17 @@ setGlobalOptions({
   region: "southamerica-east1"
 });
 
-// ✅ Leer variables de entorno desde .env
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
+// ✅ Secrets de Firebase (método moderno)
+const emailUserSecret = defineSecret("EMAIL_USER");
+const emailPassSecret = defineSecret("EMAIL_PASS");
 
-if (!EMAIL_USER || !EMAIL_PASS) {
-  console.error('❌ ERROR: Faltan variables EMAIL_USER o EMAIL_PASS en .env');
-}
-
-// ✅ FUNCIÓN para crear transporter (se ejecuta en runtime)
+// ✅ FUNCIÓN para crear transporter
 function getTransporter() {
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: EMAIL_USER,
-      pass: EMAIL_PASS
+      user: emailUserSecret.value(),
+      pass: emailPassSecret.value()
     }
   });
 }
@@ -39,7 +36,10 @@ function getTransporter() {
 // 1. TRIGGER: Cuando se crea una reserva
 // ============================================
 export const onReservaCreated = onDocumentCreated(
-  "reservas/{reservaId}",
+  {
+    document: "reservas/{reservaId}",
+    secrets: [emailUserSecret, emailPassSecret]
+  },
   async (event) => {
     const snapshot = event.data;
     if (!snapshot) {
@@ -134,7 +134,8 @@ export const onReservaDeleted = onDocumentDeleted(
 export const procesarEmailsPendientes = onSchedule(
   {
     schedule: "every 1 minutes",
-    timeZone: "America/Argentina/Buenos_Aires"
+    timeZone: "America/Argentina/Buenos_Aires",
+    secrets: [emailUserSecret, emailPassSecret]
   },
   async (event) => {
     console.log('⏰ Procesando emails pendientes...', new Date().toISOString());
@@ -208,7 +209,7 @@ async function enviarEmailRecordatorio(emailData: any): Promise<void> {
   const fechaFormateada = convertirAFormatoDDMMYYYY(emailData.fecha);
 
   const mailOptions = {
-    from: `"Century 21 Reservas" <${EMAIL_USER}>`,
+    from: `"Century 21 Reservas" <${emailUserSecret.value()}>`,
     to: emailData.usuarioEmail,
     subject: `🔔 Recordatorio: Reserva en ${emailData.salaNumero} - 1 hora restante`,
     html: `
@@ -261,34 +262,39 @@ async function enviarEmailRecordatorio(emailData: any): Promise<void> {
 // ============================================
 // 5. FUNCIÓN HTTP: Enviar email inmediato (para testing)
 // ============================================
-export const enviarRecordatorioInmediato = onCall(async (request) => {
-  // Verificar autenticación
-  if (!request.auth) {
-    throw new Error('Usuario no autenticado');
+export const enviarRecordatorioInmediato = onCall(
+  {
+    secrets: [emailUserSecret, emailPassSecret]
+  },
+  async (request) => {
+    // Verificar autenticación
+    if (!request.auth) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const { usuarioEmail, salaNumero, fecha, horaInicio, motivo } = request.data;
+
+    if (!usuarioEmail || !salaNumero || !fecha || !horaInicio) {
+      throw new Error('Faltan datos requeridos');
+    }
+
+    try {
+      await enviarEmailRecordatorio({
+        usuarioEmail,
+        salaNumero,
+        fecha,
+        horaInicio,
+        motivo: motivo || 'Sin motivo especificado',
+      });
+
+      return { success: true, message: 'Email enviado correctamente' };
+
+    } catch (error: any) {
+      console.error('Error enviando email:', error);
+      throw new Error(error.message);
+    }
   }
-
-  const { usuarioEmail, salaNumero, fecha, horaInicio, motivo } = request.data;
-
-  if (!usuarioEmail || !salaNumero || !fecha || !horaInicio) {
-    throw new Error('Faltan datos requeridos');
-  }
-
-  try {
-    await enviarEmailRecordatorio({
-      usuarioEmail,
-      salaNumero,
-      fecha,
-      horaInicio,
-      motivo: motivo || 'Sin motivo especificado',
-    });
-
-    return { success: true, message: 'Email enviado correctamente' };
-
-  } catch (error: any) {
-    console.error('Error enviando email:', error);
-    throw new Error(error.message);
-  }
-});
+);
 
 // ============================================
 // HELPER: Convertir fecha a DD-MM-YYYY
