@@ -1,5 +1,5 @@
-//app/sala.tsx
-import React, { useState, useEffect, use } from "react";
+// app/sala.tsx
+import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, ActivityIndicator, Alert } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -14,7 +14,7 @@ import TimePicker from "./componentes/TimePicker";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Notifications from "expo-notifications";
 import { RootStackParamList } from "../app/types/navigation";
-import { notifyReservaCreated,notifyReservaEdited,notifyReservaDeleted,notifyReservaDeletedByAdmin } from "./servicios/notificationService";
+import { notifyReservaCreated, notifyReservaEdited, notifyReservaDeleted } from "./servicios/notificationService";
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
@@ -22,10 +22,10 @@ type Props = { navigation: SalaScreenNavigationProp; route: SalaScreenRouteProp 
 
 type Reserva = {
   id?: string;
-  sala: string; 
-  fecha: string; // "YYYY-MM-DD"
-  horaInicio: string; // "HH:MM"
-  horaFin: string; // "HH:MM"
+  sala: string;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
   motivo: string;
   usuarioId?: string | null;
   usuarioEmail?: string | null;
@@ -37,7 +37,7 @@ const isSmallDevice = width < 380;
 const isMediumDevice = width >= 380 && width < 600;
 
 export default function Sala({ navigation, route }: Props) {
-  const { numero } = route.params; 
+  const { numero } = route.params;
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -54,12 +54,9 @@ export default function Sala({ navigation, route }: Props) {
   const [reservaParaEliminar, setReservaParaEliminar] = useState<Reserva | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<{text: string; type: "success" | "error"} | null>(null);
 
-  // Estados para navegación entre salas
   const [todasLasSalas, setTodasLasSalas] = useState<any[]>([]);
   const [indiceActual, setIndiceActual] = useState<number>(-1);
 
-
-  // Carga de fuente personalizada
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Bold.ttf"),
   });
@@ -71,7 +68,7 @@ export default function Sala({ navigation, route }: Props) {
       </View>
     );
   }
-  
+
   // Cargar todas las salas para la navegación
   useEffect(() => {
     const cargarSalas = async () => {
@@ -82,7 +79,6 @@ export default function Sala({ navigation, route }: Props) {
         const salas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setTodasLasSalas(salas);
         
-        // Encontrar el índice de la sala actual
         const idx = salas.findIndex(s => s.id === String(numero));
         setIndiceActual(idx);
       } catch (err) {
@@ -110,15 +106,15 @@ export default function Sala({ navigation, route }: Props) {
 
   //funcion para obtener username del usuario actual
   const obtenerUsernameActual = async (): Promise<string> => {
-    try{
+    try {
       const usuarioId = auth.currentUser?.uid;
       if (!usuarioId) return "Usuario";
 
-      const userDoc = await getDoc(doc(db,"users", usuarioId));
+      const userDoc = await getDoc(doc(db, "users", usuarioId));
       const userData = userDoc.data();
       return userData?.username || userData?.email || "Usuario";
 
-    }catch (error){
+    } catch (error) {
       console.log("Error al obtener username:", error);
       return "Usuario";
     }
@@ -160,60 +156,44 @@ export default function Sala({ navigation, route }: Props) {
     return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
   };
 
-  const obtenerFechasSemana = () => {
+  const suscribirReservasSemana = () => {
     const hoy = new Date();
-    const diaDeLaSemana = hoy.getDay();
-    const diasParaRestar = diaDeLaSemana === 0 ? 6 : diaDeLaSemana - 1;
-    const inicioSemana = new Date(hoy);
-    inicioSemana.setDate(hoy.getDate() - diasParaRestar);
+    hoy.setHours(0, 0, 0, 0);
     
-    const fechas = [];
-    for (let i = 0; i < 6; i++) { // Solo lunes a sábado
-      const fecha = new Date(inicioSemana);
-      fecha.setDate(inicioSemana.getDate() + i);
-      fechas.push(fecha.toISOString().split('T')[0]);
-    }
-    return fechas;
+    const fechaMinima = hoy.toISOString().split('T')[0];
+    
+    const reservasRef = collection(db, "reservas");
+
+    // Query que trae TODAS las reservas desde hoy en adelante
+    const q = query(
+      reservasRef,
+      where("sala", "==", numero),
+      where("fecha", ">=", fechaMinima),
+      orderBy("fecha", "asc")
+    );
+
+    return onSnapshot(q, (snap) => {
+      const todasLasReservas: Reserva[] = snap.docs.map((d) => {
+        const data = d.data() as any;
+        return {
+          id: d.id,
+          ...data,
+          horaInicio: normalizeTimeSafe(data.horaInicio),
+          horaFin: normalizeTimeSafe(data.horaFin),
+        };
+      });
+
+      // Ordenar por fecha y hora
+      todasLasReservas.sort((a, b) => {
+        if (a.fecha !== b.fecha) {
+          return a.fecha.localeCompare(b.fecha);
+        }
+        return timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio);
+      });
+      
+      setReservasSemana(todasLasReservas);
+    });
   };
-
-const suscribirReservasSemana = () => {
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  
-  const fechaMinima = hoy.toISOString().split('T')[0];
-  
-  const reservasRef = collection(db, "reservas");
-
-  // Query que trae TODAS las reservas desde hoy en adelante
-  const q = query(
-    reservasRef,
-    where("sala", "==", numero),
-    where("fecha", ">=", fechaMinima),
-    orderBy("fecha", "asc")
-  );
-
-  return onSnapshot(q, (snap) => {
-    const todasLasReservas: Reserva[] = snap.docs.map((d) => {
-      const data = d.data() as any;
-      return {
-        id: d.id,
-        ...data,
-        horaInicio: normalizeTimeSafe(data.horaInicio),
-        horaFin: normalizeTimeSafe(data.horaFin),
-      };
-    });
-
-    // Ordenar por fecha y hora
-    todasLasReservas.sort((a, b) => {
-      if (a.fecha !== b.fecha) {
-        return a.fecha.localeCompare(b.fecha);
-      }
-      return timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio);
-    });
-    
-    setReservasSemana(todasLasReservas);
-  });
-};
 
   const suscribirReservasDia = (fecha: string) => {
     const reservasRef = collection(db, "reservas");
@@ -235,36 +215,36 @@ const suscribirReservasSemana = () => {
     });
   };
 
-// Función para convertir reservas al formato del calendario
-const convertirReservasParaCalendario = () => {
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  
-  const reservasConvertidas = reservasSemana
-    .filter(reserva => {
-      const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
-      const fechaReserva = new Date(anio, mes - 1, dia);
-      fechaReserva.setHours(0, 0, 0, 0);
-      return fechaReserva >= hoy;
-    })
-    .map(reserva => {
-      const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
-      const [hora, minuto] = reserva.horaInicio.split(':').map(Number);
-      const [horaF, minutoF] = reserva.horaFin.split(':').map(Number);
-      
-      const fechaInicio = new Date(anio, mes - 1, dia, hora, minuto);
-      const fechaFin = new Date(anio, mes - 1, dia, horaF, minutoF);
+  // Función para convertir reservas al formato del calendario
+  const convertirReservasParaCalendario = () => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    const reservasConvertidas = reservasSemana
+      .filter(reserva => {
+        const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
+        const fechaReserva = new Date(anio, mes - 1, dia);
+        fechaReserva.setHours(0, 0, 0, 0);
+        return fechaReserva >= hoy;
+      })
+      .map(reserva => {
+        const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
+        const [hora, minuto] = reserva.horaInicio.split(':').map(Number);
+        const [horaF, minutoF] = reserva.horaFin.split(':').map(Number);
+        
+        const fechaInicio = new Date(anio, mes - 1, dia, hora, minuto);
+        const fechaFin = new Date(anio, mes - 1, dia, horaF, minutoF);
 
-      return {
-        id: reserva.id,
-        titulo: reserva.motivo,
-        inicio: fechaInicio,
-        fin: fechaFin,
-      };
-    });
-  
-  return reservasConvertidas;
-};
+        return {
+          id: reserva.id,
+          titulo: reserva.motivo,
+          inicio: fechaInicio,
+          fin: fechaFin,
+        };
+      });
+    
+    return reservasConvertidas;
+  };
 
   // Chequeo de que no haya reservas a la misma hora
   const existeSolapamientoEnFirestore = async (
@@ -343,7 +323,6 @@ const convertirReservasParaCalendario = () => {
     try {
       const usuarioEmail = auth.currentUser?.email ?? null;
       const usuarioId = auth.currentUser?.uid ?? null;
-
       //obtengo datos para la notificacion
       const userName = await obtenerUsernameActual();
       const salaName = salaInfo?.nombre || numero;
@@ -361,17 +340,16 @@ const convertirReservasParaCalendario = () => {
         showMessage("Reserva actualizada correctamente.", "success");
 
         //notificar a admins/superusers de la edicion de la reserva
-        console.log("enviando notificacion de reserva editada ...");
-        try{
-          await notifyReservaEdited( userName,salaName,selectedDay,normalizeTime(horaInicio),normalizeTime(horaFin));
+        try {
+          await notifyReservaEdited(userName, salaName, selectedDay, normalizeTime(horaInicio), normalizeTime(horaFin));
           console.log("✅ Notificación de edición enviada exitosamente");
-
-        }catch (notiError){
+        } catch (notiError) {
           console.log("Error enviando notificacion de reserva editada:", notiError);
         }
 
       } else {
-        const docRef = await addDoc(collection(db, "reservas"), {
+        // Solo crear reserva - Firebase Functions automáticamente programa el email
+        await addDoc(collection(db, "reservas"), {
           sala: numero,
           fecha: selectedDay,
           horaInicio: normalizeTime(horaInicio),
@@ -383,66 +361,54 @@ const convertirReservasParaCalendario = () => {
         });
         
         showMessage("Reserva creada correctamente.", "success");
-
-        await programarEmailConReintentos({
-          reservaId: docRef.id,
-          usuarioEmail,
-          salaNumero: salaInfo?.nombre || numero,
-          fecha: selectedDay,
-          horaInicio: normalizeTime(horaInicio),
-          motivo: motivo.trim(),
-        });
         
+        // Programar notificación local
         try {
-  const [anio, mes, dia] = selectedDay.split('-').map(Number);
-  const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
+          const [anio, mes, dia] = selectedDay.split('-').map(Number);
+          const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
 
-  // Fecha de la reserva (local)
-  const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
+          const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
 
-  // Notificación 60 minutos antes
-  const fechaNotificacionLocal = new Date(fechaReservaLocal);
-  fechaNotificacionLocal.setMinutes(fechaNotificacionLocal.getMinutes() - 60);
+          const fechaNotificacionLocal = new Date(fechaReservaLocal);
+          fechaNotificacionLocal.setMinutes(fechaNotificacionLocal.getMinutes() - 60);
 
-  console.log("Fecha reserva:", fechaReservaLocal.toString());
-  console.log("Fecha notificación:", fechaNotificacionLocal.toString());
+          console.log("Fecha reserva:", fechaReservaLocal.toString());
+          console.log("Fecha notificación:", fechaNotificacionLocal.toString());
 
-  // Solo programamos si la notificación es futura
-  if (fechaNotificacionLocal > new Date()) {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
-        body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
-        sound: true,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-        data: {
-          usuarioEmail,
-          salaNumero: salaInfo?.nombre || numero,
-          motivo: motivo.trim(),
-          horaInicio: normalizeTime(horaInicio),
-          fecha: selectedDay,
-        },
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: fechaNotificacionLocal,
-      } as Notifications.DateTriggerInput, 
-    });
+          if (fechaNotificacionLocal > new Date()) {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
+                body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
+                sound: true,
+                priority: Notifications.AndroidNotificationPriority.HIGH,
+                data: {
+                  usuarioEmail,
+                  salaNumero: salaInfo?.nombre || numero,
+                  motivo: motivo.trim(),
+                  horaInicio: normalizeTime(horaInicio),
+                  fecha: selectedDay,
+                },
+              },
+              trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DATE,
+                date: fechaNotificacionLocal,
+              } as Notifications.DateTriggerInput,
+            });
 
-    console.log("✅ Notificación programada para:", fechaNotificacionLocal.toLocaleString());
-  } else {
-    console.log("⚠️ La hora de notificación ya pasó. No se programó.");
-  }
-} catch (notifErr) {
-  console.log("❌ Error al programar notificación local:", notifErr);
-}
-
+            console.log("✅ Notificación programada para:", fechaNotificacionLocal.toLocaleString());
+          } else {
+            console.log("⚠️ La hora de notificación ya pasó. No se programó.");
+          }
+        } catch (notifErr) {
+          console.log("❌ Error al programar notificación local:", notifErr);
+        }
       }
 
-      setHoraInicio(""); 
-      setHoraFin(""); 
-      setMotivo(""); 
-      setEditingReservaId(null);  
+      setHoraInicio("");
+      setHoraFin("");
+      setMotivo("");
+      setEditingReservaId(null);
       
       setModalVisible(false);
 
@@ -452,100 +418,21 @@ const convertirReservasParaCalendario = () => {
     }
   };
 
-async function programarEmailConReintentos(emailData: any, intentos = 0) {
-  const MAX_INTENTOS = 3;
-  const BACKEND_URL = "https://century21-4et6.onrender.com/programar-email";
-
-  try {
-    console.log(`📧 Intento ${intentos + 1} de programar email...`);
-    console.log(`🌐 URL: ${BACKEND_URL}`);
-    
-    const responseEmail = await fetch(BACKEND_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(emailData),
-    });
-
-    const resultEmail = await responseEmail.json();
-    
-    console.log("📦 Respuesta del servidor:", resultEmail);
-
-    if (responseEmail.ok && resultEmail.success) {
-      console.log("✅ Email programado correctamente en backend");
-      console.log("📅 Fecha de envío:", resultEmail.fechaEnvio);
-      return true;
-    } else {
-      throw new Error(`Error: ${resultEmail.error || resultEmail.details || "Error del servidor"}`);
-    }
-
-  } catch (err: any) {
-    console.error(`❌ Error intento ${intentos + 1}:`, err.message);
-
-    // Reintentar hasta MAX_INTENTOS
-    if (intentos < MAX_INTENTOS - 1) {
-      console.log(`⏳ Esperando 5 segundos antes de reintentar...`);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      return programarEmailConReintentos(emailData, intentos + 1);
-    }
-
-    // Si se agotan los intentos, guardar como respaldo en Firestore
-    console.log("⚠️ Se agotaron los intentos. Guardando en Firestore como respaldo...");
-    await guardarEmailPendienteEnFirestore(emailData);
-    
-    return false;
-  }
-}
-
-  // Guardar email pendiente en Firestore (respaldo)
-  async function guardarEmailPendienteEnFirestore(emailData: any) {
-    try {
-      const [anio, mes, dia] = emailData.fecha.split('-').map(Number);
-      const [hora, minuto] = emailData.horaInicio.split(':').map(Number);
-      const fechaReserva = new Date(anio, mes - 1, dia, hora, minuto);
-      const fechaEnvio = new Date(fechaReserva.getTime() - 60 * 60 * 1000);
-
-      const emailDoc = {
-        reservaId: emailData.reservaId,
-        usuarioEmail: emailData.usuarioEmail,
-        salaNumero: emailData.salaNumero,
-        fecha: emailData.fecha,
-        horaInicio: emailData.horaInicio,
-        motivo: emailData.motivo,
-        fechaReserva: new Date(fechaReserva),
-        fechaEnvio: new Date(fechaEnvio),
-        estado: 'pendiente',
-        creadoEn: new Date(),
-      };
-
-      await addDoc(collection(db, "emailsProgramados"), emailDoc);
-      console.log("✅ Email guardado en Firestore como pendiente");
-    } catch (err) {
-      console.error("❌ Error al guardar email en Firestore:", err);
-    }
-  }
-
-  //FUNCION PARA ELIMINAR RESERVA
   const handleEliminarReserva = async (reserva: Reserva) => {
-    
     if (!reserva.id || reserva.usuarioId !== auth.currentUser?.uid) return;
     
     try {
-      //obtengo datos para la notificacion
       const userName = await obtenerUsernameActual();
       const salaName = salaInfo?.nombre || numero;
-      if (reserva.id) {
-        await cancelarEmailProgramado(reserva.id);
-      }
       
       await deleteDoc(doc(db, "reservas", reserva.id));
+            
       showMessage("Reserva cancelada correctamente.", "success");
 
       console.log("enviando notificacion de reserva eliminada ...");
       try {
-        await notifyReservaDeleted( userName,salaName,reserva.fecha,normalizeTime(reserva.horaInicio),normalizeTime(reserva.horaFin));
-      } catch(notiError){
+        await notifyReservaDeleted(userName, salaName, reserva.fecha, normalizeTime(reserva.horaInicio), normalizeTime(reserva.horaFin));
+      } catch (notiError) {
         console.log("Error enviando notificacion de reserva eliminada:", notiError);
       }
       
@@ -555,32 +442,6 @@ async function programarEmailConReintentos(emailData: any, intentos = 0) {
     }
   };
 
-async function cancelarEmailProgramado(reservaId: string) {
-  const BACKEND_URL = "https://century21-4et6.onrender.com/cancelar-email";
-  
-  try {
-    const response = await fetch(BACKEND_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ reservaId }),
-    });
-    
-    const result = await response.json();
-    
-    if (response.ok && result.success) {
-      console.log("✅ Email cancelado correctamente");
-    } else {
-      console.log("⚠️ No se pudo cancelar el email:", result.message);
-    }
-    
-  } catch (err: any) {
-    console.error("❌ Error al cancelar email:", err.message);
-  }
-}
-
-  // Para navegar entre salas usando índices
   const goToSala = (direccion: 'prev' | 'next') => {
     if (todasLasSalas.length === 0 || indiceActual === -1) return;
     
@@ -593,15 +454,15 @@ async function cancelarEmailProgramado(reservaId: string) {
     
     if (nuevoIndice >= 0 && nuevoIndice < todasLasSalas.length) {
       const nuevaSala = todasLasSalas[nuevoIndice];
-      const numero= nuevaSala.id;
-      navigation.replace("Sala", { numero});
+      const numero = nuevaSala.id;
+      navigation.replace("Sala", { numero });
     }
   };
 
- const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
-  const [anio, mes, dia] = fechaISO.split('-');
-  return `${dia}-${mes}-${anio}`;
-};
+  const convertirAFormatoDDMMYYYY = (fechaISO: string): string => {
+    const [anio, mes, dia] = fechaISO.split('-');
+    return `${dia}-${mes}-${anio}`;
+  };
 
   const handleSeleccionarHorario = async (fecha: Date) => {
     const hoy = new Date();
@@ -619,9 +480,6 @@ async function cancelarEmailProgramado(reservaId: string) {
       return;
     }
 
-    const dia = fecha.getDate().toString().padStart(2, "0");
-    const mes = (fecha.getMonth() + 1).toString().padStart(2, "0");
-    const anio = fecha.getFullYear();
     const diaStr = fecha.toISOString().split('T')[0];
     setSelectedDay(diaStr);
     
@@ -631,24 +489,23 @@ async function cancelarEmailProgramado(reservaId: string) {
     setMotivo("");
     
     setModalVisible(true);
-
   };
 
   return (
     <View style={styles.container}>
-      {/* Header (botones y titulos)*/}
       <View style={styles.superiorSalas}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
-            <Text style={styles.navButtonText}><Ionicons name="home" size={16} color="#ffffffff" style={{marginRight: 3}} />Inicio </Text>
-       
+            <Text style={styles.navButtonText}>
+              <Ionicons name="home" size={16} color="#ffffffff" style={{marginRight: 3}} />
+              Inicio
+            </Text>
           </TouchableOpacity>
 
           <BtnCerrarSesion />
         </View>
       </View>
 
-      {/* Calendario */}
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.leftHeader}>
@@ -701,11 +558,10 @@ async function cancelarEmailProgramado(reservaId: string) {
         />
       </View>
 
-      {/* Modal */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Reservas  {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
+            <Text style={styles.modalTitle}>Reservas {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
 
             {feedbackMessage && (
               <View style={[
@@ -721,7 +577,7 @@ async function cancelarEmailProgramado(reservaId: string) {
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
               <TouchableOpacity
                 style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8,
-                 opacity: (() => {
+                  opacity: (() => {
                     if (!selectedDay) return 1;
                     const prev = new Date(selectedDay + 'T00:00:00');
                     prev.setDate(prev.getDate() - 1);
@@ -730,16 +586,13 @@ async function cancelarEmailProgramado(reservaId: string) {
                     prev.setHours(0, 0, 0, 0);
                     return prev < hoy ? 0.3 : 1;
                   })()
-                }
-              ]} 
+                }]}
                 onPress={() => {
                   if (!selectedDay) return;
                   
-                  // Crear fecha y retroceder un día
                   const prev = new Date(selectedDay + 'T00:00:00');
                   prev.setDate(prev.getDate() - 1);
                   
-                  // Verificar si es día pasado
                   const hoy = new Date();
                   hoy.setHours(0, 0, 0, 0);
                   prev.setHours(0, 0, 0, 0);
@@ -749,12 +602,10 @@ async function cancelarEmailProgramado(reservaId: string) {
                     return;
                   }
                   
-                  // Saltar domingo
                   if (prev.getDay() === 0) {
                     prev.setDate(prev.getDate() - 1);
                     prev.setHours(0, 0, 0, 0);
                     
-                    // Verificar nuevamente si es día pasado después de saltar domingo
                     if (prev < hoy) {
                       showMessage("No se pueden seleccionar días anteriores a hoy.", "error");
                       return;
@@ -766,7 +617,7 @@ async function cancelarEmailProgramado(reservaId: string) {
                   setEditingReservaId(null);
                   setHoraInicio("");
                   setHoraFin("");
-                  setMotivo("");           
+                  setMotivo("");
                 }}
               >
                 <Text style={styles.navButtonText}>◀ Día anterior</Text>
@@ -779,7 +630,6 @@ async function cancelarEmailProgramado(reservaId: string) {
                   const next = new Date(selectedDay);
                   next.setDate(next.getDate() + 1);
                   
-                  // Saltar domingo
                   if (next.getDay() === 0) {
                     next.setDate(next.getDate() + 1);
                   }
@@ -796,12 +646,10 @@ async function cancelarEmailProgramado(reservaId: string) {
               </TouchableOpacity>
             </View>
 
-            {/* Lista de reservas */}
             {loadingReservas ? (
               <Text style={{ color: "#252526" }}>Cargando...</Text>
             ) : reservasDia.length === 0 ? (
               <Text style={{ color: "#929292ff" }}>No hay reservas para este día.</Text>
-              
             ) : (
               <FlatList
                 data={reservasDia}
@@ -884,8 +732,9 @@ async function cancelarEmailProgramado(reservaId: string) {
             </Modal>
 
             <View style={styles.formSection}>
-              <Text
-              style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>*tocar reseva para editar</Text>
+              <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
+                *tocar reserva para editar
+              </Text>
               <Text style={styles.formSectionTitle}>
                 {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
               </Text>
@@ -897,14 +746,14 @@ async function cancelarEmailProgramado(reservaId: string) {
                 placeholder="Seleccionar hora de inicio"
               />
               
-             <TimePicker
+              <TimePicker
                 label="Hora de fin"
                 value={horaFin}
                 onChange={setHoraFin}
                 placeholder="Seleccionar hora de fin"
-              /> 
+              />
 
-            {/*  {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después
+              {/*  {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después
                <Text style={styles.formLabel}>Hora de inicio</Text>
               <TextInput
                 style={styles.input}
@@ -937,10 +786,9 @@ async function cancelarEmailProgramado(reservaId: string) {
                 numberOfLines={2}
               />
 
-              <Text
-              style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}
-              >*recibirá una notificación 60 minutos antes de la reserva</Text>
-     
+              <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
+                *recibirá un email 60 minutos antes de la reserva
+              </Text>
 
               <View style={styles.buttonContainer}>
                 <TouchableOpacity 
@@ -956,9 +804,9 @@ async function cancelarEmailProgramado(reservaId: string) {
                   style={[styles.cancelButton, { marginTop: 8 }]}
                   onPress={() => {
                     setModalVisible(false);
-                    setHoraInicio(""); 
-                    setHoraFin(""); 
-                    setMotivo(""); 
+                    setHoraInicio("");
+                    setHoraFin("");
+                    setMotivo("");
                     setEditingReservaId(null);
                   }}
                 >
@@ -974,39 +822,37 @@ async function cancelarEmailProgramado(reservaId: string) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffffff", padding: width > 600 ? 20 : isSmallDevice ? 8 : 12, },
-  header: { height: isSmallDevice ? 70 : 80, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginBottom: isSmallDevice ? 4 : 8, },
-  superiorSalas:{ height: 40, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent:"center", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginTop: height > 700 ? 40 : 15, marginBottom: 8, },
+  container: { flex: 1, backgroundColor: "#ffffffff", padding: width > 600 ? 20 : isSmallDevice ? 8 : 12 },
+  header: { height: isSmallDevice ? 70 : 80, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginBottom: isSmallDevice ? 4 : 8 },
+  superiorSalas: { height: 40, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent: "center", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginTop: height > 700 ? 40 : 15, marginBottom: 8 },
   leftHeader: { flexDirection: "row", alignItems: "center" },
   rightHeader: { flexDirection: "row", alignItems: "center" },
   centerHeader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  headerTitle: { color: "#252526", fontSize: isSmallDevice ? 16 : isMediumDevice ? 17 : 18, fontWeight: "700", textAlign: "center", },
-  salaInfoContainer: { marginTop: 4, alignItems: "center", },
-  salaMeta: { color: "#252526", fontSize: isSmallDevice ? 10 : 11, textAlign: "center", },
+  headerTitle: { color: "#252526", fontSize: isSmallDevice ? 16 : isMediumDevice ? 17 : 18, fontWeight: "700", textAlign: "center" },
   disabledButton: { opacity: 0.4 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", paddingHorizontal: isSmallDevice ? 6 : 10, },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", paddingHorizontal: isSmallDevice ? 6 : 10 },
   content: { flex: 1, padding: isSmallDevice ? 4 : 8, alignItems: "center" },
   modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
-  modalContent: { backgroundColor: "#1c1c1c", padding: isSmallDevice ? 16 : 20, borderRadius: 10, width: "90%", maxWidth: 500, },
+  modalContent: { backgroundColor: "#1c1c1c", padding: isSmallDevice ? 16 : 20, borderRadius: 10, width: "90%", maxWidth: 500 },
   modalTitle: { color: "#BEAF87", fontSize: isSmallDevice ? 16 : 18, marginBottom: 10, textAlign: "center" },
-  input: { backgroundColor: "#1e1e1e", borderColor: "#BEAF87", borderWidth: 1, borderRadius: 8, color: "#fff", padding: isSmallDevice ? 8 : 10, marginBottom: 10, fontSize: isSmallDevice ? 13 : 14, },
+  input: { backgroundColor: "#1e1e1e", borderColor: "#BEAF87", borderWidth: 1, borderRadius: 8, color: "#fff", padding: isSmallDevice ? 8 : 10, marginBottom: 10, fontSize: isSmallDevice ? 13 : 14 },
   saveButton: { backgroundColor: "#BEAF87", paddingVertical: isSmallDevice ? 8 : 10, paddingHorizontal: isSmallDevice ? 12 : 16, borderRadius: 8, alignItems: "center" },
-  saveText: { color: "#252526", fontWeight: "bold", fontSize: isSmallDevice ? 13 : 14, },
+  saveText: { color: "#252526", fontWeight: "bold", fontSize: isSmallDevice ? 13 : 14 },
   cancelButton: { backgroundColor: '#252526', paddingVertical: isSmallDevice ? 8 : 10, paddingHorizontal: isSmallDevice ? 12 : 16, borderRadius: 8, borderWidth: 1, borderColor: "#BEAF87" },
-  cancelText: { color: "#BEAF87", textAlign: "center", fontSize: isSmallDevice ? 13 : 14, },
+  cancelText: { color: "#BEAF87", textAlign: "center", fontSize: isSmallDevice ? 13 : 14 },
   reservaRow: { padding: isSmallDevice ? 6 : 8, marginBottom: 6, borderRadius: 6, backgroundColor: "#2e2e2e" },
-  reservaText: { color: "#BEAF87", fontWeight: "bold", fontSize: isSmallDevice ? 13 : 14, },
-  reservaMotivo: { color: "#fff", fontSize: isSmallDevice ? 12 : 13, },
+  reservaText: { color: "#BEAF87", fontWeight: "bold", fontSize: isSmallDevice ? 13 : 14 },
+  reservaMotivo: { color: "#fff", fontSize: isSmallDevice ? 12 : 13 },
   reservaUsuario: { color: "#ccc", fontSize: isSmallDevice ? 11 : 12 },
-  eliminarText: { color: "#ff6961", fontWeight: "700", fontSize: isSmallDevice ? 12 : 13, },
+  eliminarText: { color: "#ff6961", fontWeight: "700", fontSize: isSmallDevice ? 12 : 13 },
   navButton: { backgroundColor: "#BEAF87", paddingVertical: isSmallDevice ? 6 : 8, paddingHorizontal: isSmallDevice ? 10 : 14, borderRadius: 8, marginHorizontal: isSmallDevice ? 4 : 6 },
   navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: isSmallDevice ? 12 : 14 },
   feedbackContainer: { padding: isSmallDevice ? 6 : 8, borderRadius: 6, marginBottom: 8 },
   formSection: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#333' },
   formSectionTitle: { color: '#BEAF87', fontSize: isSmallDevice ? 14 : 16, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
-  formLabel: { color: '#BEAF87', fontSize: isSmallDevice ? 14 : 16, fontWeight: '600', marginBottom: 12, textAlign:'left' },
+  formLabel: { color: '#BEAF87', fontSize: isSmallDevice ? 14 : 16, fontWeight: '600', marginBottom: 12, textAlign: 'left' },
   buttonContainer: { marginTop: 10 },
-  salaDescripcionContainer: { flexDirection: "row", justifyContent: "center", marginTop: 4},
-descripcionItem: { flexDirection: "row", alignItems: "center", marginHorizontal: 6},
-salaDescripcion: { color: "#252526", fontSize: isSmallDevice ? 12 : 14},
+  salaDescripcionContainer: { flexDirection: "row", justifyContent: "center", marginTop: 4 },
+  descripcionItem: { flexDirection: "row", alignItems: "center", marginHorizontal: 6 },
+  salaDescripcion: { color: "#252526", fontSize: isSmallDevice ? 12 : 14 },
 });
