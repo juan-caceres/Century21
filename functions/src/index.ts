@@ -21,13 +21,19 @@ setGlobalOptions({
 const emailUserSecret = defineSecret("EMAIL_USER");
 const emailPassSecret = defineSecret("EMAIL_PASS");
 
-// ✅ FUNCIÓN para crear transporter
+// ✅ FUNCIÓN para crear transporter con Brevo
 function getTransporter() {
+  console.log('📧 Configurando transporter con Brevo...');
+  console.log('EMAIL_USER existe:', !!emailUserSecret.value());
+  console.log('EMAIL_PASS existe:', !!emailPassSecret.value());
+  
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false,
     auth: {
-      user: emailUserSecret.value(),
-      pass: emailPassSecret.value()
+      user: emailUserSecret.value(), // Tu email de Brevo
+      pass: emailPassSecret.value()  // Tu SMTP key de Brevo
     }
   });
 }
@@ -57,11 +63,21 @@ export const onReservaCreated = onDocumentCreated(
       const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
       const [hora, minuto] = reserva.horaInicio.split(':').map(Number);
 
+      // La hora guardada es hora local de Argentina
       const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
+      
+      // Convertir a UTC sumando 3 horas
       const fechaReservaUTC = new Date(fechaReservaLocal.getTime() + (3 * 60 * 60 * 1000));
+      
+      // Calcular 1 hora antes en UTC
       const fechaEnvio = new Date(fechaReservaUTC.getTime() - (60 * 60 * 1000));
 
       const ahora = new Date();
+
+      console.log('📅 Fecha reserva local (Argentina):', fechaReservaLocal.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' }));
+      console.log('📅 Fecha reserva UTC:', fechaReservaUTC.toISOString());
+      console.log('📧 Fecha envío UTC:', fechaEnvio.toISOString());
+      console.log('🕐 Ahora UTC:', ahora.toISOString());
 
       if (fechaEnvio <= ahora) {
         console.log('⚠️ La fecha de envío ya pasó, no se programa email');
@@ -129,7 +145,7 @@ export const onReservaDeleted = onDocumentDeleted(
 );
 
 // ============================================
-// 3. FUNCIÓN PROGRAMADA: Procesar emails cada minuto
+// 3. FUNCIÓN PROGRAMADA: Procesar emails cada 5 minutos
 // ============================================
 export const procesarEmailsPendientes = onSchedule(
   {
@@ -147,7 +163,7 @@ export const procesarEmailsPendientes = onSchedule(
       const emailsSnapshot = await db.collection('emailsProgramados')
         .where('estado', '==', 'pendiente')
         .where('fechaEnvio', '<=', ahora)
-        .limit(50) // Procesar máximo 50 por ejecución
+        .limit(50)
         .get();
 
       if (emailsSnapshot.empty) {
