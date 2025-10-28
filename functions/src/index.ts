@@ -133,7 +133,7 @@ export const onReservaDeleted = onDocumentDeleted(
 // ============================================
 export const procesarEmailsPendientes = onSchedule(
   {
-    schedule: "every 1 minutes",
+    schedule: "every 5 minutes",
     timeZone: "America/Argentina/Buenos_Aires",
     secrets: [emailUserSecret, emailPassSecret]
   },
@@ -264,7 +264,8 @@ async function enviarEmailRecordatorio(emailData: any): Promise<void> {
 // ============================================
 export const enviarRecordatorioInmediato = onCall(
   {
-    secrets: [emailUserSecret, emailPassSecret]
+    secrets: [emailUserSecret, emailPassSecret],
+    cors: true
   },
   async (request) => {
     // Verificar autenticación
