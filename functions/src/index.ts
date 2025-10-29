@@ -17,24 +17,29 @@ setGlobalOptions({
   region: "southamerica-east1"
 });
 
-// ✅ Secrets de Firebase (método moderno)
 const emailUserSecret = defineSecret("EMAIL_USER");
 const emailPassSecret = defineSecret("EMAIL_PASS");
 
-// ✅ FUNCIÓN para crear transporter con Brevo
 function getTransporter() {
   console.log('📧 Configurando transporter con Brevo...');
-  console.log('EMAIL_USER existe:', !!emailUserSecret.value());
-  console.log('EMAIL_PASS existe:', !!emailPassSecret.value());
+  
+  // Verificar que los secrets existen
+  const user = emailUserSecret.value();
+  const pass = emailPassSecret.value();
+  
+  console.log('EMAIL_USER:', user ? `${user.substring(0, 3)}...` : 'NO DEFINIDO');
+  console.log('EMAIL_PASS:', pass ? 'Configurado (oculto)' : 'NO DEFINIDO');
   
   return nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
     port: 587,
     secure: false,
     auth: {
-      user: emailUserSecret.value(), // Tu email de Brevo
-      pass: emailPassSecret.value()  // Tu SMTP key de Brevo
-    }
+      user: user,
+      pass: pass
+    },
+    debug: true,
+    logger: true
   });
 }
 
@@ -44,6 +49,7 @@ function getTransporter() {
 export const onReservaCreated = onDocumentCreated(
   {
     document: "reservas/{reservaId}",
+    region: "southamerica-west1",
     secrets: [emailUserSecret, emailPassSecret]
   },
   async (event) => {
@@ -57,52 +63,71 @@ export const onReservaCreated = onDocumentCreated(
     const reserva = snapshot.data();
 
     console.log('🔔 Nueva reserva creada:', reservaId);
+    console.log('📊 Datos de reserva:', {
+      fecha: reserva.fecha,
+      horaInicio: reserva.horaInicio,
+      email: reserva.usuarioEmail
+    });
 
     try {
-      // Calcular fecha de envío (1 hora antes)
+      let salaNombre = reserva.sala;
+      try {
+        const salaDoc = await db.collection('salas').doc(reserva.sala).get();
+        if (salaDoc.exists) {
+          const salaData = salaDoc.data();
+          salaNombre = salaData?.nombre || reserva.sala;
+          console.log('📍 Nombre de sala obtenido:', salaNombre);
+        }
+      } catch (salaErr) {
+        console.log('⚠️ No se pudo obtener nombre de sala, usando código:', reserva.sala);
+      }
+
       const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
       const [hora, minuto] = reserva.horaInicio.split(':').map(Number);
 
-      // La hora guardada es hora local de Argentina
-      const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
+      // Primero crear la fecha en hora Argentina local
+      const fechaArgentinaLocal = new Date(anio, mes - 1, dia, hora, minuto);
       
-      // Convertir a UTC sumando 3 horas
-      const fechaReservaUTC = new Date(fechaReservaLocal.getTime() + (3 * 60 * 60 * 1000));
+      // Convertir a UTC (Argentina es UTC-3, entonces sumamos 3 horas)
+      const fechaReservaUTC = new Date(fechaArgentinaLocal.getTime() + (3 * 60 * 60 * 1000));
       
-      // Calcular 1 hora antes en UTC
-      const fechaEnvio = new Date(fechaReservaUTC.getTime() - (60 * 60 * 1000));
+      // Calcular 1 hora antes (en UTC)
+      const fechaEnvioUTC = new Date(fechaReservaUTC.getTime() - (60 * 60 * 1000));
 
-      const ahora = new Date();
+      const ahoraUTC = new Date();
 
-      console.log('📅 Fecha reserva local (Argentina):', fechaReservaLocal.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' }));
+      console.log('📅 Fecha reserva LOCAL Argentina:', fechaArgentinaLocal.toISOString());
       console.log('📅 Fecha reserva UTC:', fechaReservaUTC.toISOString());
-      console.log('📧 Fecha envío UTC:', fechaEnvio.toISOString());
-      console.log('🕐 Ahora UTC:', ahora.toISOString());
+      console.log('📧 Fecha envío UTC (1h antes):', fechaEnvioUTC.toISOString());
+      console.log('🕐 Ahora UTC:', ahoraUTC.toISOString());
+      console.log('⏰ Diferencia en minutos:', Math.round((fechaEnvioUTC.getTime() - ahoraUTC.getTime()) / 1000 / 60));
 
-      if (fechaEnvio <= ahora) {
+      if (fechaEnvioUTC <= ahoraUTC) {
         console.log('⚠️ La fecha de envío ya pasó, no se programa email');
         return;
       }
 
       // Guardar email programado en Firestore
-      await db.collection('emailsProgramados').add({
+      const emailDoc = await db.collection('emailsProgramados').add({
         reservaId,
         usuarioEmail: reserva.usuarioEmail,
-        salaNumero: reserva.sala,
+        salaNumero: salaNombre,
         fecha: reserva.fecha,
         horaInicio: reserva.horaInicio,
         motivo: reserva.motivo || 'Sin motivo especificado',
         fechaReserva: admin.firestore.Timestamp.fromDate(fechaReservaUTC),
-        fechaEnvio: admin.firestore.Timestamp.fromDate(fechaEnvio),
+        fechaEnvio: admin.firestore.Timestamp.fromDate(fechaEnvioUTC),
         estado: 'pendiente',
         intentos: 0,
         creadoEn: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      console.log('✅ Email programado correctamente para', fechaEnvio.toISOString());
+      console.log('✅ Email programado correctamente con ID:', emailDoc.id);
+      console.log('✅ Se enviará en:', Math.round((fechaEnvioUTC.getTime() - ahoraUTC.getTime()) / 1000 / 60), 'minutos');
 
     } catch (error) {
       console.error('❌ Error programando email:', error);
+      console.error('❌ Stack:', error instanceof Error ? error.stack : 'No stack available');
     }
   }
 );
@@ -111,14 +136,16 @@ export const onReservaCreated = onDocumentCreated(
 // 2. TRIGGER: Cuando se elimina una reserva
 // ============================================
 export const onReservaDeleted = onDocumentDeleted(
-  "reservas/{reservaId}",
+  {
+    document: "reservas/{reservaId}",
+    region: "southamerica-west1"
+  },
   async (event) => {
     const reservaId = event.params.reservaId;
 
     console.log('🗑️ Reserva eliminada:', reservaId);
 
     try {
-      // Buscar emails programados para esta reserva
       const emailsSnapshot = await db.collection('emailsProgramados')
         .where('reservaId', '==', reservaId)
         .where('estado', '==', 'pendiente')
@@ -129,7 +156,6 @@ export const onReservaDeleted = onDocumentDeleted(
         return;
       }
 
-      // Eliminar todos los emails pendientes
       const batch = db.batch();
       emailsSnapshot.docs.forEach(doc => {
         batch.delete(doc.ref);
@@ -159,7 +185,6 @@ export const procesarEmailsPendientes = onSchedule(
     try {
       const ahora = admin.firestore.Timestamp.now();
 
-      // Buscar emails pendientes cuya fecha de envío ya pasó
       const emailsSnapshot = await db.collection('emailsProgramados')
         .where('estado', '==', 'pendiente')
         .where('fechaEnvio', '<=', ahora)
@@ -167,20 +192,31 @@ export const procesarEmailsPendientes = onSchedule(
         .get();
 
       if (emailsSnapshot.empty) {
-        console.log('✅ No hay emails pendientes');
+        console.log('✅ No hay emails pendientes para enviar ahora');
+        
+        const totalPendientes = await db.collection('emailsProgramados')
+          .where('estado', '==', 'pendiente')
+          .get();
+        console.log(`ℹ️ Total de emails pendientes (futuro): ${totalPendientes.size}`);
+        
+        if (totalPendientes.size > 0) {
+          // Mostrar el próximo email a enviar
+          const proximo = totalPendientes.docs[0].data();
+          console.log('📅 Próximo email programado para:', proximo.fechaEnvio.toDate().toISOString());
+        }
+        
         return;
       }
 
       console.log(`📬 Procesando ${emailsSnapshot.size} emails...`);
 
-      // Procesar cada email
       const promises = emailsSnapshot.docs.map(async (doc) => {
         const emailData = doc.data();
 
         try {
+          console.log(`📤 Intentando enviar a ${emailData.usuarioEmail}...`);
           await enviarEmailRecordatorio(emailData);
 
-          // Marcar como enviado
           await doc.ref.update({
             estado: 'enviado',
             enviadoEn: admin.firestore.FieldValue.serverTimestamp(),
@@ -191,7 +227,6 @@ export const procesarEmailsPendientes = onSchedule(
         } catch (error) {
           console.error(`❌ Error enviando email a ${emailData.usuarioEmail}:`, error);
 
-          // Marcar como fallido (máximo 3 reintentos)
           const intentos = (emailData.intentos || 0) + 1;
           
           if (intentos >= 3) {
@@ -200,10 +235,12 @@ export const procesarEmailsPendientes = onSchedule(
               intentos,
               errorMessage: error instanceof Error ? error.message : 'Error desconocido'
             });
+            console.log(`❌ Email marcado como fallido después de ${intentos} intentos`);
           } else {
             await doc.ref.update({
               intentos,
             });
+            console.log(`⚠️ Reintentando... (intento ${intentos}/3)`);
           }
         }
       });
@@ -221,11 +258,13 @@ export const procesarEmailsPendientes = onSchedule(
 // 4. FUNCIÓN: Enviar email de recordatorio
 // ============================================
 async function enviarEmailRecordatorio(emailData: any): Promise<void> {
+  console.log('📧 Preparando email para:', emailData.usuarioEmail);
+  
   const transporter = getTransporter();
   const fechaFormateada = convertirAFormatoDDMMYYYY(emailData.fecha);
 
   const mailOptions = {
-    from: `"Century 21 Reservas" <${emailUserSecret.value()}>`,
+    from: `"Century 21 Reservas" <abcitcentury21@gmail.com>`,
     to: emailData.usuarioEmail,
     subject: `🔔 Recordatorio: Reserva en ${emailData.salaNumero} - 1 hora restante`,
     html: `
@@ -272,7 +311,15 @@ async function enviarEmailRecordatorio(emailData: any): Promise<void> {
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  console.log('📤 Enviando email...');
+  
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email enviado exitosamente. MessageId:', info.messageId);
+  } catch (error) {
+    console.error('❌ Error en transporter.sendMail:', error);
+    throw error;
+  }
 }
 
 // ============================================
@@ -284,7 +331,6 @@ export const enviarRecordatorioInmediato = onCall(
     cors: true
   },
   async (request) => {
-    // Verificar autenticación
     if (!request.auth) {
       throw new Error('Usuario no autenticado');
     }
