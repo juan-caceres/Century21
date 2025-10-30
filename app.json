@@ -14,7 +14,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.century21.miapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,9 +28,9 @@
       "edgeToEdgeEnabled": true,
       "package": "com.juancruzcaceres.century21"
     },
-     "notification": {
-      "icon": "./assets/century21-logoTransparente2.png",  
-      "color": "#ffffff",                       
+    "notification": {
+      "icon": "./assets/century21-logoTransparente2.png",
+      "color": "#ffffff",
       "androidMode": "default",
       "androidCollapsedTitle": "Nuevas notificaciones"
     },
@@ -41,6 +45,12 @@
     "owner": "juancruzcaceres",
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d34372cc-5926-4b50-8f4a-1b0a29d49f6c"
+    }
   }
 }
