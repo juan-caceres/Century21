@@ -16,6 +16,7 @@ import * as Notifications from "expo-notifications";
 import { RootStackParamList } from "../app/types/navigation";
 import { notifyReservaCreated, notifyReservaEdited, notifyReservaDeleted } from "./servicios/notificationService";
 
+
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
 type Props = { navigation: SalaScreenNavigationProp; route: SalaScreenRouteProp };
@@ -56,6 +57,7 @@ export default function Sala({ navigation, route }: Props) {
 
   const [todasLasSalas, setTodasLasSalas] = useState<any[]>([]);
   const [indiceActual, setIndiceActual] = useState<number>(-1);
+  const [rolUsuario, setRolUsuario] = useState<string>("user");
 
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Bold.ttf"),
@@ -89,6 +91,15 @@ export default function Sala({ navigation, route }: Props) {
     cargarSalas();
   }, [numero]);
 
+  // Cargar rol del usuario actual
+  useEffect(() => {
+    const cargarRol = async () => {
+      const rol = await obtenerRolUsuarioActual();
+      setRolUsuario(rol);
+    };
+    cargarRol();
+  }, []);
+
   useEffect(() => {
     fetchSalaInfo();
     const unsubscribe = suscribirReservasSemana();
@@ -119,6 +130,23 @@ export default function Sala({ navigation, route }: Props) {
       return "Usuario";
     }
   };
+
+  //funcion para obtener rol del usuario actual
+  const obtenerRolUsuarioActual = async (): Promise<string> => {
+    try {
+      const usuarioId = auth.currentUser?.uid;
+      if (!usuarioId) return "user"; // por defecto
+
+      const userDoc = await getDoc(doc(db, "users", usuarioId));
+      const userData = userDoc.data();
+      console.log("Rol detectado desde sala:", userData?.role);
+      return userData?.role || "user"; // valores esperados: "user", "admin", "superuser"
+    } catch (error) {
+      console.log("Error al obtener rol:", error);
+      return "user";
+    }
+  };
+
 
   const fetchSalaInfo = async () => {
     try {
@@ -423,7 +451,15 @@ export default function Sala({ navigation, route }: Props) {
   };
 
   const handleEliminarReserva = async (reserva: Reserva) => {
-    if (!reserva.id || reserva.usuarioId !== auth.currentUser?.uid) return;
+    if (!reserva.id) return;
+
+    const puedeEliminar = reserva.usuarioId === auth.currentUser?.uid ||
+                          rolUsuario === "admin" ||
+                          rolUsuario === "superuser";  
+    if (!puedeEliminar) {
+      showMessage("No tienes permiso para cancelar esta reserva.", "error");
+      return;
+    }
     
     try {
       const userName = await obtenerUsernameActual();
@@ -664,7 +700,9 @@ export default function Sala({ navigation, route }: Props) {
                     <TouchableOpacity
                       style={{ flex: 1 }}
                       onPress={() => {
-                        if (item.usuarioId === auth.currentUser?.uid) {
+                        if (item.usuarioId === auth.currentUser?.uid ||
+                            rolUsuario === "admin" ||
+                            rolUsuario === "superuser") {
                           setHoraInicio(item.horaInicio);
                           setHoraFin(item.horaFin);
                           setMotivo(item.motivo);
@@ -681,7 +719,9 @@ export default function Sala({ navigation, route }: Props) {
                       </Text>
                     </TouchableOpacity>
 
-                    {item.usuarioId === auth.currentUser?.uid && (
+                    {(item.usuarioId === auth.currentUser?.uid ||
+                      rolUsuario === "admin" ||
+                      rolUsuario === "superuser") && (
                       <TouchableOpacity
                         style={{
                           paddingHorizontal: 10,
@@ -785,6 +825,7 @@ export default function Sala({ navigation, route }: Props) {
                 placeholder="Motivo de la reserva"
                 placeholderTextColor="#888"
                 value={motivo}
+                maxLength={100}
                 onChangeText={setMotivo}
                 multiline={true}
                 numberOfLines={2}
