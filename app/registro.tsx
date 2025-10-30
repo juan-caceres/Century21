@@ -44,15 +44,11 @@ export default function Registro({ navigation }: Props) {
 
   if (!fontsLoaded) {
     return (
-      <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
-          >
+ 
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#BEAF87" />
       </View>
-      </KeyboardAvoidingView>
+  
     );
   }
 
@@ -160,192 +156,200 @@ export default function Registro({ navigation }: Props) {
 
   // Interfaz usuario
   return (
-    <View style={styles.container}>
-      <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
-      <Text style={styles.title}>Crear Cuenta</Text>
 
-      {/* Correo con advertencia */}
-      <View style={styles.warningContainer}>
-        <Icon name="alert-circle" size={16} color="#ff9800" style={{ marginRight: 6 }} />
-        <Text style={styles.warningText}>
-          El email es permanente, tené cuidado al ingresarlo (¡no se puede cambiar!)
-        </Text>
-      </View>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
+    >
+      <View style={styles.container}>
+        <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.title}>Crear Cuenta</Text>
 
-      <View style={[styles.inputContainer, errorEmail ? styles.inputError : null]}>
-        <Icon name="email-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
-        <TextInput
-          placeholder="Correo electrónico"
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
-          placeholderTextColor="#aaa"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-      </View>
-      {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}
+        {/* Correo con advertencia */}
+        <View style={styles.warningContainer}>
+          <Icon name="alert-circle" size={16} color="#ff9800" style={{ marginRight: 6 }} />
+          <Text style={styles.warningText}>
+            El email es permanente, tené cuidado al ingresarlo (¡no se puede cambiar!)
+          </Text>
+        </View>
 
-      {/* Username */}
-      <View style={[styles.inputContainer, errorUsername ? styles.inputError : null]}>
-        <Icon name="at" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
-        <TextInput
-          placeholder="Nombre de Usuario"
-          value={username}
-          onChangeText={setUsername}
-          style={styles.input}
-          placeholderTextColor="#aaa"
-          autoCapitalize="none"
-          autoCorrect={false}
-          maxLength={20}
-        />
-      </View>
-      <Text style={styles.helpText}>3-20 caracteres • Letras, números y guion bajo (_)</Text>
-      {errorUsername ? <Text style={styles.errorText}>{errorUsername}</Text> : null}
-
-      {/* Contraseña */}
-      <View style={[styles.inputContainer, errorPassword ? styles.inputError : null]}>
-        <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
-        <TextInput
-          placeholder="Contraseña"
-          secureTextEntry={false}
-          value={showPassword ? password : visiblePassword}
-          onChangeText={(text) => {
-            if (text.length < prevLength) {
-              setPassword((prev) => prev.slice(0, -1));
-            } else if (text.length === prevLength + 1) {
-              const newChar = text[text.length - 1];
-              setPassword((prev) => prev + newChar);
-            } else {
-              setPassword(text);
-            }
-        
-            setPrevLength(text.length);
-            if (showPassword) {
-              if (hideTimeout) clearTimeout(hideTimeout);
-              setVisiblePassword(text);
-              return;
-            }
-            if (hideTimeout) clearTimeout(hideTimeout);
-            if (text.length === 0) {
-               setVisiblePassword("");
-               return;
-            }
-        
-             const hidden = "•".repeat(text.length - 1);
-             const last = text[text.length - 1];
-             setVisiblePassword(hidden + last);
-        
-             const timeout = setTimeout(() => {
-               setVisiblePassword("•".repeat(text.length));
-             }, 1000);
-        
-             setHideTimeout(timeout);
-           }}
-           style={[styles.input, styles.fontTypold]}
-          placeholderTextColor="#aaa"
-        />
-        
-        <TouchableOpacity
-          onPress={() => {
-            if (hideTimeout) clearTimeout(hideTimeout);
-        
-            const newValue = !showPassword;
-            setShowPassword(newValue);
-        
-            if (newValue) {
-              setVisiblePassword(password); // mostrar real
-             } else {
-               setVisiblePassword("•".repeat(password.length)); // ocultar todo
-            }
-          }}
-        >
-          <Icon
-            name={showPassword ? "eye-off-outline" : "eye-outline"}
-            size={20}
-            color="#BEAF87"
+        <View style={[styles.inputContainer, errorEmail ? styles.inputError : null]}>
+          <Icon name="email-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+          <TextInput
+            placeholder="Correo electrónico"
+            value={email}
+            onChangeText={setEmail}
+            style={styles.input}
+            placeholderTextColor="#aaa"
+            keyboardType="email-address"
+            autoCapitalize="none"
           />
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.helpText}>Debe contener, al menos, una Mayúscula, una Minúscula y un Número</Text>
-      {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
+        </View>
+        {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}
 
-      {/* Confirmar contraseña */}
-      <View style={[styles.inputContainer, errorConfirm ? styles.inputError : null]}>
-        <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
-        <TextInput
-          placeholder="Confirmar Contraseña"
-          secureTextEntry={false}
-          value={showConfirmPassword ? confirm : visibleConfirmPassword}
-          onChangeText={(text) => {
-            if (text.length < prevLength) {
-              setConfirm((prev) => prev.slice(0, -1));
-            } else if (text.length === prevLength + 1) {
-              const newChar = text[text.length - 1];
-              setConfirm((prev) => prev + newChar);
-            } else {
-              setConfirm(text);
-            }
-            
-            setPrevLength(text.length);
-            if (showConfirmPassword) {
-              if (hideTimeout) clearTimeout(hideTimeout);
-                setVisibleConfirmPassword(text);
+        {/* Username */}
+        <View style={[styles.inputContainer, errorUsername ? styles.inputError : null]}>
+          <Icon name="at" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+          <TextInput
+            placeholder="Nombre de Usuario"
+            value={username}
+            onChangeText={setUsername}
+            style={styles.input}
+            placeholderTextColor="#aaa"
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={20}
+          />
+        </View>
+        <Text style={styles.helpText}>3-20 caracteres • Letras, números y guion bajo (_)</Text>
+        {errorUsername ? <Text style={styles.errorText}>{errorUsername}</Text> : null}
+
+        {/* Contraseña */}
+        <View style={[styles.inputContainer, errorPassword ? styles.inputError : null]}>
+          <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+          <TextInput
+            placeholder="Contraseña"
+            secureTextEntry={false}
+            value={showPassword ? password : visiblePassword}
+            onChangeText={(text) => {
+              if (text.length < prevLength) {
+                setPassword((prev) => prev.slice(0, -1));
+              } else if (text.length === prevLength + 1) {
+                const newChar = text[text.length - 1];
+                setPassword((prev) => prev + newChar);
+              } else {
+                setPassword(text);
+              }
+          
+              setPrevLength(text.length);
+              if (showPassword) {
+                if (hideTimeout) clearTimeout(hideTimeout);
+                setVisiblePassword(text);
                 return;
               }
-            
-            if (hideTimeout) clearTimeout(hideTimeout);
-            
-            if (text.length === 0) {
-              setVisibleConfirmPassword("");
-              return;
-            }
-            
-            const hidden = "•".repeat(text.length - 1);
-            const last = text[text.length - 1];
-            setVisibleConfirmPassword(hidden + last);
-            
-            const timeout = setTimeout(() => {
-              setVisibleConfirmPassword("•".repeat(text.length));
-            }, 1000);
-            
-            setHideTimeout(timeout);
-          }}
-          style={[styles.input, styles.fontTypold]}
-          placeholderTextColor="#aaa"
+              if (hideTimeout) clearTimeout(hideTimeout);
+              if (text.length === 0) {
+                setVisiblePassword("");
+                return;
+              }
+          
+              const hidden = "•".repeat(text.length - 1);
+              const last = text[text.length - 1];
+              setVisiblePassword(hidden + last);
+          
+              const timeout = setTimeout(() => {
+                setVisiblePassword("•".repeat(text.length));
+              }, 1000);
+          
+              setHideTimeout(timeout);
+            }}
+            style={[styles.input, styles.fontTypold]}
+            placeholderTextColor="#aaa"
           />
-            
+          
           <TouchableOpacity
             onPress={() => {
               if (hideTimeout) clearTimeout(hideTimeout);
-                const newValue = !showConfirmPassword;
-                setShowConfirmPassword(newValue);
-                if (newValue) {
-                  setVisibleConfirmPassword(confirm); // mostrar real
-                } else {
-                  setVisibleConfirmPassword("•".repeat(confirm.length)); // ocultar todo
-                }
-           }}  
+          
+              const newValue = !showPassword;
+              setShowPassword(newValue);
+          
+              if (newValue) {
+                setVisiblePassword(password); // mostrar real
+              } else {
+                setVisiblePassword("•".repeat(password.length)); // ocultar todo
+              }
+            }}
           >
-          <Icon
-            name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
-            size={20}
-            color="#BEAF87"
-          />
+            <Icon
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color="#BEAF87"
+            />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.helpText}>Debe contener, al menos, una Mayúscula, una Minúscula y un Número</Text>
+        {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
+
+        {/* Confirmar contraseña */}
+        <View style={[styles.inputContainer, errorConfirm ? styles.inputError : null]}>
+          <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+          <TextInput
+            placeholder="Confirmar Contraseña"
+            secureTextEntry={false}
+            value={showConfirmPassword ? confirm : visibleConfirmPassword}
+            onChangeText={(text) => {
+              if (text.length < prevLength) {
+                setConfirm((prev) => prev.slice(0, -1));
+              } else if (text.length === prevLength + 1) {
+                const newChar = text[text.length - 1];
+                setConfirm((prev) => prev + newChar);
+              } else {
+                setConfirm(text);
+              }
+              
+              setPrevLength(text.length);
+              if (showConfirmPassword) {
+                if (hideTimeout) clearTimeout(hideTimeout);
+                  setVisibleConfirmPassword(text);
+                  return;
+                }
+              
+              if (hideTimeout) clearTimeout(hideTimeout);
+              
+              if (text.length === 0) {
+                setVisibleConfirmPassword("");
+                return;
+              }
+              
+              const hidden = "•".repeat(text.length - 1);
+              const last = text[text.length - 1];
+              setVisibleConfirmPassword(hidden + last);
+              
+              const timeout = setTimeout(() => {
+                setVisibleConfirmPassword("•".repeat(text.length));
+              }, 1000);
+              
+              setHideTimeout(timeout);
+            }}
+            style={[styles.input, styles.fontTypold]}
+            placeholderTextColor="#aaa"
+            />
+              
+            <TouchableOpacity
+              onPress={() => {
+                if (hideTimeout) clearTimeout(hideTimeout);
+                  const newValue = !showConfirmPassword;
+                  setShowConfirmPassword(newValue);
+                  if (newValue) {
+                    setVisibleConfirmPassword(confirm); // mostrar real
+                  } else {
+                    setVisibleConfirmPassword("•".repeat(confirm.length)); // ocultar todo
+                  }
+            }}  
+            >
+            <Icon
+              name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color="#BEAF87"
+            />
+          </TouchableOpacity>
+        </View>
+        {errorConfirm ? <Text style={styles.errorText}>{errorConfirm}</Text> : null}
+
+        {/* Botón registro */}
+        <TouchableOpacity style={styles.button} onPress={handleRegister} activeOpacity={0.7}>
+          <Text style={styles.buttonText}>Registrarse</Text>
+        </TouchableOpacity>
+
+        {/* Link a login */}
+        <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+          <Text style={styles.link}>Ya tengo cuenta</Text>
         </TouchableOpacity>
       </View>
-      {errorConfirm ? <Text style={styles.errorText}>{errorConfirm}</Text> : null}
 
-      {/* Botón registro */}
-      <TouchableOpacity style={styles.button} onPress={handleRegister} activeOpacity={0.7}>
-        <Text style={styles.buttonText}>Registrarse</Text>
-      </TouchableOpacity>
-
-      {/* Link a login */}
-      <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-        <Text style={styles.link}>Ya tengo cuenta</Text>
-      </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
