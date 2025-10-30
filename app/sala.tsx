@@ -15,6 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Notifications from "expo-notifications";
 import { RootStackParamList } from "../app/types/navigation";
 import { notifyReservaCreated, notifyReservaEdited, notifyReservaDeleted } from "./servicios/notificationService";
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
@@ -537,12 +538,11 @@ export default function Sala({ navigation, route }: Props) {
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
             <Text style={styles.navButtonText}>
-              <Ionicons name="home" size={16} color="#ffffffff" style={{marginRight: 3}} />
+              <FontAwesome name="arrow-left" size={15} color="white" />
               Inicio
             </Text>
           </TouchableOpacity>
 
-          <BtnCerrarSesion />
         </View>
       </View>
 
