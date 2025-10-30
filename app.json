@@ -25,7 +25,7 @@
       "package": "com.juancruzcaceres.century21"
     },
      "notification": {
-      "icon": "./assets/century21-logoTransparente.png",  
+      "icon": "./assets/century21-logoTransparente2.png",  
       "color": "#ffffff",                       
       "androidMode": "default",
       "androidCollapsedTitle": "Nuevas notificaciones"
