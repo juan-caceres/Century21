@@ -25,6 +25,10 @@ export default function Registro({ navigation }: Props) {
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [visiblePassword, setVisiblePassword] = useState("");
+  const [visibleConfirmPassword, setVisibleConfirmPassword] = useState("");
+  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [prevLength, setPrevLength] = useState(0);
 
   // Estados para mensajes de error
   const [errorEmail, setErrorEmail] = useState("");
@@ -204,13 +208,58 @@ export default function Registro({ navigation }: Props) {
         <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
         <TextInput
           placeholder="Contraseña"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          style={styles.input}
+          secureTextEntry={false}
+          value={showPassword ? password : visiblePassword}
+          onChangeText={(text) => {
+            if (text.length < prevLength) {
+              setPassword((prev) => prev.slice(0, -1));
+            } else if (text.length === prevLength + 1) {
+              const newChar = text[text.length - 1];
+              setPassword((prev) => prev + newChar);
+            } else {
+              setPassword(text);
+            }
+        
+            setPrevLength(text.length);
+            if (showPassword) {
+              if (hideTimeout) clearTimeout(hideTimeout);
+              setVisiblePassword(text);
+              return;
+            }
+            if (hideTimeout) clearTimeout(hideTimeout);
+            if (text.length === 0) {
+               setVisiblePassword("");
+               return;
+            }
+        
+             const hidden = "•".repeat(text.length - 1);
+             const last = text[text.length - 1];
+             setVisiblePassword(hidden + last);
+        
+             const timeout = setTimeout(() => {
+               setVisiblePassword("•".repeat(text.length));
+             }, 1000);
+        
+             setHideTimeout(timeout);
+           }}
+           style={[styles.input, styles.fontTypold]}
           placeholderTextColor="#aaa"
         />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+        
+        <TouchableOpacity
+          onPress={() => {
+            if (hideTimeout) clearTimeout(hideTimeout);
+        
+            const newValue = !showPassword;
+            setShowPassword(newValue);
+        
+            if (newValue) {
+              setVisiblePassword(password); // mostrar real
+             } else {
+               setVisiblePassword("•".repeat(password.length)); // ocultar todo
+            }
+          }}
+        >
           <Icon
             name={showPassword ? "eye-off-outline" : "eye-outline"}
             size={20}
@@ -226,13 +275,58 @@ export default function Registro({ navigation }: Props) {
         <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
         <TextInput
           placeholder="Confirmar Contraseña"
-          value={confirm}
-          onChangeText={setConfirm}
-          secureTextEntry={!showConfirmPassword}
-          style={styles.input}
+          secureTextEntry={false}
+          value={showConfirmPassword ? confirm : visibleConfirmPassword}
+          onChangeText={(text) => {
+            if (text.length < prevLength) {
+              setConfirm((prev) => prev.slice(0, -1));
+            } else if (text.length === prevLength + 1) {
+              const newChar = text[text.length - 1];
+              setConfirm((prev) => prev + newChar);
+            } else {
+              setConfirm(text);
+            }
+            
+            setPrevLength(text.length);
+            if (showConfirmPassword) {
+              if (hideTimeout) clearTimeout(hideTimeout);
+                setVisibleConfirmPassword(text);
+                return;
+              }
+            
+            if (hideTimeout) clearTimeout(hideTimeout);
+            
+            if (text.length === 0) {
+              setVisibleConfirmPassword("");
+              return;
+            }
+            
+            const hidden = "•".repeat(text.length - 1);
+            const last = text[text.length - 1];
+            setVisibleConfirmPassword(hidden + last);
+            
+            const timeout = setTimeout(() => {
+              setVisibleConfirmPassword("•".repeat(text.length));
+            }, 1000);
+            
+            setHideTimeout(timeout);
+          }}
+          style={[styles.input, styles.fontTypold]}
           placeholderTextColor="#aaa"
-        />
-        <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+          />
+            
+          <TouchableOpacity
+            onPress={() => {
+              if (hideTimeout) clearTimeout(hideTimeout);
+                const newValue = !showConfirmPassword;
+                setShowConfirmPassword(newValue);
+                if (newValue) {
+                  setVisibleConfirmPassword(confirm); // mostrar real
+                } else {
+                  setVisibleConfirmPassword("•".repeat(confirm.length)); // ocultar todo
+                }
+           }}  
+          >
           <Icon
             name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
             size={20}
