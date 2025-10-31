@@ -1,6 +1,6 @@
 // app/sala.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList,KeyboardAvoidingView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList,KeyboardAvoidingView, ActivityIndicator, Alert, ScrollView, Keyboard } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
@@ -533,12 +533,6 @@ export default function Sala({ navigation, route }: Props) {
   };
 
   return (
- 
-             <KeyboardAvoidingView
-                  style={{ flex: 1 }}
-                  behavior={Platform.OS === "ios" ? "padding" : "height"}
-                  keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
-            >
     <View style={styles.container}>
       <View style={styles.superiorSalas}>
         <View style={styles.headerRow}>
@@ -605,6 +599,16 @@ export default function Sala({ navigation, route }: Props) {
       </View>
 
       <Modal visible={modalVisible} transparent animationType="slide">
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+        >
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+          >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Reservas {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
@@ -845,7 +849,10 @@ export default function Sala({ navigation, route }: Props) {
                 <View style={styles.buttonContainer}>
                   <TouchableOpacity 
                     style={styles.saveButton} 
-                    onPress={handleCreateOrUpdateReserva}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      handleCreateOrUpdateReserva()
+                    }}
                   >
                     <Text style={styles.saveText}>
                       {editingReservaId ? "Actualizar" : "Guardar Reserva"}
@@ -869,11 +876,10 @@ export default function Sala({ navigation, route }: Props) {
             
           </View>
         </View>
-      </Modal>
-  
+      </ScrollView>
+    </KeyboardAvoidingView>
+  </Modal>
     </View>
-        </KeyboardAvoidingView>
-    
   );
 }
 

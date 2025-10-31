@@ -1,7 +1,7 @@
 //app/gestionSalas.tsx
 import { db } from "../firebase";
 import React, {useEffect,useState} from "react";
-import { View, Text, TextInput,Dimensions ,TouchableOpacity, FlatList, StyleSheet, Alert, KeyboardAvoidingView, Platform, Modal } from "react-native";
+import { View, Text, TextInput,Dimensions ,TouchableOpacity, FlatList, StyleSheet, Alert, KeyboardAvoidingView, Platform, Modal, ScrollView, Keyboard } from "react-native";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -204,10 +204,16 @@ export default function GestionSalas(){
 
     return (
         <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
+            style={{ flex: 1, backgroundColor: "#ffffff" }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={0}
         >
+            <ScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            >
         <View style={styles.container}>
             
             {/* Header */}
@@ -265,7 +271,10 @@ export default function GestionSalas(){
             <View style={styles.buttonRow}>
                 <TouchableOpacity
                     style={styles.addButton}
-                    onPress={editId ? abrirModalEdicion : agregarSala}
+                    onPress={() => {
+                        Keyboard.dismiss();
+                        editId ? abrirModalEdicion() : agregarSala();
+                    }}
                 >
                     <Text style={styles.addButtonText}>
                         {editId ? "Guardar Cambios" : "Agregar Sala"}
@@ -402,8 +411,9 @@ export default function GestionSalas(){
                 </View>
             </Modal>
         </View>
-    </KeyboardAvoidingView>
-    );
+    </ScrollView>    
+</KeyboardAvoidingView>
+);
 }
 
 const { height } = Dimensions.get("window");
