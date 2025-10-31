@@ -1,6 +1,6 @@
 //app/registro.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator,KeyboardAvoidingView, Platform , Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator,KeyboardAvoidingView, Platform , Alert, ScrollView, Keyboard } from "react-native";
 import { useFonts } from "expo-font";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth, db } from "../firebase";
@@ -156,12 +156,17 @@ export default function Registro({ navigation }: Props) {
 
   // Interfaz usuario
   return (
-
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
+      style={{ flex: 1, backgroundColor: "#ffffff" }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={0}
     >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
       <View style={styles.container}>
         <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
         <Text style={styles.title}>Crear Cuenta</Text>
@@ -339,7 +344,11 @@ export default function Registro({ navigation }: Props) {
         {errorConfirm ? <Text style={styles.errorText}>{errorConfirm}</Text> : null}
 
         {/* Botón registro */}
-        <TouchableOpacity style={styles.button} onPress={handleRegister} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.button}
+          onPress={() => {
+            Keyboard.dismiss();
+            handleRegister();}}
+        >
           <Text style={styles.buttonText}>Registrarse</Text>
         </TouchableOpacity>
 
@@ -348,9 +357,9 @@ export default function Registro({ navigation }: Props) {
           <Text style={styles.link}>Ya tengo cuenta</Text>
         </TouchableOpacity>
       </View>
-
-    </KeyboardAvoidingView>
-  );
+    </ScrollView>
+  </KeyboardAvoidingView>
+);
 }
 
 const styles = StyleSheet.create({

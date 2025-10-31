@@ -1,6 +1,6 @@
 //app/usuarios.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet,Button, Dimensions, KeyboardAvoidingView, Platform, Modal, TextInput } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Button, Dimensions, KeyboardAvoidingView, Platform, Modal, TextInput, ScrollView, Keyboard } from "react-native";
 import { db } from "../firebase";
 import { collection, getDocs, updateDoc, doc, DocumentData, query, where } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -370,10 +370,16 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-              style={{ flex: 1 }}
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
-            >
+      style={{ flex: 1, backgroundColor: "#ffffff" }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={0}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -822,8 +828,9 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         </View>
       </Modal>
     </View>
-    </KeyboardAvoidingView>
-  );
+  </ScrollView>
+</KeyboardAvoidingView>
+);
 };
 
 const { height } = Dimensions.get("window");
