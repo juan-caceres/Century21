@@ -604,11 +604,7 @@ export default function Sala({ navigation, route }: Props) {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
         >
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
-            keyboardShouldPersistTaps="handled"
-            bounces={false}
-          >
+         
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Reservas {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
@@ -876,7 +872,7 @@ export default function Sala({ navigation, route }: Props) {
             
           </View>
         </View>
-      </ScrollView>
+
     </KeyboardAvoidingView>
   </Modal>
     </View>
