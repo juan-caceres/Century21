@@ -374,12 +374,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={0}
     >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
+  
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -828,7 +823,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         </View>
       </Modal>
     </View>
-  </ScrollView>
+  
 </KeyboardAvoidingView>
 );
 };
