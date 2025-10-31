@@ -208,12 +208,7 @@ export default function GestionSalas(){
             behavior={Platform.OS === "ios" ? "padding" : undefined}
             keyboardVerticalOffset={0}
         >
-            <ScrollView
-            contentContainerStyle={{ flexGrow: 1 }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-            >
+     
         <View style={styles.container}>
             
             {/* Header */}
@@ -411,7 +406,7 @@ export default function GestionSalas(){
                 </View>
             </Modal>
         </View>
-    </ScrollView>    
+    
 </KeyboardAvoidingView>
 );
 }
