@@ -1,6 +1,6 @@
 // app/sala.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList,KeyboardAvoidingView, ActivityIndicator, Alert, ScrollView, Keyboard } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList,KeyboardAvoidingView,TouchableWithoutFeedback, ActivityIndicator, Alert, ScrollView, Keyboard } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
@@ -599,13 +599,12 @@ export default function Sala({ navigation, route }: Props) {
       </View>
 
       <Modal visible={modalVisible} transparent animationType="slide">
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-        >
-         
+
+
         <View style={styles.modalContainer}>
+
+          
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Reservas {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
 
@@ -789,6 +788,18 @@ export default function Sala({ navigation, route }: Props) {
                 <Text style={styles.formSectionTitle}>
                   {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
                 </Text>
+
+                      <Text style={styles.formLabel}>Motivo</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Motivo de la reserva"
+                  placeholderTextColor="#888"
+                  value={motivo}
+                  maxLength={100}
+                  onChangeText={setMotivo}
+                  multiline={true}
+                  numberOfLines={2}
+                />
                 
                 <TimePicker
                   label="Hora de inicio"
@@ -826,18 +837,6 @@ export default function Sala({ navigation, route }: Props) {
                   keyboardType="default"
                 /> */}
 
-                <Text style={styles.formLabel}>Motivo</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Motivo de la reserva"
-                  placeholderTextColor="#888"
-                  value={motivo}
-                  maxLength={100}
-                  onChangeText={setMotivo}
-                  multiline={true}
-                  numberOfLines={2}
-                />
-
                 <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
                   *recibirá un email 60 minutos antes de la reserva
                 </Text>
@@ -871,9 +870,15 @@ export default function Sala({ navigation, route }: Props) {
               </View>
             
           </View>
+        </TouchableWithoutFeedback>
+                           
         </View>
 
-    </KeyboardAvoidingView>
+
+
+
+
+
   </Modal>
     </View>
   );
@@ -890,8 +895,8 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.4 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", paddingHorizontal: isSmallDevice ? 6 : 10 },
   content: { flex: 1, padding: isSmallDevice ? 4 : 8, alignItems: "center" },
-  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
-  modalContent: { backgroundColor: "#1c1c1c", padding: isSmallDevice ? 16 : 20, borderRadius: 10, width: "90%", maxWidth: 500 },
+  modalContainer: { flex: 1,justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
+  modalContent: { backgroundColor: "#1c1c1c", padding: isSmallDevice ? 16 : 20, borderRadius: 10, width: "90%", maxWidth: 500, position: "relative", bottom: 60 },
   modalTitle: { color: "#BEAF87", fontSize: isSmallDevice ? 16 : 18, marginBottom: 10, textAlign: "center" },
   input: { backgroundColor: "#1e1e1e", borderColor: "#BEAF87", borderWidth: 1, borderRadius: 8, color: "#fff", padding: isSmallDevice ? 8 : 10, marginBottom: 10, fontSize: isSmallDevice ? 13 : 14 },
   saveButton: { backgroundColor: "#BEAF87", paddingVertical: isSmallDevice ? 8 : 10, paddingHorizontal: isSmallDevice ? 12 : 16, borderRadius: 8, alignItems: "center" },
