@@ -217,8 +217,8 @@ export default function Login({ navigation, route }: Props) {
      <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
-    >
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header probando nueva rama
+    > 
       <View style={styles.container}>
         <Image
           source={require("../assets/LogoGrey.png")}
