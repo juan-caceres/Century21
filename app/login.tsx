@@ -218,6 +218,7 @@ export default function Login({ navigation, route }: Props) {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
+      //comentario
     >
       <View style={styles.container}>
         <Image
