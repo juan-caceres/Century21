@@ -1,6 +1,6 @@
 //app/olvidePassword.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Modal, ActivityIndicator  } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Modal, ActivityIndicator, ScrollView, Keyboard } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../app/types/navigation";
@@ -53,10 +53,16 @@ export default function OlvidePassword({ navigation }: Props) {
 
   return (
     <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
-        >
+      style={{ flex: 1, backgroundColor: "#ffffff" }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={0}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
     <View style={styles.container}>
       <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
       <Text style={[styles.title, styles.fontTypold]}>Recuperar Contraseña</Text>
@@ -76,7 +82,12 @@ export default function OlvidePassword({ navigation }: Props) {
       </View>
       {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}
 
-      <TouchableOpacity style={styles.button} onPress={handleReset} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.button}
+      onPress={() => {
+        Keyboard.dismiss();
+        handleReset();
+        }}
+      >
         <Text style={[styles.buttonText, styles.fontTypold]}>Enviar enlace</Text>
       </TouchableOpacity>
 
@@ -105,8 +116,9 @@ export default function OlvidePassword({ navigation }: Props) {
         </View>
       </Modal>
     </View>
-    </KeyboardAvoidingView>
-  );
+  </ScrollView>
+</KeyboardAvoidingView>
+);
 }
 
 // Estilos (siguiendo logo c21)

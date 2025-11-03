@@ -50,12 +50,9 @@ export default function App() {
       if (Platform.OS === 'android') {
         try {
           // Configurar la barra de navegación (botones de Android)
-          await NavigationBar.setBackgroundColorAsync('#000000'); // Fondo negro
           await NavigationBar.setButtonStyleAsync('light'); // Botones blancos
-          
           // Activar modo inmersivo sticky
           await NavigationBar.setVisibilityAsync('hidden');
-          await NavigationBar.setBehaviorAsync('overlay-swipe');
           
           console.log('✅ Modo inmersivo activado en Android');
         } catch (error) {

@@ -1,6 +1,6 @@
 //app/usuarios.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet,Button, Dimensions, KeyboardAvoidingView, Platform, Modal, TextInput } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Button, Dimensions, KeyboardAvoidingView, Platform, Modal, TextInput, ScrollView, Keyboard } from "react-native";
 import { db } from "../firebase";
 import { collection, getDocs, updateDoc, doc, DocumentData, query, where } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -370,10 +370,11 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-              style={{ flex: 1 }}
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
-            >
+      style={{ flex: 1, backgroundColor: "#ffffff" }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={0}
+    >
+  
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -404,7 +405,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         <Ionicons name="search" size={20} color="#BEAF87" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por Nombre de Usuario o Email..."
+          placeholder="Buscar Usuario..."
           placeholderTextColor="#888"
           value={searchText}
           onChangeText={setSearchText}
@@ -416,6 +417,8 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
         )}
       </View>
+      <Text style={styles.helpText}>Buscar por Nombre de Usuario o Email.</Text>
+
 
       {/* Filtros por estado (Activos/Eliminados) */}
       <View style={styles.filterContainer}>
@@ -820,8 +823,9 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         </View>
       </Modal>
     </View>
-    </KeyboardAvoidingView>
-  );
+  
+</KeyboardAvoidingView>
+);
 };
 
 const { height } = Dimensions.get("window");
@@ -881,7 +885,7 @@ const styles = StyleSheet.create({
   editContainer: { width: "100%", marginBottom: 20, },
   inputContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#2e2e2e", borderRadius: 8, paddingHorizontal: 12, marginTop: 15, borderWidth: 1, borderColor: "#BEAF87", },
   input: { flex: 1, color: "#fff", paddingVertical: 12, fontSize: 16, },
-  helpText: { color: "#888", fontSize: 12, marginTop: 8, textAlign: "center", },
+  helpText: { color: "#888", fontSize: 12, alignSelf: "flex-start", marginTop: -12, marginBottom: 15, },
   errorContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 10, paddingHorizontal: 10,},
   errorText: { color: "#ff6b6b", fontSize: 13, fontWeight: "600", flex: 1, },
   modalButtons: { flexDirection: "row", gap: 10, width: "100%", },

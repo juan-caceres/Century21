@@ -1,6 +1,6 @@
 // app/sala.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList,KeyboardAvoidingView,TouchableWithoutFeedback, ActivityIndicator, Alert, ScrollView, Keyboard } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
@@ -15,6 +15,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Notifications from "expo-notifications";
 import { RootStackParamList } from "../app/types/navigation";
 import { notifyReservaCreated, notifyReservaEdited, notifyReservaDeleted } from "./servicios/notificationService";
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
@@ -56,6 +58,7 @@ export default function Sala({ navigation, route }: Props) {
 
   const [todasLasSalas, setTodasLasSalas] = useState<any[]>([]);
   const [indiceActual, setIndiceActual] = useState<number>(-1);
+  const [rolUsuario, setRolUsuario] = useState<string>("user");
 
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Bold.ttf"),
@@ -89,6 +92,15 @@ export default function Sala({ navigation, route }: Props) {
     cargarSalas();
   }, [numero]);
 
+  // Cargar rol del usuario actual
+  useEffect(() => {
+    const cargarRol = async () => {
+      const rol = await obtenerRolUsuarioActual();
+      setRolUsuario(rol);
+    };
+    cargarRol();
+  }, []);
+
   useEffect(() => {
     fetchSalaInfo();
     const unsubscribe = suscribirReservasSemana();
@@ -119,6 +131,23 @@ export default function Sala({ navigation, route }: Props) {
       return "Usuario";
     }
   };
+
+  //funcion para obtener rol del usuario actual
+  const obtenerRolUsuarioActual = async (): Promise<string> => {
+    try {
+      const usuarioId = auth.currentUser?.uid;
+      if (!usuarioId) return "user"; // por defecto
+
+      const userDoc = await getDoc(doc(db, "users", usuarioId));
+      const userData = userDoc.data();
+      console.log("Rol detectado desde sala:", userData?.role);
+      return userData?.role || "user"; // valores esperados: "user", "admin", "superuser"
+    } catch (error) {
+      console.log("Error al obtener rol:", error);
+      return "user";
+    }
+  };
+
 
   const fetchSalaInfo = async () => {
     try {
@@ -423,7 +452,15 @@ export default function Sala({ navigation, route }: Props) {
   };
 
   const handleEliminarReserva = async (reserva: Reserva) => {
-    if (!reserva.id || reserva.usuarioId !== auth.currentUser?.uid) return;
+    if (!reserva.id) return;
+
+    const puedeEliminar = reserva.usuarioId === auth.currentUser?.uid ||
+                          rolUsuario === "admin" ||
+                          rolUsuario === "superuser";  
+    if (!puedeEliminar) {
+      showMessage("No tienes permiso para cancelar esta reserva.", "error");
+      return;
+    }
     
     try {
       const userName = await obtenerUsernameActual();
@@ -501,12 +538,11 @@ export default function Sala({ navigation, route }: Props) {
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
             <Text style={styles.navButtonText}>
-              <Ionicons name="home" size={16} color="#ffffffff" style={{marginRight: 3}} />
+              <FontAwesome name="arrow-left" size={15} color="white" />
               Inicio
             </Text>
           </TouchableOpacity>
 
-          <BtnCerrarSesion />
         </View>
       </View>
 
@@ -563,7 +599,12 @@ export default function Sala({ navigation, route }: Props) {
       </View>
 
       <Modal visible={modalVisible} transparent animationType="slide">
+
+
         <View style={styles.modalContainer}>
+
+          
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Reservas {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
 
@@ -664,7 +705,9 @@ export default function Sala({ navigation, route }: Props) {
                     <TouchableOpacity
                       style={{ flex: 1 }}
                       onPress={() => {
-                        if (item.usuarioId === auth.currentUser?.uid) {
+                        if (item.usuarioId === auth.currentUser?.uid ||
+                            rolUsuario === "admin" ||
+                            rolUsuario === "superuser") {
                           setHoraInicio(item.horaInicio);
                           setHoraFin(item.horaFin);
                           setMotivo(item.motivo);
@@ -681,7 +724,9 @@ export default function Sala({ navigation, route }: Props) {
                       </Text>
                     </TouchableOpacity>
 
-                    {item.usuarioId === auth.currentUser?.uid && (
+                    {(item.usuarioId === auth.currentUser?.uid ||
+                      rolUsuario === "admin" ||
+                      rolUsuario === "superuser") && (
                       <TouchableOpacity
                         style={{
                           paddingHorizontal: 10,
@@ -733,94 +778,108 @@ export default function Sala({ navigation, route }: Props) {
                   </View>
                 </View>
               </View>
+         
             </Modal>
 
-            <View style={styles.formSection}>
-              <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
-                *tocar reserva para editar
-              </Text>
-              <Text style={styles.formSectionTitle}>
-                {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
-              </Text>
-              
-              <TimePicker
-                label="Hora de inicio"
-                value={horaInicio}
-                onChange={setHoraInicio}
-                placeholder="Seleccionar hora de inicio"
-              />
-              
-              <TimePicker
-                label="Hora de fin"
-                value={horaFin}
-                onChange={setHoraFin}
-                placeholder="Seleccionar hora de fin"
-              />
+              <View style={styles.formSection}>
+                <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
+                  *tocar reserva para editar
+                </Text>
+                <Text style={styles.formSectionTitle}>
+                  {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
+                </Text>
 
-                {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después */}
-              {/* <Text style={styles.formLabel}>Hora de inicio</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="HH:MM (ej: 14:30)"
-                placeholderTextColor="#888"
-                value={horaInicio}
-                onChangeText={setHoraInicio}
-                keyboardType="default"
-              />*/}
-
-              {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después*/}
-              {/*<Text style={styles.formLabel}>Hora de fin</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="HH:MM (ej: 16:00)"
-                placeholderTextColor="#888"
-                value={horaFin}
-                onChangeText={setHoraFin}
-                keyboardType="default"
-              /> */}
-
-              <Text style={styles.formLabel}>Motivo</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Motivo de la reserva"
-                placeholderTextColor="#888"
-                value={motivo}
-                onChangeText={setMotivo}
-                multiline={true}
-                numberOfLines={2}
-              />
-
-              <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
-                *recibirá un email 60 minutos antes de la reserva
-              </Text>
-
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity 
-                  style={styles.saveButton} 
-                  onPress={handleCreateOrUpdateReserva}
-                >
-                  <Text style={styles.saveText}>
-                    {editingReservaId ? "Actualizar" : "Guardar Reserva"}
-                  </Text>
-                </TouchableOpacity>
+                      <Text style={styles.formLabel}>Motivo</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Motivo de la reserva"
+                  placeholderTextColor="#888"
+                  value={motivo}
+                  maxLength={100}
+                  onChangeText={setMotivo}
+                  multiline={true}
+                  numberOfLines={2}
+                />
                 
-                <TouchableOpacity
-                  style={[styles.cancelButton, { marginTop: 8 }]}
-                  onPress={() => {
-                    setModalVisible(false);
-                    setHoraInicio("");
-                    setHoraFin("");
-                    setMotivo("");
-                    setEditingReservaId(null);
-                  }}
-                >
-                  <Text style={styles.cancelText}>Cerrar</Text>
-                </TouchableOpacity>
+                <TimePicker
+                  label="Hora de inicio"
+                  value={horaInicio}
+                  onChange={setHoraInicio}
+                  placeholder="Seleccionar hora de inicio"
+                />
+                
+                <TimePicker
+                  label="Hora de fin"
+                  value={horaFin}
+                  onChange={setHoraFin}
+                  placeholder="Seleccionar hora de fin"
+                />
+
+                  {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después */}
+                {/* <Text style={styles.formLabel}>Hora de inicio</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="HH:MM (ej: 14:30)"
+                  placeholderTextColor="#888"
+                  value={horaInicio}
+                  onChangeText={setHoraInicio}
+                  keyboardType="default"
+                />*/}
+
+                {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después*/}
+                {/*<Text style={styles.formLabel}>Hora de fin</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="HH:MM (ej: 16:00)"
+                  placeholderTextColor="#888"
+                  value={horaFin}
+                  onChangeText={setHoraFin}
+                  keyboardType="default"
+                /> */}
+
+                <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
+                  *recibirá un email 60 minutos antes de la reserva
+                </Text>
+
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity 
+                    style={styles.saveButton} 
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      handleCreateOrUpdateReserva()
+                    }}
+                  >
+                    <Text style={styles.saveText}>
+                      {editingReservaId ? "Actualizar" : "Guardar Reserva"}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.cancelButton, { marginTop: 8 }]}
+                    onPress={() => {
+                      setModalVisible(false);
+                      setHoraInicio("");
+                      setHoraFin("");
+                      setMotivo("");
+                      setEditingReservaId(null);
+                    }}
+                  >
+                    <Text style={styles.cancelText}>Cerrar</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            
           </View>
+        </TouchableWithoutFeedback>
+                           
         </View>
-      </Modal>
+
+
+
+
+
+
+  </Modal>
     </View>
   );
 }
@@ -836,8 +895,8 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.4 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", paddingHorizontal: isSmallDevice ? 6 : 10 },
   content: { flex: 1, padding: isSmallDevice ? 4 : 8, alignItems: "center" },
-  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
-  modalContent: { backgroundColor: "#1c1c1c", padding: isSmallDevice ? 16 : 20, borderRadius: 10, width: "90%", maxWidth: 500 },
+  modalContainer: { flex: 1,justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
+  modalContent: { backgroundColor: "#1c1c1c", padding: isSmallDevice ? 16 : 20, borderRadius: 10, width: "90%", maxWidth: 500, position: "relative", bottom: 60 },
   modalTitle: { color: "#BEAF87", fontSize: isSmallDevice ? 16 : 18, marginBottom: 10, textAlign: "center" },
   input: { backgroundColor: "#1e1e1e", borderColor: "#BEAF87", borderWidth: 1, borderRadius: 8, color: "#fff", padding: isSmallDevice ? 8 : 10, marginBottom: 10, fontSize: isSmallDevice ? 13 : 14 },
   saveButton: { backgroundColor: "#BEAF87", paddingVertical: isSmallDevice ? 8 : 10, paddingHorizontal: isSmallDevice ? 12 : 16, borderRadius: 8, alignItems: "center" },
