@@ -1,6 +1,6 @@
 //app/usuarios.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet,Button, Dimensions, KeyboardAvoidingView, Platform, Modal, TextInput } from "react-native";
+import { View, Text, FlatList, TouchableWithoutFeedback,Keyboard,TouchableOpacity, StyleSheet,Button, Dimensions, KeyboardAvoidingView, Platform, Modal, TextInput } from "react-native";
 import { db } from "../firebase";
 import { collection, getDocs, updateDoc, doc, DocumentData, query, where } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -369,6 +369,8 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   const usuariosEliminados = usuarios.filter(u => u.eliminado).length;
 
   return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+  
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -655,6 +657,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
 
           {/* Modal principal */}
           <Modal visible={modalVisible} transparent animationType="fade">
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
                 {modalType === 'infoEmail' ? (
@@ -743,6 +746,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
                 )}
               </View>
             </View>
+            </TouchableWithoutFeedback>
           </Modal>
 
           {/* Modal de confirmación de cancelación */}
@@ -823,6 +827,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
         </View>
       </KeyboardAvoidingView>
     </View>
+    </TouchableWithoutFeedback>
   );
 };
 

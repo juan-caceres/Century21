@@ -495,8 +495,9 @@ export default function Sala({ navigation, route }: Props) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+
+      <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      
         <KeyboardAvoidingView
           style={{ flex: 1}}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -566,6 +567,7 @@ export default function Sala({ navigation, route }: Props) {
             </View>
 
             <Modal visible={modalVisible} transparent animationType="slide">
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
               
               <View style={styles.modalContainer}>
                 <View style={styles.modalContent}>
@@ -826,10 +828,11 @@ export default function Sala({ navigation, route }: Props) {
                   </View>
                 </View>
               </View>
+              </TouchableWithoutFeedback>
             </Modal>
           </View>
         </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
+   
     </View>
   );
 }
