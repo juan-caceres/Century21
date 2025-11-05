@@ -1,5 +1,5 @@
 // app/login.tsx
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { Text, StyleSheet, View, TextInput, ScrollView, TouchableOpacity, Image, ActivityIndicator,KeyboardAvoidingView, Platform ,Modal } from "react-native";
 import { useFonts } from "expo-font";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -27,14 +27,20 @@ export default function Login({ navigation, route }: Props) {
   const { setBlockNavigation } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
-  const [visiblePassword, setVisiblePassword] = useState("");
-  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [prevLength, setPrevLength] = useState(0);
+
   const setSessionPending = route?.params?.setSessionPending || (() => {});
 
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Regular.ttf"),
   });
+
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!ready) return null;
 
 
   if (!fontsLoaded) {
@@ -255,60 +261,15 @@ export default function Login({ navigation, route }: Props) {
 
               <TextInput
                 placeholder="Contraseña"
-                secureTextEntry={false}
-                value={showPassword ? password : visiblePassword}
-                onChangeText={(text) => {
-                  if (text.length < prevLength) {
-                    setPassword((prev) => prev.slice(0, -1));
-                  } else if (text.length === prevLength + 1) {
-                    const newChar = text[text.length - 1];
-                    setPassword((prev) => prev + newChar);
-                  } else {
-                    setPassword(text);
-                  }
-
-                  setPrevLength(text.length);
-
-                  if (showPassword) {
-                    if (hideTimeout) clearTimeout(hideTimeout);
-                    setVisiblePassword(text);
-                    return;
-                  }
-
-                  if (hideTimeout) clearTimeout(hideTimeout);
-
-                  if (text.length === 0) {
-                    setVisiblePassword("");
-                    return;
-                  }
-
-                  const hidden = "•".repeat(text.length - 1);
-                  const last = text[text.length - 1];
-                  setVisiblePassword(hidden + last);
-
-                  const timeout = setTimeout(() => {
-                    setVisiblePassword("•".repeat(text.length));
-                  }, 1000);
-
-                  setHideTimeout(timeout);
-                }}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
                 style={[styles.input, styles.fontTypold]}
                 placeholderTextColor="#aaa"
               />
 
               <TouchableOpacity
-                onPress={() => {
-                  if (hideTimeout) clearTimeout(hideTimeout);
-
-                  const newValue = !showPassword;
-                  setShowPassword(newValue);
-
-                  if (newValue) {
-                    setVisiblePassword(password); // mostrar real
-                  } else {
-                    setVisiblePassword("•".repeat(password.length)); // ocultar todo
-                  }
-                }}
+                onPress={() => setShowPassword(!showPassword)}
               >
                 <Icon
                   name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -425,3 +386,5 @@ const styles = StyleSheet.create({
   modalButton: { backgroundColor: "#BEAF87", paddingVertical: 10, paddingHorizontal: 25, borderRadius: 8 },
   modalButtonText: { color: "#252526", fontSize: 16, fontWeight: "bold" },
 });
+
+
