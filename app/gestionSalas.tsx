@@ -1,7 +1,7 @@
 //app/gestionSalas.tsx
 import { db } from "../firebase";
 import React, {useEffect,useState} from "react";
-import { View, Text, TextInput,Dimensions ,TouchableOpacity, FlatList, StyleSheet, Alert, KeyboardAvoidingView, Platform, Modal } from "react-native";
+import { View, Text, TextInput,Dimensions ,TouchableOpacity, FlatList, StyleSheet, Alert, KeyboardAvoidingView, Platform, Modal, ScrollView } from "react-native";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -202,13 +202,19 @@ export default function GestionSalas(){
         setTvOriginal(false);
     };
 
-    return (
-        <View style={styles.container}>     
-            <KeyboardAvoidingView
+    return (             
+        <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
             keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
 
+            <ScrollView 
+                style={{ flex: 1 }}
+                contentContainerStyle={{ flexGrow: 1 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
+            <View style={styles.container}>
             {/* Header */}
                   <View style={styles.header}>
                     <TouchableOpacity 
@@ -399,9 +405,10 @@ export default function GestionSalas(){
                         )}
                     </View>
                 </View>
-            </Modal>        
+            </Modal>   
+          </View>       
+        </ScrollView>
     </KeyboardAvoidingView>
-  </View>
   );
 }
 
