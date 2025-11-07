@@ -553,12 +553,8 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
               </Text>
             </View>
           ) : (
-            <FlatList
-              data={usuariosFiltrados}
-              keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <View style={[
+            usuariosFiltrados.map((item) => (
+              <View key={item.id} style={[
                   styles.card,
                   item.eliminado && styles.cardEliminado
                 ]}>
@@ -656,8 +652,7 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
                     )}
                   </View>
                 </View>
-              )}
-            />
+              ))
           )}
 
           {/* Modal principal */}
