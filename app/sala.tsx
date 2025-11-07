@@ -496,7 +496,7 @@ export default function Sala({ navigation, route }: Props) {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      
         <KeyboardAvoidingView
           style={{ flex: 1}}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -566,7 +566,7 @@ export default function Sala({ navigation, route }: Props) {
             </View>
 
             <Modal visible={modalVisible} transparent animationType="slide">
-              
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
               <View style={styles.modalContainer}>
                 <View style={styles.modalContent}>
                   <Text style={styles.modalTitle}>Reservas {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
@@ -826,11 +826,13 @@ export default function Sala({ navigation, route }: Props) {
                   </View>
                 </View>
               </View>
+                   </TouchableWithoutFeedback>
             </Modal>
           </View>
         </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
+     
     </View>
+
   );
 }
 
