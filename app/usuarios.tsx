@@ -372,8 +372,8 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0} // Ajustá según tu header
       >
         <View style={styles.container}>
           {/* Header */}

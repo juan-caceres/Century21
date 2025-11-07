@@ -203,13 +203,12 @@ export default function GestionSalas(){
     };
 
     return (
-        <KeyboardAvoidingView
+        <View style={styles.container}>     
+            <KeyboardAvoidingView
             style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
-        >
-        <View style={styles.container}>
-            
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
+
             {/* Header */}
                   <View style={styles.header}>
                     <TouchableOpacity 
@@ -400,10 +399,10 @@ export default function GestionSalas(){
                         )}
                     </View>
                 </View>
-            </Modal>
-        </View>
+            </Modal>        
     </KeyboardAvoidingView>
-    );
+  </View>
+  );
 }
 
 const { height } = Dimensions.get("window");
