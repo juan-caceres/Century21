@@ -1,6 +1,6 @@
 //app/olvidePassword.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Modal, ActivityIndicator  } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Modal,Keyboard,TouchableWithoutFeedback ,ActivityIndicator  } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../app/types/navigation";
@@ -52,6 +52,7 @@ export default function OlvidePassword({ navigation }: Props) {
   };
 
   return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -108,6 +109,7 @@ export default function OlvidePassword({ navigation }: Props) {
         </View>
       </KeyboardAvoidingView>
     </View>
+    </TouchableWithoutFeedback>
   );
 }
 
