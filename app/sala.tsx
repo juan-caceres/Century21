@@ -635,7 +635,7 @@ export default function Sala({ navigation, route }: Props) {
                       style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8 }]}
                       onPress={() => {
                         if (!selectedDay) return;
-                        const next = new Date(selectedDay);
+                        const next = new Date(selectedDay + 'T00:00:00');
                         next.setDate(next.getDate() + 1);
                         
                         if (next.getDay() === 0) {
