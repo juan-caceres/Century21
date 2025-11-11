@@ -161,13 +161,13 @@ export default function Registro({ navigation }: Props) {
       <KeyboardAvoidingView
         style={{ flex: 1}}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0} // Ajustá según tu header probando nueva rama
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header probando nueva rama
       > 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          bounces={false}
+          contentInsetAdjustmentBehavior="automatic"
         >
 
           <View style={styles.container}>
@@ -192,6 +192,9 @@ export default function Registro({ navigation }: Props) {
                 placeholderTextColor="#aaa"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
+                textContentType="emailAddress"
+                importantForAutofill="no"
               />
             </View>
             {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}
@@ -208,6 +211,9 @@ export default function Registro({ navigation }: Props) {
                 autoCapitalize="none"
                 autoCorrect={false}
                 maxLength={20}
+                autoComplete="off"
+                textContentType="none"
+                importantForAutofill="no"
               />
             </View>
             <Text style={styles.helpText}>3-20 caracteres • Letras, números y guion bajo (_)</Text>
@@ -223,6 +229,9 @@ export default function Registro({ navigation }: Props) {
                 secureTextEntry={!showPassword}
                 style={[styles.input, styles.fontTypold]}
                 placeholderTextColor="#aaa"
+                autoComplete="password"
+                textContentType="password"
+                importantForAutofill="no"
               />
               
               <TouchableOpacity
@@ -248,6 +257,9 @@ export default function Registro({ navigation }: Props) {
                 secureTextEntry={!showConfirmPassword}
                 style={[styles.input, styles.fontTypold]}
                 placeholderTextColor="#aaa"
+                autoComplete="password"
+                textContentType="password"
+                importantForAutofill="no"
                 />
                   
                 <TouchableOpacity
@@ -281,7 +293,7 @@ export default function Registro({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   fontTypold: { fontFamily: 'Typold' },
-  container: { flex: 1, backgroundColor: "#fff", justifyContent: "center", alignItems: "center", padding: 20 },
+  container: { flex: 1, backgroundColor: "#fff", justifyContent: "center", alignItems: "center", padding: 20},
    scrollContent: { flexGrow: 1, backgroundColor: "#ffffff",},
   logo: { width: 220, height: 120, marginBottom: 20 },
   title: { fontSize: 26, fontWeight: "bold", color: "#BEAF87", marginBottom: 10 },
