@@ -55,6 +55,7 @@ export default function Sala({ navigation, route }: Props) {
 
   const [todasLasSalas, setTodasLasSalas] = useState<any[]>([]);
   const [indiceActual, setIndiceActual] = useState<number>(-1);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Bold.ttf"),
@@ -90,6 +91,7 @@ export default function Sala({ navigation, route }: Props) {
 
   useEffect(() => {
     fetchSalaInfo();
+    obtenerRolUsuario().then(role => setUserRole(role));
     const unsubscribe = suscribirReservasSemana();
     return () => { unsubscribe(); }
   }, [numero]);
@@ -116,6 +118,20 @@ export default function Sala({ navigation, route }: Props) {
     } catch (error) {
       console.log("Error al obtener username:", error);
       return "Usuario";
+    }
+  };
+
+  const obtenerRolUsuario = async (): Promise<string | null> => {
+    try {
+      const usuarioId = auth.currentUser?.uid;
+      if (!usuarioId) return null;
+
+      const userDoc = await getDoc(doc(db, "users", usuarioId));
+      const userData = userDoc.data();
+      return userData?.role || null;
+    } catch (error) {
+      console.log("Error al obtener rol:", error);
+      return null;
     }
   };
 
@@ -340,7 +356,7 @@ export default function Sala({ navigation, route }: Props) {
 
         //notificar a admins/superusers de la edicion de la reserva
         try {
-          await notifyReservaEdited(userName, salaName, selectedDay, normalizeTime(horaInicio), normalizeTime(horaFin));
+          await notifyReservaEdited(userName, salaName, selectedDay, normalizeTime(horaInicio), normalizeTime(horaFin), usuarioId);
           console.log("✅ Notificación de edición enviada exitosamente");
         } catch (notiError) {
           console.log("Error enviando notificacion de reserva editada:", notiError);
@@ -422,19 +438,46 @@ export default function Sala({ navigation, route }: Props) {
   };
 
   const handleEliminarReserva = async (reserva: Reserva) => {
-    if (!reserva.id || reserva.usuarioId !== auth.currentUser?.uid) return;
+    if (!reserva.id) return;
+    if (reserva.usuarioId !== auth.currentUser?.uid && userRole !== 'admin' && userRole !== 'superuser') return;
     
     try {
       const userName = await obtenerUsernameActual();
       const salaName = salaInfo?.nombre || numero;
       
+      // Cancelar notificación local programada ANTES de eliminar
+      try {
+        const allScheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+        
+        // Buscar la notificación que corresponde a esta reserva
+        const notificationToCancel = allScheduledNotifications.find(notification => {
+          const data = notification.content.data;
+          return (
+            data.fecha === reserva.fecha &&
+            data.horaInicio === reserva.horaInicio &&
+            data.salaNumero === (salaInfo?.nombre || numero) &&
+            data.usuarioEmail === reserva.usuarioEmail
+          );
+        });
+
+        if (notificationToCancel) {
+          await Notifications.cancelScheduledNotificationAsync(notificationToCancel.identifier);
+          console.log("✅ Notificación local cancelada:", notificationToCancel.identifier);
+        } else {
+          console.log("⚠️ No se encontró notificación local para cancelar");
+        }
+      } catch (notifErr) {
+        console.log("❌ Error al cancelar notificación local:", notifErr);
+      }
+      
+      // Eliminar la reserva de Firestore
       await deleteDoc(doc(db, "reservas", reserva.id));
             
       showMessage("Reserva cancelada correctamente.", "success");
 
       console.log("enviando notificacion de reserva eliminada ...");
       try {
-        await notifyReservaDeleted(userName, salaName, reserva.fecha, normalizeTime(reserva.horaInicio), normalizeTime(reserva.horaFin));
+        await notifyReservaDeleted(userName, salaName, reserva.fecha, normalizeTime(reserva.horaInicio), normalizeTime(reserva.horaFin), auth.currentUser?.uid);
       } catch (notiError) {
         console.log("Error enviando notificacion de reserva eliminada:", notiError);
       }
@@ -668,7 +711,7 @@ export default function Sala({ navigation, route }: Props) {
                           <TouchableOpacity
                             style={{ flex: 1 }}
                             onPress={() => {
-                              if (item.usuarioId === auth.currentUser?.uid) {
+                              if (item.usuarioId === auth.currentUser?.uid || userRole === 'admin' || userRole === 'superuser') {
                                 setHoraInicio(item.horaInicio);
                                 setHoraFin(item.horaFin);
                                 setMotivo(item.motivo);
@@ -685,7 +728,7 @@ export default function Sala({ navigation, route }: Props) {
                             </Text>
                           </TouchableOpacity>
 
-                          {item.usuarioId === auth.currentUser?.uid && (
+                          {(item.usuarioId === auth.currentUser?.uid || userRole === 'admin' || userRole === 'superuser') && (
                             <TouchableOpacity
                               style={{
                                 paddingHorizontal: 10,
