@@ -1,4 +1,3 @@
-// app/login.tsx
 import React, { useState } from "react";
 import { Text, StyleSheet, View, TextInput, TouchableOpacity, Image, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, ScrollView, Keyboard } from "react-native";
 import { useFonts } from "expo-font";
