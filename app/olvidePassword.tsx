@@ -1,6 +1,6 @@
 //app/olvidePassword.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Modal, ActivityIndicator, ScrollView, Keyboard } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Modal,Keyboard,TouchableWithoutFeedback ,ActivityIndicator  } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../app/types/navigation";
@@ -52,73 +52,65 @@ export default function OlvidePassword({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#ffffff" }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={0}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        bounces={false}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
       >
-    <View style={styles.container}>
-      <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
-      <Text style={[styles.title, styles.fontTypold]}>Recuperar Contraseña</Text>
-      <Text style={[styles.subtitle, styles.fontTypold]}>Ingresa tu correo para recibir el enlace</Text>
+        <View style={styles.container}>
+          <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
+          <Text style={[styles.title, styles.fontTypold]}>Recuperar Contraseña</Text>
+          <Text style={[styles.subtitle, styles.fontTypold]}>Ingresa tu correo para recibir el enlace</Text>
 
-      <View style={[styles.inputContainer, errorEmail ? styles.inputError : null]}>
-        <Icon name="email-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
-        <TextInput
-          placeholder="Correo"
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
-          placeholderTextColor="#aaa"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-      </View>
-      {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}
-
-      <TouchableOpacity style={styles.button}
-      onPress={() => {
-        Keyboard.dismiss();
-        handleReset();
-        }}
-      >
-        <Text style={[styles.buttonText, styles.fontTypold]}>Enviar enlace</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-        <Text style={[styles.link, styles.fontTypold]}>Volver al login</Text>
-      </TouchableOpacity>
-
-      <Modal transparent visible={modalVisible} animationType="fade" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={[styles.modalTitle, styles.fontTypold]}>¡Correo enviado!</Text>
-            <Text style={[styles.modalText, styles.fontTypold]}>
-              Te hemos enviado un enlace para restablecer tu contraseña.{"\n"}
-              Revisa también la carpeta de spam o correo no deseado.
-            </Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => {
-                setModalVisible(false);
-                navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-              }}
-            >
-              <Text style={styles.modalButtonText}>Aceptar</Text>
-            </TouchableOpacity>
+          <View style={[styles.inputContainer, errorEmail ? styles.inputError : null]}>
+            <Icon name="email-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+            <TextInput
+              placeholder="Correo"
+              value={email}
+              onChangeText={setEmail}
+              style={styles.input}
+              placeholderTextColor="#aaa"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
           </View>
+          {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}
+
+          <TouchableOpacity style={styles.button} onPress={handleReset} activeOpacity={0.7}>
+            <Text style={[styles.buttonText, styles.fontTypold]}>Enviar enlace</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+            <Text style={[styles.link, styles.fontTypold]}>Volver al login</Text>
+          </TouchableOpacity>
+
+          <Modal transparent visible={modalVisible} animationType="fade" onRequestClose={() => setModalVisible(false)}>
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={[styles.modalTitle, styles.fontTypold]}>¡Correo enviado!</Text>
+                <Text style={[styles.modalText, styles.fontTypold]}>
+                  Te hemos enviado un enlace para restablecer tu contraseña.{"\n"}
+                  Revisa también la carpeta de spam o correo no deseado.
+                </Text>
+                <TouchableOpacity
+                  style={styles.modalButton}
+                  onPress={() => {
+                    setModalVisible(false);
+                    navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Aceptar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
         </View>
-      </Modal>
+      </KeyboardAvoidingView>
     </View>
-  </ScrollView>
-</KeyboardAvoidingView>
-);
+    </TouchableWithoutFeedback>
+  );
 }
 
 // Estilos (siguiendo logo c21)

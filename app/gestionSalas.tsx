@@ -202,15 +202,19 @@ export default function GestionSalas(){
         setTvOriginal(false);
     };
 
-    return (
+    return (             
         <KeyboardAvoidingView
-            style={{ flex: 1, backgroundColor: "#ffffff" }}
+            style={{ flex: 1 }}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
-            keyboardVerticalOffset={0}
-        >
-     
-        <View style={styles.container}>
-            
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
+
+            <ScrollView 
+                style={{ flex: 1 }}
+                contentContainerStyle={{ flexGrow: 1 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
+            <View style={styles.container}>
             {/* Header */}
                   <View style={styles.header}>
                     <TouchableOpacity 
@@ -287,11 +291,9 @@ export default function GestionSalas(){
             </View>
 
             {/* Lista de salas */}
-            <FlatList
-                data={salas}
-                keyExtractor={(item, index) => item.id || index.toString()}
-                renderItem={({ item }) => (
-                    <View style={styles.salaItem}>
+            {salas.map((item, index) => (
+                <View key={item.id || index.toString()} 
+                style={styles.salaItem}>
                         <View style={styles.salaInfo}>
                             <Text style={styles.salaText}>{item.nombre}</Text>
                             <Text style={styles.salaSubtext}>
@@ -313,9 +315,8 @@ export default function GestionSalas(){
                             </TouchableOpacity>
                         </View>
                     </View>
-                )}
-            />
-
+                ))}
+            
             {/* Modal de confirmación */}
             <Modal visible={modalVisible} transparent animationType="fade">
                 <View style={styles.modalContainer}>
@@ -404,11 +405,11 @@ export default function GestionSalas(){
                         )}
                     </View>
                 </View>
-            </Modal>
-        </View>
-    
-</KeyboardAvoidingView>
-);
+            </Modal>   
+          </View>       
+        </ScrollView>
+    </KeyboardAvoidingView>
+  );
 }
 
 const { height } = Dimensions.get("window");
