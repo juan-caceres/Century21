@@ -17,19 +17,30 @@ interface NotificationPayload {
 
 /**
  * Envía notificaciones push a todos los usuarios con rol admin o superuser
+ * @param excludeUserId - UID del usuario a excluir (opcional)
  */
-export async function sendNotificationToAdmins(notification: NotificationPayload): Promise<void> {
+export async function sendNotificationToAdmins(
+  notification: NotificationPayload, 
+  excludeUserId?: string
+): Promise<void> {
   try {
     console.log('🔔 Enviando notificaciones a admins y superusers...');
 
     // Obtener todos los usuarios con rol admin o superuser
     const usersRef = collection(db, 'users');
-    const adminQuery = query(usersRef,where('role', 'in', ['admin', 'superuser']));
+    const adminQuery = query(usersRef, where('role', 'in', ['admin', 'superuser']));
     const querySnapshot = await getDocs(adminQuery);
     const pushTokens: string[] = [];
 
     querySnapshot.forEach((doc) => {
       const userData = doc.data();
+      
+      // Excluir al usuario que realizó la acción
+      if (doc.id === excludeUserId) {
+        console.log(`⏭️ Excluyendo usuario ${doc.id} de las notificaciones`);
+        return;
+      }
+      
       // Verificar que el usuario tenga token y no esté eliminado
       if (userData.notificationToken && !userData.eliminado) {
         pushTokens.push(userData.notificationToken);
@@ -74,14 +85,20 @@ export async function sendNotificationToAdmins(notification: NotificationPayload
     console.log('✅ Todas las notificaciones fueron enviadas exitosamente');
   } catch (error) {
     console.error('❌ Error enviando notificaciones:', error);
-    // No lanzamos el error para no interrumpir el flujo principal
   }
 }
 
 /**
  * Envía notificación cuando se crea una reserva
  */
-export async function notifyReservaCreated(userName: string,salaName: string,fecha: string,horaInicio: string,horaFin: string,): Promise<void> {
+export async function notifyReservaCreated(
+  userName: string,
+  salaName: string,
+  fecha: string,
+  horaInicio: string,
+  horaFin: string,
+  userId?: string  
+): Promise<void> {
   const fechaFormateada = convertirAFormatoDDMMYYYY(fecha);
   await sendNotificationToAdmins({
     title: '📅 Nueva Reserva Creada',
@@ -95,7 +112,7 @@ export async function notifyReservaCreated(userName: string,salaName: string,fec
       userName,
       timestamp: new Date().toISOString(),
     },
-  });
+  }, userId);  // Pasar el userId
 }
 
 /**
@@ -107,6 +124,7 @@ export async function notifyReservaEdited(
   fecha: string,
   horaInicio: string,
   horaFin: string,
+  userId?: string
 ): Promise<void> {
   const fechaFormateada = convertirAFormatoDDMMYYYY(fecha);
   await sendNotificationToAdmins({
@@ -121,7 +139,7 @@ export async function notifyReservaEdited(
       userName,
       timestamp: new Date().toISOString(),
     },
-  });
+  }, userId);  // Pasar el userId
 }
 
 /**
@@ -133,6 +151,7 @@ export async function notifyReservaDeleted(
   fecha: string,
   horaInicio: string,
   horaFin: string,
+  userId?: string  
 ): Promise<void> {
   console.log("enviando notificacion al eliminar reserva");
   const fechaFormateada = convertirAFormatoDDMMYYYY(fecha);
@@ -148,7 +167,7 @@ export async function notifyReservaDeleted(
       userName,
       timestamp: new Date().toISOString(),
     },
-  });
+  }, userId);  // Pasar el userId
 }
 
 /**

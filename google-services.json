@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "423314868478",
+    "project_id": "century21-60277",
+    "storage_bucket": "century21-60277.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:423314868478:android:7f0a60f84423952668bdaf",
+        "android_client_info": {
+          "package_name": "com.juancruzcaceres.century21"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDu7tdY052Ud1h7WImY5grc2TF-pP3U7Sk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
