@@ -26,7 +26,6 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "googleServicesFile": "./google-services.json",
       "package": "com.juancruzcaceres.century21"
     },
     "notification": {
@@ -46,7 +45,7 @@
     "owner": "c21",
     "plugins": [
       "expo-font"
-    ],
+        ],
     "runtimeVersion": {
       "policy": "appVersion"
     },
