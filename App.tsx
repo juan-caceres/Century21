@@ -45,6 +45,7 @@ export default function App() {
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
   
+  console.log("✅ Auth importado en App:", auth);
   useEffect(() => {
     const setupSystemUI = async () => {
       if (Platform.OS === 'android') {
@@ -148,6 +149,10 @@ export default function App() {
   useEffect(() => {
     let unsubscribeFirestore: (() => void) | null = null;
 
+    console.log("========== TEST FIREBASE ==========");
+    console.log("AUTH:", auth);
+    console.log("TYPE AUTH:", typeof auth);
+    console.log("==================================");
     const unsub = onAuthStateChanged(auth, async (usuario) => {
       console.log("Auth state cambió:", usuario ? "Usuario logueado" : "Sin usuario");
       
