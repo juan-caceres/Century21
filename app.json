@@ -26,7 +26,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.juancruzcaceres.century21"
+      "package": "com.juancruzcaceres.century21",
+      "googleServicesFile": "./google-services.json"
     },
     "notification": {
       "icon": "./assets/century21-logo.png",
