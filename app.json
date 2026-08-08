@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "C21-Salas",
+    "name": "C21 Salas",
     "slug": "century21",
     "version": "1.0.0",
     "scheme": "century21",
@@ -26,11 +26,12 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.juancruzcaceres.century21"
+      "package": "com.juancruzcaceres.century21",
+      "googleServicesFile": "./google-services.json"
     },
     "notification": {
-      "icon": "./assets/century21-logoTransparente2.png",
-      "color": "#ffffff",
+      "icon": "./assets/century21-logo.png",
+      "color": "#d4af37",
       "androidMode": "default",
       "androidCollapsedTitle": "Nuevas notificaciones"
     },
@@ -42,18 +43,15 @@
         "projectId": "d34372cc-5926-4b50-8f4a-1b0a29d49f6c"
       }
     },
-    "owner": "juancruzcaceres",
+    "owner": "c21",
     "plugins": [
       "expo-font"
-    ],
+        ],
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/d34372cc-5926-4b50-8f4a-1b0a29d49f6c", 
-      "enabled": true,
-      "fallbackToCacheTimeout": 0,
-      "checkAutomatically": "ON_LOAD"
+      "url": "https://u.expo.dev/d34372cc-5926-4b50-8f4a-1b0a29d49f6c"
     }
   }
 }
