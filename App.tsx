@@ -44,33 +44,40 @@ export default function App() {
   const [fontsLoaded] = useFonts({Typold: require('./assets/Typold-Bold.ttf'),});
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+
+  useEffect(() => {
+  if (Platform.OS === 'web') {
+    const styleId = 'expo-web-scroll-fix';
+    
+    // Solo lo inyectamos si no existe para evitar duplicados
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.innerHTML = `
+        html, body, #root {
+          height: 100%;
+        }
+        body {
+          overflow-y: auto;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+}, []);
   
   useEffect(() => {
-    const setupSystemUI = async () => {
-      if (Platform.OS === 'android') {
-        try {
-          // Configurar la barra de navegación (botones de Android)
-  
-          await NavigationBar.setButtonStyleAsync('light'); // Botones blancos
-          // Activar modo inmersivo sticky
-          await NavigationBar.setVisibilityAsync('hidden');
-          
-          console.log('✅ Modo inmersivo activado en Android');
-        } catch (error) {
-          console.log('⚠️ Error configurando barras del sistema:', error);
-        }
-      }
-      
-      // Configurar color de fondo raíz
-      try {
-        await SystemUI.setBackgroundColorAsync('#ffffff');
-      } catch (error) {
-        console.log('⚠️ Error configurando background color:', error);
-      }
-    };
+  const setupSystemUI = async () => {
+    // Configurar color de fondo raíz
+    try {
+      await SystemUI.setBackgroundColorAsync('#ffffff');
+    } catch (error) {
+      console.log('⚠️ Error configurando background color:', error);
+    }
+  };
 
-    setupSystemUI();
-  }, []);
+  setupSystemUI();
+}, []);
   
   useEffect(() => {
   console.log('📱 Configurando listeners de notificaciones...');
@@ -120,6 +127,7 @@ export default function App() {
   responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
     console.log('👆 Usuario interactuó con la notificación:', response);
     const data = response.notification.request.content.data;
+    if (!data) return;
 
     if (data.type === 'reserva_created') {
       console.log('Navegar a detalles de reserva:', data.reservaId);
@@ -319,7 +327,7 @@ export default function App() {
           )}
         </Stack.Navigator>
         {/* StatusBar con estilo oscuro para que se vea en fondo blanco */}
-        <StatusBar style="dark" backgroundColor="#ffffff" />
+        <StatusBar style="dark" />
       </NavigationContainer>
 
       {/* Modal de cuenta eliminada permanentemente */}

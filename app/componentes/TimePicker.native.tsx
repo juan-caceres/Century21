@@ -1,30 +1,29 @@
-// app/componentes/TimePicker.jsx
+// app/componentes/TimePicker.native.tsx
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-  Platform,
-  Button,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
-const TimePicker = ({ 
-  value, 
-  onChange, 
+type TimePickerProps = {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  label?: string;
+  disabled?: boolean;
+};
+
+const TimePicker: React.FC<TimePickerProps> = ({
+  value,
+  onChange,
   placeholder = "Seleccionar hora",
   label = "",
-  disabled = false 
+  disabled = false,
 }) => {
   const [showPicker, setShowPicker] = useState(false);
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState<Date>(new Date());
   const [displayTime, setDisplayTime] = useState('');
 
   useEffect(() => {
     if (value && value !== '') {
-      // Convertir string HH:MM a Date
       const [hours, minutes] = value.split(':').map(Number);
       const newDate = new Date();
       newDate.setHours(hours);
@@ -34,11 +33,11 @@ const TimePicker = ({
     }
   }, [value]);
 
-  const handleTimeChange = (event, selectedTime) => {
+  const handleTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
     if (Platform.OS === 'android') {
       setShowPicker(false);
     }
-    
+
     if (selectedTime && event.type !== 'dismissed') {
       setTime(selectedTime);
       const hours = selectedTime.getHours().toString().padStart(2, '0');
@@ -50,9 +49,7 @@ const TimePicker = ({
   };
 
   const showTimePicker = () => {
-    if (!disabled) {
-      setShowPicker(true);
-    }
+    if (!disabled) setShowPicker(true);
   };
 
   const confirmIOS = () => {
@@ -67,27 +64,20 @@ const TimePicker = ({
   return (
     <View style={styles.container}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      
+
       <TouchableOpacity
         style={[styles.input, disabled && styles.inputDisabled]}
         onPress={showTimePicker}
         disabled={disabled}
       >
-        <Text style={[
-          styles.inputText,
-          !displayTime && styles.placeholderText
-        ]}>
+        <Text style={[styles.inputText, !displayTime && styles.placeholderText]}>
           {displayTime || placeholder}
         </Text>
         <Text style={styles.clockIcon}>🕐</Text>
       </TouchableOpacity>
 
       {Platform.OS === 'ios' ? (
-        <Modal
-          visible={showPicker}
-          transparent={true}
-          animationType="slide"
-        >
+        <Modal visible={showPicker} transparent animationType="slide">
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
@@ -99,7 +89,7 @@ const TimePicker = ({
                   <Text style={styles.confirmButton}>Confirmar</Text>
                 </TouchableOpacity>
               </View>
-              
+
               <DateTimePicker
                 value={time}
                 mode="time"
@@ -128,75 +118,20 @@ const TimePicker = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 10,
-  },
-  label: {
-    color: '#BEAF87',
-    fontSize: 14,
-    marginBottom: 5,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: '#1e1e1e',
-    borderColor: '#BEAF87',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  inputDisabled: {
-    opacity: 0.6,
-  },
-  inputText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  placeholderText: {
-    color: '#888',
-  },
-  clockIcon: {
-    fontSize: 20,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#1c1c1c',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 30,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  modalTitle: {
-    color: '#BEAF87',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  cancelButton: {
-    color: '#ff6961',
-    fontSize: 16,
-  },
-  confirmButton: {
-    color: '#BEAF87',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  iosPicker: {
-    backgroundColor: '#1c1c1c',
-    height: 200,
-  },
+  container: { marginBottom: 10 },
+  label: { color: '#BEAF87', fontSize: 14, marginBottom: 5, fontWeight: '600' },
+  input: { backgroundColor: '#1e1e1e', borderColor: '#BEAF87', borderWidth: 1, borderRadius: 8, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  inputDisabled: { opacity: 0.6 },
+  inputText: { color: '#fff', fontSize: 16 },
+  placeholderText: { color: '#888' },
+  clockIcon: { fontSize: 20 },
+  modalContainer: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+  modalContent: { backgroundColor: '#1c1c1c', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 30 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#333' },
+  modalTitle: { color: '#BEAF87', fontSize: 18, fontWeight: '600' },
+  cancelButton: { color: '#ff6961', fontSize: 16 },
+  confirmButton: { color: '#BEAF87', fontSize: 16, fontWeight: '600' },
+  iosPicker: { backgroundColor: '#1c1c1c', height: 200 },
 });
 
 export default TimePicker;

@@ -20,9 +20,9 @@ const appFirebase = getApps().length === 0
   : getApp();
 
 // 2. Inicializamos Auth con persistencia para que no se cierre la sesión
-export const auth = initializeAuth(appFirebase, {
+export const auth = initializeAuth(appFirebase, /*{
   persistence: getReactNativePersistence(AsyncStorage)
-});
+}*/);
 
 // 3. Exportamos la base de datos
 export const db = getFirestore(appFirebase);

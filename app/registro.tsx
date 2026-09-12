@@ -1,5 +1,5 @@
 //app/registro.tsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { View, Text, TextInput ,TouchableOpacity, StyleSheet, Image, ActivityIndicator,KeyboardAvoidingView,ScrollView, Platform , Alert } from "react-native";
 import { useFonts } from "expo-font";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
@@ -33,6 +33,9 @@ export default function Registro({ navigation }: Props) {
   const [errorPassword, setErrorPassword] = useState("");
   const [errorConfirm, setErrorConfirm] = useState("");
  
+  const usernameRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
   
   // Carga de fuente personalizada
   const [fontsLoaded] = useFonts({
@@ -156,7 +159,7 @@ export default function Registro({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView
         style={{ flex: 1}}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header probando nueva rama
       > 
         <ScrollView
@@ -191,6 +194,9 @@ export default function Registro({ navigation }: Props) {
                 autoComplete="email"
                 textContentType="emailAddress"
                 importantForAutofill="no"
+                returnKeyType="next"
+                onSubmitEditing={() => usernameRef.current?.focus()}
+                submitBehavior="submit"
               />
             </View>
             {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}
@@ -199,6 +205,7 @@ export default function Registro({ navigation }: Props) {
             <View style={[styles.inputContainer, errorUsername ? styles.inputError : null]}>
               <Icon name="at" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
               <TextInput
+                ref={usernameRef}
                 placeholder="Nombre de Usuario"
                 value={username}
                 onChangeText={setUsername}
@@ -210,6 +217,9 @@ export default function Registro({ navigation }: Props) {
                 autoComplete="off"
                 textContentType="none"
                 importantForAutofill="no"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                submitBehavior="submit"
               />
             </View>
             <Text style={styles.helpText}>3-20 caracteres • Letras, números y guion bajo (_)</Text>
@@ -219,6 +229,7 @@ export default function Registro({ navigation }: Props) {
             <View style={[styles.inputContainer, errorPassword ? styles.inputError : null]}>
               <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
               <TextInput
+                ref={passwordRef}
                 placeholder="Contraseña"
                 value={password}
                 onChangeText={setPassword}
@@ -228,6 +239,9 @@ export default function Registro({ navigation }: Props) {
                 autoComplete="password"
                 textContentType="password"
                 importantForAutofill="no"
+                returnKeyType="next"
+                onSubmitEditing={() => confirmRef.current?.focus()}
+                submitBehavior="submit"
               />
               
               <TouchableOpacity
@@ -247,6 +261,7 @@ export default function Registro({ navigation }: Props) {
             <View style={[styles.inputContainer, errorConfirm ? styles.inputError : null]}>
               <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
               <TextInput
+                ref={confirmRef}
                 placeholder="Confirmar Contraseña"
                 value={confirm}
                 onChangeText={setConfirm}
@@ -256,7 +271,9 @@ export default function Registro({ navigation }: Props) {
                 autoComplete="password"
                 textContentType="password"
                 importantForAutofill="no"
-                />
+                returnKeyType="done"
+                onSubmitEditing={handleRegister}
+              />
                   
                 <TouchableOpacity
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}

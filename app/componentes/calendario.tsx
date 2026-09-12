@@ -1,6 +1,7 @@
 //app/componentes/calendario.tsx
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Dimensions, Platform } from "react-native";
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Dimensions, Platform, Alert } from "react-native";
+import { generarOcurrenciasDeGrupos } from "../utils/recurrencia";
 
 type Reserva = {
   id?: string;
@@ -11,6 +12,7 @@ type Reserva = {
 
 type Props = {
   reservas: Reserva[];
+  grupos?: any[];
   alSeleccionarHorario: (fecha: Date) => void;
 };
 
@@ -43,7 +45,7 @@ const getAnchoColumnaHoras = () => {
 
 const ANCHO_COLUMNA_HORAS = getAnchoColumnaHoras();
 
-export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
+export default function Calendario({ reservas, grupos = [], alSeleccionarHorario }: Props) {
   const [semanaActual, setSemanaActual] = useState(new Date());
   
   // Obtener los días de la semana (Lunes a Sábado)
@@ -64,6 +66,8 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
   };
 
   const diasSemana = obtenerDiasDeLaSemana(semanaActual);
+  const ocurrenciasGrupos = generarOcurrenciasDeGrupos(grupos, diasSemana);
+  const reservasTotales = [...reservas, ...ocurrenciasGrupos];
   
   // Verificar día pasado
   const esDiaPasado = (fecha: Date) => {
@@ -122,19 +126,19 @@ export default function Calendario({ reservas, alSeleccionarHorario }: Props) {
 const obtenerReservasDelDia = (fecha: Date) => {
   const fechaComparar = new Date(fecha);
   fechaComparar.setHours(0, 0, 0, 0);
-  
+
   const año = fechaComparar.getFullYear();
   const mes = fechaComparar.getMonth();
   const dia = fechaComparar.getDate();
-  
-  return reservas.filter(reserva => {
+
+  return reservasTotales.filter(reserva => {
     const reservaFecha = new Date(reserva.inicio);
     reservaFecha.setHours(0, 0, 0, 0);
-    
+
     const reservaAño = reservaFecha.getFullYear();
     const reservaMes = reservaFecha.getMonth();
     const reservaDia = reservaFecha.getDate();
-    
+
     return reservaAño === año && reservaMes === mes && reservaDia === dia;
   });
 };
@@ -173,6 +177,8 @@ const obtenerReservasDelDia = (fecha: Date) => {
     const minutosInicio = reserva.inicio.getMinutes();
     const horaFin = reserva.fin.getHours();
     const minutosFin = reserva.fin.getMinutes();
+
+    const esGrupo = reserva.id?.startsWith('grupo-');
     
     const topPosition = ((horaInicio - HORAS_INICIO) + minutosInicio / 60) * ALTURA_HORA;
     const duration = ((horaFin - horaInicio) + (minutosFin - minutosInicio) / 60) * ALTURA_HORA;
@@ -185,6 +191,7 @@ const obtenerReservasDelDia = (fecha: Date) => {
         key={reserva.id}
         style={[
           styles.evento,
+          esGrupo && styles.eventoGrupo,
           {
             top: topPosition,
             height: Math.max(duration, 20),
@@ -208,7 +215,7 @@ const obtenerReservasDelDia = (fecha: Date) => {
     const horarioPasado = esHorarioPasado(dia, horaIndex);
     
     if (esPasado || horarioPasado) {
-      alert("No se pueden seleccionar horarios anteriores.");
+      Alert.alert("Atención", "No se pueden seleccionar horarios anteriores.");
       return;
     }
 
@@ -364,8 +371,5 @@ const styles = StyleSheet.create({
   evento: { position: 'absolute', left: 0, right: 0, backgroundColor: '#BEAF87', borderRadius: isSmallDevice ? 3 : 4, borderLeftWidth: 2, borderLeftColor: '#9A8F6A', },
   eventoTexto: { color: '#ffffff', fontWeight: 'bold', marginBottom: 1, },
   eventoHora: { color: '#ffffff', opacity: 0.9, },
+  eventoGrupo: { backgroundColor: "#8B7355", borderLeftColor: "#5c4a30" },
 });
-
-function alert(arg0: string) {
-  throw new Error("Function not implemented.");
-}
