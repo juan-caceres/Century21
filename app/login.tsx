@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Text, StyleSheet, View, TextInput, TouchableOpacity, Image, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, ScrollView, Keyboard } from "react-native";
+// app/login.tsx
+import React, { useState,useEffect } from "react";
+import { Text, StyleSheet, View, TextInput, ScrollView, TouchableOpacity, Image, ActivityIndicator,KeyboardAvoidingView, Platform ,Modal, Keyboard } from "react-native";
 import { useFonts } from "expo-font";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
@@ -23,9 +24,7 @@ export default function Login({ navigation, route }: Props) {
   const [loading, setLoading] = useState(false);
   const { setBlockNavigation } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [visiblePassword, setVisiblePassword] = useState("");
-  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [prevLength, setPrevLength] = useState(0);
+ 
   const setSessionPending = route?.params?.setSessionPending || (() => {});
 
   const [fontsLoaded] = useFonts({
@@ -192,197 +191,154 @@ export default function Login({ navigation, route }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#ffffff" }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={0}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        <View style={styles.container}>
-          <Image
-            source={require("../assets/LogoGrey.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={[styles.title, styles.fontTypold]}>Bienvenido</Text>
-          <Text style={[styles.subtitle, styles.fontTypold]}>
-            Inicia sesión para continuar
-          </Text>
-
-          <View style={[styles.inputContainer, errorEmailOrUsername ? styles.inputError : null]}>
-            <Icon name="account-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
-            <TextInput
-              placeholder="Nombre de Usuario o Email"
-              value={emailOrUsername}
-              onChangeText={setEmailOrUsername}
-              style={[styles.input, styles.fontTypold]}
-              placeholderTextColor="#aaa"
-              autoCapitalize="none"
-            />
-          </View>
-          {errorEmailOrUsername ? <Text style={styles.errorText}>{errorEmailOrUsername}</Text> : null}
-
-          <View style={[styles.inputContainer, errorPassword ? styles.inputError : null]}>
-            <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
-
-            <TextInput
-              placeholder="Contraseña"
-              secureTextEntry={false}
-              value={showPassword ? password : visiblePassword}
-              onChangeText={(text) => {
-                if (text.length < prevLength) {
-                  setPassword((prev) => prev.slice(0, -1));
-                } else if (text.length === prevLength + 1) {
-                  const newChar = text[text.length - 1];
-                  setPassword((prev) => prev + newChar);
-                } else {
-                  setPassword(text);
-                }
-
-                setPrevLength(text.length);
-
-                if (showPassword) {
-                  if (hideTimeout) clearTimeout(hideTimeout);
-                  setVisiblePassword(text);
-                  return;
-                }
-
-                if (hideTimeout) clearTimeout(hideTimeout);
-
-                if (text.length === 0) {
-                  setVisiblePassword("");
-                  return;
-                }
-
-                const hidden = "•".repeat(text.length - 1);
-                const last = text[text.length - 1];
-                setVisiblePassword(hidden + last);
-
-                const timeout = setTimeout(() => {
-                  setVisiblePassword("•".repeat(text.length));
-                }, 1000);
-
-                setHideTimeout(timeout);
-              }}
-              style={[styles.input, styles.fontTypold]}
-              placeholderTextColor="#aaa"
-            />
-
-            <TouchableOpacity
-              onPress={() => {
-                if (hideTimeout) clearTimeout(hideTimeout);
-
-                const newValue = !showPassword;
-                setShowPassword(newValue);
-
-                if (newValue) {
-                  setVisiblePassword(password);
-                } else {
-                  setVisiblePassword("•".repeat(password.length));
-                }
-              }}
-            >
-              <Icon
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color="#BEAF87"
-              />
-            </TouchableOpacity>
-          </View>
-          {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={logueo}
-            activeOpacity={0.7}
-            disabled={loading}
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1}}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0} // Ajustá según tu header probando nueva rama
+      > 
+        <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
           >
-            {loading ? (
-              <ActivityIndicator size="small" color="#252526" />
-            ) : (
-              <Text style={[styles.buttonText, styles.fontTypold]}>Iniciar Sesión</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate("OlvidePassword")}>
-            <Text style={[styles.link, styles.fontTypold]}>¿Olvidaste tu contraseña?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate("Registro")}>
-            <Text style={[styles.link, styles.fontTypold]}>Crear cuenta</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      {/* Modal de usuario eliminado permanentemente */}
-      <Modal 
-        transparent 
-        visible={showDeletedModal} 
-        animationType="fade"
-        onRequestClose={handleModalClose}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={[styles.fontTypold, styles.modalTitle]}>
-              Tu usuario fue eliminado
+          <View style={styles.container}>
+            <Image
+              source={require("../assets/LogoGrey.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={[styles.title, styles.fontTypold]}>Bienvenido</Text>
+            <Text style={[styles.subtitle, styles.fontTypold]}>
+              Inicia sesión para continuar
             </Text>
-            <Text style={[styles.fontTypold, styles.modalMessage]}>
-              Tu cuenta ya no existe en nuestros registros. Contacta con el administrador para más información.
-            </Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={handleModalClose}
-            >
-              <Text style={[styles.fontTypold, styles.modalButtonText]}>Aceptar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
-      {/* Modal de usuario desactivado */}
-      <Modal 
-        transparent 
-        visible={showDeactivatedModal} 
-        animationType="fade"
-        onRequestClose={handleDeactivatedModalClose}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.iconContainer}>
-              <Icon name="account-off" size={48} color="#ff6b6b" />
+            <View style={[styles.inputContainer, errorEmailOrUsername ? styles.inputError : null]}>
+              <Icon name="account-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+              <TextInput
+                placeholder="Nombre de Usuario o Email"
+                value={emailOrUsername}
+                onChangeText={setEmailOrUsername}
+                style={[styles.input, styles.fontTypold]}
+                placeholderTextColor="#aaa"
+                autoCapitalize="none"
+              />
             </View>
-            <Text style={[styles.fontTypold, styles.modalTitle]}>
-              Cuenta Desactivada
-            </Text>
-            <Text style={[styles.fontTypold, styles.modalMessage]}>
-              Tu cuenta ha sido desactivada temporalmente por un administrador. No puedes iniciar sesión en este momento.
-            </Text>
-            <Text style={[styles.fontTypold, styles.modalMessage, { fontSize: 14, color: "#aaa", marginTop: -10 }]}>
-              Contacta con el administrador si crees que esto es un error.
-            </Text>
+            {errorEmailOrUsername ? <Text style={styles.errorText}>{errorEmailOrUsername}</Text> : null}
+
+            <View style={[styles.inputContainer, errorPassword ? styles.inputError : null]}>
+              <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+
+              <TextInput
+                placeholder="Contraseña"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                style={[styles.input, styles.fontTypold]}
+                placeholderTextColor="#aaa"
+              />
+
+              <TouchableOpacity
+                 onPress={() => setShowPassword(!showPassword)}
+              >
+                <Icon
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="#BEAF87"
+                />
+              </TouchableOpacity>
+            </View>
+            {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
+
             <TouchableOpacity
-              style={styles.modalButton}
-              onPress={handleDeactivatedModalClose}
+              style={styles.button}
+              onPress={logueo}
+              activeOpacity={0.7}
+              disabled={loading}
             >
-              <Text style={[styles.fontTypold, styles.modalButtonText]}>Entendido</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color="#252526" />
+              ) : (
+                <Text style={[styles.buttonText, styles.fontTypold]}>Iniciar Sesión</Text>
+              )}
             </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => navigation.navigate("OlvidePassword")}>
+              <Text style={[styles.link, styles.fontTypold]}>¿Olvidaste tu contraseña?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => navigation.navigate("Registro")}>
+              <Text style={[styles.link, styles.fontTypold]}>Crear cuenta</Text>
+            </TouchableOpacity>
+
+            {/* Modal de usuario eliminado permanentemente */}
+            <Modal 
+              transparent 
+              visible={showDeletedModal} 
+              animationType="fade"
+              onRequestClose={handleModalClose}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <Text style={[styles.fontTypold, styles.modalTitle]}>
+                    Tu usuario fue eliminado
+                  </Text>
+                  <Text style={[styles.fontTypold, styles.modalMessage]}>
+                    Tu cuenta ya no existe en nuestros registros. Contacta con el administrador para más información.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={handleModalClose}
+                  >
+                    <Text style={[styles.fontTypold, styles.modalButtonText]}>Aceptar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
+            {/* Modal de usuario desactivado */}
+            <Modal 
+              transparent 
+              visible={showDeactivatedModal} 
+              animationType="fade"
+              onRequestClose={handleDeactivatedModalClose}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.iconContainer}>
+                    <Icon name="account-off" size={48} color="#ff6b6b" />
+                  </View>
+                  <Text style={[styles.fontTypold, styles.modalTitle]}>
+                    Cuenta Desactivada
+                  </Text>
+                  <Text style={[styles.fontTypold, styles.modalMessage]}>
+                    Tu cuenta ha sido desactivada temporalmente por un administrador. No puedes iniciar sesión en este momento.
+                  </Text>
+                  <Text style={[styles.fontTypold, styles.modalMessage, { fontSize: 14, color: "#aaa", marginTop: -10 }]}>
+                    Contacta con el administrador si crees que esto es un error.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={handleDeactivatedModalClose}
+                  >
+                    <Text style={[styles.fontTypold, styles.modalButtonText]}>Entendido</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
           </View>
-        </View>
-      </Modal>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   fontTypold: { fontFamily: "Typold" },
-  loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#ffffff" },
+  container: { flex: 1, backgroundColor: "#ffffffff", justifyContent: "center", alignItems: "center", padding: 20 },
+  loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   scrollContent: { flexGrow: 1, backgroundColor: "#ffffff",},
-  container: { flex: 1, backgroundColor: "#ffffff", justifyContent: "center", alignItems: "center", padding: 20, minHeight: '100%', },
   logo: { width: 220, height: 120, marginBottom: 20 },
   title: { fontSize: 26, fontWeight: "bold", color: "#BEAF87", marginBottom: 5 },
   subtitle: { fontSize: 16, color: "#252526", marginBottom: 25 },

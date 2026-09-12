@@ -51,6 +51,7 @@ export default function App() {
       if (Platform.OS === 'android') {
         try {
           // Configurar la barra de navegación (botones de Android)
+  
           await NavigationBar.setButtonStyleAsync('light'); // Botones blancos
           // Activar modo inmersivo sticky
           await NavigationBar.setVisibilityAsync('hidden');

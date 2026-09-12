@@ -1,6 +1,6 @@
 //app/usuarios.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Button, Dimensions, KeyboardAvoidingView, Platform, Modal, TextInput, ScrollView, Keyboard } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet,Button,TouchableWithoutFeedback,Keyboard ,Dimensions, KeyboardAvoidingView, Platform, Modal, TextInput, ScrollView } from "react-native";
 import { db } from "../firebase";
 import { collection, getDocs, updateDoc, doc, DocumentData, query, where } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -369,463 +369,466 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
   const usuariosEliminados = usuarios.filter(u => u.eliminado).length;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#ffffff" }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={0}
-    >
-  
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.navigate("Home")}
-        >
-        <Text style={styles.backButtonText}><FontAwesome name="arrow-left" size={15} color="white" /> Inicio</Text>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0} // Ajustá según tu header
+      >
 
-        </TouchableOpacity>
-
-        <Text style={styles.title}>Gestión de Usuarios</Text>     
-        
-      </View>
-
-      {/* Mensaje de feedback */}
-      {message.text !== '' && (
-        <View style={[
-          styles.messageContainer,
-          { backgroundColor: message.type === "success" ? "#4CAF50" : "#ff6b6b" }
-        ]}>
-          <Text style={styles.messageText}>{message.text}</Text>
-        </View>
-      )}
-
-      {/* Barra de búsqueda */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#BEAF87" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar Usuario..."
-          placeholderTextColor="#888"
-          value={searchText}
-          onChangeText={setSearchText}
-          autoCapitalize="none"
-        />
-        {searchText !== '' && (
-          <TouchableOpacity onPress={() => setSearchText('')}>
-            <Ionicons name="close-circle" size={20} color="#888" />
-          </TouchableOpacity>
-        )}
-      </View>
-      <Text style={styles.helpText}>Buscar por Nombre de Usuario o Email.</Text>
-
-
-      {/* Filtros por estado (Activos/Eliminados) */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filtroEstado === 'activos' && styles.filterButtonActive
-          ]}
-          onPress={() => setFiltroEstado('activos')}
-        >
-          <Ionicons name="checkmark-circle" size={16} color={filtroEstado === 'activos' ? "#000" : "#4CAF50"} style={{ marginRight: 4 }} />
-          <Text style={[
-            styles.filterButtonText,
-            filtroEstado === 'activos' && styles.filterButtonTextActive
-          ]}>
-            Activos ({usuariosActivos})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filtroEstado === 'eliminados' && styles.filterButtonActive
-          ]}
-          onPress={() => setFiltroEstado('eliminados')}
-        >
-          <Ionicons name="close-circle" size={16} color={filtroEstado === 'eliminados' ? "#000" : "#ff6b6b"} style={{ marginRight: 4 }} />
-          <Text style={[
-            styles.filterButtonText,
-            filtroEstado === 'eliminados' && styles.filterButtonTextActive
-          ]}>
-            Inactivos ({usuariosEliminados})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filtroEstado === 'todos' && styles.filterButtonActive
-          ]}
-          onPress={() => setFiltroEstado('todos')}
-        >
-          <Text style={[
-            styles.filterButtonText,
-            filtroEstado === 'todos' && styles.filterButtonTextActive
-          ]}>
-            Todos ({usuarios.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Filtros por rol */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filtroRol === 'todos' && styles.filterButtonActive
-          ]}
-          onPress={() => setFiltroRol('todos')}
-        >
-          <Text style={[
-            styles.filterButtonText,
-            filtroRol === 'todos' && styles.filterButtonTextActive
-          ]}>
-            Todos Roles
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filtroRol === 'admin' && styles.filterButtonActive
-          ]}
-          onPress={() => setFiltroRol('admin')}
-        >
-          <Text style={[
-            styles.filterButtonText,
-            filtroRol === 'admin' && styles.filterButtonTextActive
-          ]}>
-            Admins
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filtroRol === 'noAdmin' && styles.filterButtonActive
-          ]}
-          onPress={() => setFiltroRol('noAdmin')}
-        >
-          <Text style={[
-            styles.filterButtonText,
-            filtroRol === 'noAdmin' && styles.filterButtonTextActive
-          ]}>
-            Usuarios
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Botón para limpiar filtros */}
-      {hayFiltrosActivos && (
-        <TouchableOpacity 
-          style={styles.clearFiltersButton}
-          onPress={limpiarFiltros}
-        >
-          <Ionicons name="refresh" size={16} color="#BEAF87" style={{ marginRight: 6 }} />
-          <Text style={styles.clearFiltersText}>Limpiar filtros</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Contador de resultados */}
-      <View style={styles.resultsCounter}>
-        <Text style={styles.resultsCounterText}>
-          Mostrando {usuariosFiltrados.length} de {usuarios.length} usuarios
-        </Text>
-      </View>
-
-      {loading ? (
-        <Text style={styles.loadingText}>Cargando usuarios...</Text>
-      ) : usuariosFiltrados.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="search-outline" size={48} color="#888" />
-          <Text style={styles.emptyText}>
-            {searchText !== '' 
-              ? "No se encontraron usuarios" 
-              : "No hay usuarios en esta categoría"}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={usuariosFiltrados}
-          keyExtractor={(item) => item.id}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
+        >
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.navigate("Home")}
+            >
+            <Text style={styles.backButtonText}><FontAwesome name="arrow-left" size={15} color="white" /> Inicio</Text>
+
+            </TouchableOpacity>
+
+            <Text style={styles.title}>Gestión de Usuarios</Text>     
+            
+          </View>
+
+          {/* Mensaje de feedback */}
+          {message.text !== '' && (
             <View style={[
-              styles.card,
-              item.eliminado && styles.cardEliminado
+              styles.messageContainer,
+              { backgroundColor: message.type === "success" ? "#4CAF50" : "#ff6b6b" }
             ]}>
-              {/* Usuario eliminado */}
-              {item.eliminado && (
-                <View style={styles.eliminadoBadge}>
-                  <Ionicons name="ban" size={14} color="#fff" style={{ marginRight: 4 }} />
-                  <Text style={styles.eliminadoBadgeText}>INACTIVO</Text>
-                </View>
-              )}
+              <Text style={styles.messageText}>{message.text}</Text>
+            </View>
+          )}
 
-              <View style={styles.userInfo}>
-                {/* Nombre usuario con botón de edición */}
-                <View style={styles.usernameRow}>
-                  <Ionicons name="person" size={18} color="#BEAF87" style={{ marginRight: 6 }} />
-                  <Text style={[styles.username, item.eliminado && styles.textEliminado]}>
-                    @{item.username}
-                  </Text>
-                  {!item.eliminado && (
-                    <TouchableOpacity
-                      onPress={() => openModal('editUsername', item)}
-                      style={styles.editButton}
-                    >
-                      <Ionicons name="pencil" size={16} color="#BEAF87" />
-                    </TouchableOpacity>
-                  )}
-                </View>
+          {/* Barra de búsqueda */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#BEAF87" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar por Nombre de Usuario o Email..."
+              placeholderTextColor="#888"
+              value={searchText}
+              onChangeText={setSearchText}
+              autoCapitalize="none"
+            />
+            {searchText !== '' && (
+              <TouchableOpacity onPress={() => setSearchText('')}>
+                <Ionicons name="close-circle" size={20} color="#888" />
+              </TouchableOpacity>
+            )}
+          </View>
 
-                {/* Email con botón de info */}
-                <View style={styles.emailRow}>
-                  <Ionicons name="mail" size={16} color="#888" style={{ marginRight: 6 }} />
-                  <Text style={[styles.email, item.eliminado && styles.textEliminado]}>
-                    {item.email}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => openModal('infoEmail')}
-                    style={styles.infoButton}
-                  >
-                    <Ionicons name="information-circle" size={18} color="#888" />
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={[
-                  styles.roleBadge,
-                  { backgroundColor: getRoleColor(item.role) }
+          {/* Filtros por estado (Activos/Eliminados) */}
+          <View style={styles.filterContainer}>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                filtroEstado === 'activos' && styles.filterButtonActive
+              ]}
+              onPress={() => setFiltroEstado('activos')}
+            >
+              <Ionicons name="checkmark-circle" size={16} color={filtroEstado === 'activos' ? "#000" : "#4CAF50"} style={{ marginRight: 4 }} />
+              <Text style={[
+                styles.filterButtonText,
+                filtroEstado === 'activos' && styles.filterButtonTextActive
+              ]}>
+                Activos ({usuariosActivos})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                filtroEstado === 'eliminados' && styles.filterButtonActive
+              ]}
+              onPress={() => setFiltroEstado('eliminados')}
+            >
+              <Ionicons name="close-circle" size={16} color={filtroEstado === 'eliminados' ? "#000" : "#ff6b6b"} style={{ marginRight: 4 }} />
+              <Text style={[
+                styles.filterButtonText,
+                filtroEstado === 'eliminados' && styles.filterButtonTextActive
+              ]}>
+                Inactivos ({usuariosEliminados})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                filtroEstado === 'todos' && styles.filterButtonActive
+              ]}
+              onPress={() => setFiltroEstado('todos')}
+            >
+              <Text style={[
+                styles.filterButtonText,
+                filtroEstado === 'todos' && styles.filterButtonTextActive
+              ]}>
+                Todos ({usuarios.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Filtros por rol */}
+          <View style={styles.filterContainer}>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                filtroRol === 'todos' && styles.filterButtonActive
+              ]}
+              onPress={() => setFiltroRol('todos')}
+            >
+              <Text style={[
+                styles.filterButtonText,
+                filtroRol === 'todos' && styles.filterButtonTextActive
+              ]}>
+                Todos Roles
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                filtroRol === 'admin' && styles.filterButtonActive
+              ]}
+              onPress={() => setFiltroRol('admin')}
+            >
+              <Text style={[
+                styles.filterButtonText,
+                filtroRol === 'admin' && styles.filterButtonTextActive
+              ]}>
+                Admins
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                filtroRol === 'noAdmin' && styles.filterButtonActive
+              ]}
+              onPress={() => setFiltroRol('noAdmin')}
+            >
+              <Text style={[
+                styles.filterButtonText,
+                filtroRol === 'noAdmin' && styles.filterButtonTextActive
+              ]}>
+                Usuarios
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Botón para limpiar filtros */}
+          {hayFiltrosActivos && (
+            <TouchableOpacity 
+              style={styles.clearFiltersButton}
+              onPress={limpiarFiltros}
+            >
+              <Ionicons name="refresh" size={16} color="#BEAF87" style={{ marginRight: 6 }} />
+              <Text style={styles.clearFiltersText}>Limpiar filtros</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Contador de resultados */}
+          <View style={styles.resultsCounter}>
+            <Text style={styles.resultsCounterText}>
+              Mostrando {usuariosFiltrados.length} de {usuarios.length} usuarios
+            </Text>
+          </View>
+
+          {loading ? (
+            <Text style={styles.loadingText}>Cargando usuarios...</Text>
+          ) : usuariosFiltrados.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="search-outline" size={48} color="#888" />
+              <Text style={styles.emptyText}>
+                {searchText !== '' 
+                  ? "No se encontraron usuarios" 
+                  : "No hay usuarios en esta categoría"}
+              </Text>
+            </View>
+          ) : (
+            usuariosFiltrados.map((item) => (
+              <View key={item.id} style={[
+                  styles.card,
+                  item.eliminado && styles.cardEliminado
                 ]}>
-                  <Text style={styles.roleText}>{getRoleText(item.role)}</Text>
+                  {/* Usuario eliminado */}
+                  {item.eliminado && (
+                    <View style={styles.eliminadoBadge}>
+                      <Ionicons name="ban" size={14} color="#fff" style={{ marginRight: 4 }} />
+                      <Text style={styles.eliminadoBadgeText}>INACTIVO</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.userInfo}>
+                    {/* Nombre usuario con botón de edición */}
+                    <View style={styles.usernameRow}>
+                      <Ionicons name="person" size={18} color="#BEAF87" style={{ marginRight: 6 }} />
+                      <Text style={[styles.username, item.eliminado && styles.textEliminado]}>
+                        @{item.username}
+                      </Text>
+                      {!item.eliminado && (
+                        <TouchableOpacity
+                          onPress={() => openModal('editUsername', item)}
+                          style={styles.editButton}
+                        >
+                          <Ionicons name="pencil" size={16} color="#BEAF87" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* Email con botón de info */}
+                    <View style={styles.emailRow}>
+                      <Ionicons name="mail" size={16} color="#888" style={{ marginRight: 6 }} />
+                      <Text style={[styles.email, item.eliminado && styles.textEliminado]}>
+                        {item.email}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => openModal('infoEmail')}
+                        style={styles.infoButton}
+                      >
+                        <Ionicons name="information-circle" size={18} color="#888" />
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <View style={[
+                      styles.roleBadge,
+                      { backgroundColor: getRoleColor(item.role) }
+                    ]}>
+                      <Text style={styles.roleText}>{getRoleText(item.role)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.actionButtons}>
+                    {/* Botón de Reactivar (solo para usuarios eliminados) */}
+                    {item.eliminado && (
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.reactivateButton]}
+                        onPress={() => openModal('reactivate', item)}
+                      >
+                        <Ionicons name="checkmark-circle" size={16} color="#fff" style={{ marginRight: 4 }} />
+                        <Text style={styles.actionButtonText}>Reactivar</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {/* Botones normales (solo para usuarios activos) */}
+                    {!item.eliminado && (
+                      <>
+                        {item.role === "user" && (
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.promoteButton]}
+                            onPress={() => openModal('promote', item)}
+                          >
+                            <Text style={styles.actionButtonText}>Hacer Admin</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {item.role === "admin" && (
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.demoteButton]}
+                            onPress={() => openModal('demote', item)}
+                          >
+                            <Text style={styles.actionButtonText}>Quitar Admin</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {item.role !== "superuser" && (
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.deleteButton]}
+                            onPress={() => openModal('delete', item)}
+                          >
+                            <Text style={[styles.actionButtonText, { color: "#fff" }]}>
+                              Desactivar
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+                  </View>
                 </View>
-              </View>
+              ))
+          )}
 
-              <View style={styles.actionButtons}>
-                {/* Botón de Reactivar (solo para usuarios eliminados) */}
-                {item.eliminado && (
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.reactivateButton]}
-                    onPress={() => openModal('reactivate', item)}
-                  >
-                    <Ionicons name="checkmark-circle" size={16} color="#fff" style={{ marginRight: 4 }} />
-                    <Text style={styles.actionButtonText}>Reactivar</Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Botones normales (solo para usuarios activos) */}
-                {!item.eliminado && (
+          {/* Modal principal */}
+          <Modal visible={modalVisible} transparent animationType="fade">
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                {modalType === 'infoEmail' ? (
+                  // Modal de información del email
                   <>
-                    {item.role === "user" && (
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.promoteButton]}
-                        onPress={() => openModal('promote', item)}
-                      >
-                        <Text style={styles.actionButtonText}>Hacer Admin</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {item.role === "admin" && (
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.demoteButton]}
-                        onPress={() => openModal('demote', item)}
-                      >
-                        <Text style={styles.actionButtonText}>Quitar Admin</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {item.role !== "superuser" && (
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.deleteButton]}
-                        onPress={() => openModal('delete', item)}
-                      >
-                        <Text style={[styles.actionButtonText, { color: "#fff" }]}>
-                          Desactivar
+                    <View style={styles.iconContainer}>
+                      <Ionicons name="information-circle" size={48} color="#BEAF87" />
+                    </View>
+                    <Text style={styles.modalTitle}>Email no editable</Text>
+                    <Text style={styles.infoModalText}>
+                      ⚠️ El email <Text style={{ fontWeight: 'bold' }}>no puede modificarse</Text>.
+                    </Text>
+                    <Text style={styles.infoModalText}>
+                      ✅ Puedes editar el <Text style={{ fontWeight: 'bold' }}>NOMBRE DE USUARIO</Text> para cambiar cómo se identifica el usuario.
+                    </Text>
+                    <Text style={styles.infoModalText}>
+                      🔒 El email es <Text style={{ fontWeight: 'bold' }}>permanente</Text> por razones de seguridad.
+                    </Text>
+                    <TouchableOpacity
+                      style={[styles.botonInfo, { backgroundColor: '#BEAF87' }]}
+                      onPress={closeModal}
+                    >
+                      <Text style={[styles.textoInfo, { color: '#fff' }]}>Entendido</Text>
+                    </TouchableOpacity>
+                    
+                  </>
+                ) : (
+                  // Modales normales (editar, eliminar, reactivar, promover)
+                  <>
+                    <Text style={styles.modalTitle}>{modalContent.title}</Text>
+                    
+                    {modalType === 'editUsername' ? (
+                      <View style={styles.editContainer}>
+                        <Text style={styles.modalMessage}>
+                          Nombre de Usuario actual: <Text style={{ color: '#BEAF87', fontWeight: 'bold' }}>@{selectedUser?.username}</Text>
                         </Text>
-                      </TouchableOpacity>
+                        
+                        <View style={styles.inputContainer}>
+                          <Ionicons name="at" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
+                          <TextInput
+                            style={styles.input}
+                            placeholder="Nuevo username"
+                            placeholderTextColor="#888"
+                            value={nuevoUsername}
+                            onChangeText={(text) => {
+                              setNuevoUsername(text);
+                              setErrorUsername('');
+                            }}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            maxLength={20}
+                          />
+                        </View>
+
+                        <Text style={styles.helpText}>
+                          3-20 caracteres • Letras, números y _
+                        </Text>
+                        
+                        {errorUsername !== '' && (
+                          <View style={styles.errorContainer}>
+                            <Ionicons name="alert-circle" size={16} color="#ff6b6b" style={{ marginRight: 6 }} />
+                            <Text style={styles.errorText}>{errorUsername}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ) : (
+                      <Text style={styles.modalMessage}>{modalContent.message}</Text>
                     )}
+                    
+                    <View style={styles.modalButtons}>
+                      <TouchableOpacity
+                        style={[styles.modalButton, { backgroundColor: modalContent.color }]}
+                        onPress={handleAction}
+                      >
+                        <Text style={styles.modalButtonText}>{modalContent.action}</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.cancelModalButton]}
+                        onPress={modalType === 'editUsername' ? handleCancelEdit : closeModal}
+                      >
+                        <Text style={styles.cancelModalButtonText}>Cancelar</Text>
+                      </TouchableOpacity>
+                    </View>
                   </>
                 )}
               </View>
             </View>
-          )}
-        />
-      )}
+            </TouchableWithoutFeedback>
+          </Modal>
 
-      {/* Modal principal */}
-      <Modal visible={modalVisible} transparent animationType="fade">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            {modalType === 'infoEmail' ? (
-              // Modal de información del email
-              <>
+          {/* Modal de confirmación de cancelación */}
+          <Modal visible={modalCancelVisible} transparent animationType="fade">
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="information-circle" size={48} color="#BEAF87" />
+                  <Ionicons name="warning" size={48} color="#ff9800" />
                 </View>
-                <Text style={styles.modalTitle}>Email no editable</Text>
+                <Text style={styles.modalTitle}>¿Cancelar edición?</Text>
                 <Text style={styles.infoModalText}>
-                  ⚠️ El email <Text style={{ fontWeight: 'bold' }}>no puede modificarse</Text>.
+                  Si cancelas ahora, <Text style={{ fontWeight: 'bold', color: '#ff9800' }}>se perderán los cambios</Text> que realizaste en el nombre de usuario.
                 </Text>
                 <Text style={styles.infoModalText}>
-                  ✅ Puedes editar el <Text style={{ fontWeight: 'bold' }}>NOMBRE DE USUARIO</Text> para cambiar cómo se identifica el usuario.
+                  ¿Estás seguro de que deseas cancelar?
                 </Text>
-                <Text style={styles.infoModalText}>
-                  🔒 El email es <Text style={{ fontWeight: 'bold' }}>permanente</Text> por razones de seguridad.
-                </Text>
-                <TouchableOpacity
-                  style={[styles.botonInfo, { backgroundColor: '#BEAF87' }]}
-                  onPress={closeModal}
-                >
-                  <Text style={[styles.textoInfo, { color: '#fff' }]}>Entendido</Text>
-                </TouchableOpacity>
-                
-              </>
-            ) : (
-              // Modales normales (editar, eliminar, reactivar, promover)
-              <>
-                <Text style={styles.modalTitle}>{modalContent.title}</Text>
-                
-                {modalType === 'editUsername' ? (
-                  <View style={styles.editContainer}>
-                    <Text style={styles.modalMessage}>
-                      Nombre de Usuario actual: <Text style={{ color: '#BEAF87', fontWeight: 'bold' }}>@{selectedUser?.username}</Text>
-                    </Text>
-                    
-                    <View style={styles.inputContainer}>
-                      <Ionicons name="at" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Nuevo username"
-                        placeholderTextColor="#888"
-                        value={nuevoUsername}
-                        onChangeText={(text) => {
-                          setNuevoUsername(text);
-                          setErrorUsername('');
-                        }}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        maxLength={20}
-                      />
-                    </View>
-
-                    <Text style={styles.helpText}>
-                      3-20 caracteres • Letras, números y _
-                    </Text>
-                    
-                    {errorUsername !== '' && (
-                      <View style={styles.errorContainer}>
-                        <Ionicons name="alert-circle" size={16} color="#ff6b6b" style={{ marginRight: 6 }} />
-                        <Text style={styles.errorText}>{errorUsername}</Text>
-                      </View>
-                    )}
-                  </View>
-                ) : (
-                  <Text style={styles.modalMessage}>{modalContent.message}</Text>
-                )}
                 
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
-                    style={[styles.modalButton, { backgroundColor: modalContent.color }]}
-                    onPress={handleAction}
+                    style={[styles.modalButton, { backgroundColor: '#ff6b6b' }]}
+                    onPress={confirmarCancelacion}
                   >
-                    <Text style={styles.modalButtonText}>{modalContent.action}</Text>
+                    <Text style={styles.modalButtonText}>Sí, cancelar</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
+                    onPress={rechazarCancelacion}
+                  >
+                    <Text style={styles.modalButtonText}>No, seguir editando</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Modal de confirmación de guardado */}
+          <Modal visible={modalConfirmSaveVisible} transparent animationType="fade">
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <View style={styles.iconContainer}>
+                  <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
+                </View>
+                <Text style={styles.modalTitle}>¿Confirmar cambio?</Text>
+                <Text style={styles.infoModalText}>
+                  ¿Estás seguro de que quieres cambiar el nombre de usuario?
+                </Text>
+                <View style={styles.usernameChangeBox}>
+                  <View style={styles.usernameChangeRow}>
+                    <Text style={styles.usernameChangeLabel}>De:</Text>
+                    <Text style={styles.usernameOld}>@{usernameOriginal}</Text>
+                  </View>
+                  <Ionicons name="arrow-down" size={24} color="#BEAF87" style={{ marginVertical: 8 }} />
+                  <View style={styles.usernameChangeRow}>
+                    <Text style={styles.usernameChangeLabel}>A:</Text>
+                    <Text style={styles.usernameNew}>@{nuevoUsername.trim()}</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
+                    onPress={confirmarGuardado}
+                  >
+                    <Text style={styles.modalButtonText}>Sí, confirmar</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
                     style={[styles.modalButton, styles.cancelModalButton]}
-                    onPress={modalType === 'editUsername' ? handleCancelEdit : closeModal}
+                    onPress={cancelarGuardado}
                   >
                     <Text style={styles.cancelModalButtonText}>Cancelar</Text>
                   </TouchableOpacity>
                 </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal de confirmación de cancelación */}
-      <Modal visible={modalCancelVisible} transparent animationType="fade">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="warning" size={48} color="#ff9800" />
-            </View>
-            <Text style={styles.modalTitle}>¿Cancelar edición?</Text>
-            <Text style={styles.infoModalText}>
-              Si cancelas ahora, <Text style={{ fontWeight: 'bold', color: '#ff9800' }}>se perderán los cambios</Text> que realizaste en el nombre de usuario.
-            </Text>
-            <Text style={styles.infoModalText}>
-              ¿Estás seguro de que deseas cancelar?
-            </Text>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#ff6b6b' }]}
-                onPress={confirmarCancelacion}
-              >
-                <Text style={styles.modalButtonText}>Sí, cancelar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
-                onPress={rechazarCancelacion}
-              >
-                <Text style={styles.modalButtonText}>No, seguir editando</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal de confirmación de guardado */}
-      <Modal visible={modalConfirmSaveVisible} transparent animationType="fade">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
-            </View>
-            <Text style={styles.modalTitle}>¿Confirmar cambio?</Text>
-            <Text style={styles.infoModalText}>
-              ¿Estás seguro de que quieres cambiar el nombre de usuario?
-            </Text>
-            <View style={styles.usernameChangeBox}>
-              <View style={styles.usernameChangeRow}>
-                <Text style={styles.usernameChangeLabel}>De:</Text>
-                <Text style={styles.usernameOld}>@{usernameOriginal}</Text>
-              </View>
-              <Ionicons name="arrow-down" size={24} color="#BEAF87" style={{ marginVertical: 8 }} />
-              <View style={styles.usernameChangeRow}>
-                <Text style={styles.usernameChangeLabel}>A:</Text>
-                <Text style={styles.usernameNew}>@{nuevoUsername.trim()}</Text>
               </View>
             </View>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
-                onPress={confirmarGuardado}
-              >
-                <Text style={styles.modalButtonText}>Sí, confirmar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelModalButton]}
-                onPress={cancelarGuardado}
-              >
-                <Text style={styles.cancelModalButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </Modal>
         </View>
-      </Modal>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
-  
-</KeyboardAvoidingView>
-);
+  );
 };
 
 const { height } = Dimensions.get("window");
