@@ -1,5 +1,7 @@
+// app/pantallaAcceso.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { useFonts } from "expo-font";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { doc, getDoc } from 'firebase/firestore';
@@ -12,6 +14,18 @@ export default function AccessScreen() {
   const [mensajeError, setMensajeError] = useState('');
   
   const navigation = useNavigation<any>();
+
+  const [fontsLoaded] = useFonts({
+    Typold: require("../assets/Typold-Bold.ttf"),
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#BEAF87" />
+      </View>
+    );
+  }
 
   const verificarClave = async () => {
     if (!clave.trim()) {
@@ -51,40 +65,56 @@ export default function AccessScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Acceso Restringido</Text>
-      <Text style={styles.subtitle}>Ingrese la clave de Century 21 Alianza Urbana SA para continuar</Text>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Clave de acceso"
-        secureTextEntry={true} // Oculta los caracteres
-        value={clave}
-        onChangeText={(text) => {
-          setClave(text);
-          setMensajeError(''); // Limpia el error al escribir
-        }}
-        editable={!cargando}
-      />
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
+    >
+      <View style={styles.container}>
+        <Image
+          source={require("../assets/LogoGrey.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={[styles.title, styles.fontTypold]}>Acceso Restringido</Text>
+        <Text style={[styles.subtitle, styles.fontTypold]}>
+          Ingrese la clave de Century 21 Alianza Urbana SA para continuar
+        </Text>
 
-      {mensajeError ? <Text style={styles.error}>{mensajeError}</Text> : null}
+        <TextInput
+          style={[styles.input, styles.fontTypold]}
+          placeholder="Clave de acceso"
+          placeholderTextColor="#aaa"
+          secureTextEntry={true}
+          value={clave}
+          onChangeText={(text) => {
+            setClave(text);
+            setMensajeError('');
+          }}
+          editable={!cargando}
+          returnKeyType="done"
+          onSubmitEditing={verificarClave}
+        />
 
-      <TouchableOpacity 
-        style={[styles.button, cargando && styles.buttonDisabled]} 
-        onPress={verificarClave}
-        disabled={cargando}
-      >
-        {cargando ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.buttonText}>Ingresar</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+        {mensajeError ? <Text style={styles.error}>{mensajeError}</Text> : null}
+
+        <TouchableOpacity 
+          style={[styles.button, cargando && styles.buttonDisabled]} 
+          onPress={verificarClave}
+          disabled={cargando}
+        >
+          {cargando ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text style={[styles.buttonText, styles.fontTypold]}>Ingresar</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  fontTypold: { fontFamily: 'Typold' },
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -92,11 +122,12 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#f5f5f5',
   },
+  logo: { width: 220, height: 120, marginBottom: 20 },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#333',
+    color: '#BEAF87',
   },
   subtitle: {
     fontSize: 16,
@@ -106,7 +137,7 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
-    color: '#aaa',
+    color: '#333',
     maxWidth: 400,
     height: 50,
     backgroundColor: '#fff',
@@ -121,7 +152,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     height: 50,
-    backgroundColor: '#BEAF87', // Dorado típico de C21, ajústalo a tu paleta
+    backgroundColor: '#BEAF87',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
