@@ -21,6 +21,8 @@ import GestionSalas from "./app/gestionSalas";
 import * as Notifications from 'expo-notifications';
 import { RootStackParamList } from "./app/types/navigation";
 import { AuthProvider, useAuth } from "./app/context/authContext";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import AccessScreen from './app/pantallaAcceso'; 
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -44,6 +46,26 @@ export default function App() {
   const [fontsLoaded] = useFonts({Typold: require('./assets/Typold-Bold.ttf'),});
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+
+  const [hasAccess, setHasAccess] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
+  useEffect(() => {
+    const verificarAcceso = async () => {
+      try {
+        const access = await AsyncStorage.getItem('appAccessGranted');
+        if (access === 'true') {
+          setHasAccess(true);
+        }
+      } catch (error) {
+        console.error('Error al leer AsyncStorage', error);
+      } finally {
+        setCheckingAccess(false);
+      }
+    };
+
+    verificarAcceso();
+  }, []);
 
   useEffect(() => {
   if (Platform.OS === 'web') {
@@ -304,6 +326,15 @@ export default function App() {
     }
   };
 
+   // Evita que la pantalla parpadee mientras lee la memoria
+  if (checkingAccess) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#C2A34F" />
+      </View>
+    );
+  }
+
   if (loading || !fontsLoaded) return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
       <ActivityIndicator size="large" color="#BEAF87" />
@@ -315,9 +346,13 @@ export default function App() {
   return (
     <AuthProvider>
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator 
+          screenOptions={{ headerShown: false }}
+          initialRouteName={hasAccess ? "Login" : "AccessScreen"}>
+
           {shouldShowAuthScreens ? (
             <>
+              <Stack.Screen name="AccessScreen" component={AccessScreen} />
               <Stack.Screen name="Login" component={Login} />
               <Stack.Screen name="Registro" component={Registro} />
               <Stack.Screen name="OlvidePassword" component={olvidePassword} />
