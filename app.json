@@ -36,7 +36,7 @@
       "androidCollapsedTitle": "Nuevas notificaciones"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/century21-logo.png"
     },
     "extra": {
       "eas": {
