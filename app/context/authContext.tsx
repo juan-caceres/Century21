@@ -32,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       useEffect(() => {
         // Escucha cambios de sesión
+        console.log("AUTH EN CONTEXT:", auth);
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
           if (user) {
             setUser(user);

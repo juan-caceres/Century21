@@ -66,6 +66,7 @@ export default function App() {
   }
 }, []);
   
+  console.log("✅ Auth importado en App:", auth);
   useEffect(() => {
   const setupSystemUI = async () => {
     // Configurar color de fondo raíz
@@ -157,6 +158,10 @@ export default function App() {
   useEffect(() => {
     let unsubscribeFirestore: (() => void) | null = null;
 
+    console.log("========== TEST FIREBASE ==========");
+    console.log("AUTH:", auth);
+    console.log("TYPE AUTH:", typeof auth);
+    console.log("==================================");
     const unsub = onAuthStateChanged(auth, async (usuario) => {
       console.log("Auth state cambió:", usuario ? "Usuario logueado" : "Sin usuario");
       

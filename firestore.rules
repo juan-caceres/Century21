@@ -1,0 +1,117 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función helper para verificar si el usuario autenticado es superuser
+    function isSuperuser() {
+      return request.auth != null 
+             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superuser';
+    }
+    
+    // Función helper para verificar si el usuario autenticado es admin o superuser
+    function isAdminOrSuperuser() {
+      return request.auth != null 
+             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superuser'];
+    }
+    
+    // -----------------
+    // Usuarios
+    // -----------------
+    match /users/{userId} {
+      // Crear: solo el propio usuario durante registro
+      allow create: if request.auth != null 
+                    && request.auth.uid == userId;
+      
+        // Permitir lectura de username sin autenticación (para login)
+        allow read: if request.query.limit <= 1 
+                    && 'username' in request.query.constraint;
+
+        // Leer: cualquiera logueado puede leer (para lista de usuarios)
+        allow read: if true;
+      
+      // Actualizar su propio documento (username, etc.)
+      // PERO NO puede cambiar su propio campo 'eliminado' ni 'role'
+      allow update: if request.auth != null
+            && request.auth.uid == userId
+            && (
+              // Permitir actualizar solo token de notificación Y lastTokenUpdate
+                  request.resource.data.diff(resource.data).affectedKeys().hasOnly(['notificationToken', 'lastTokenUpdate'])
+
+              || (
+                // O permitir actualizar otros campos EXCEPTO 'eliminado' y 'role'
+                !('eliminado' in request.resource.data.diff(resource.data))
+                && !('role' in request.resource.data.diff(resource.data))
+              )
+            );
+
+      
+      // Superuser puede actualizar cualquier usuario (cambiar roles, eliminar/reactivar)
+      allow update: if isSuperuser();
+      
+      // NO permitimos delete real, solo soft delete
+    }
+    
+    // -----------------
+    // Salas
+    // -----------------
+    match /salas/{salaId} {
+      // Leer: cualquier usuario logueado
+      // NOTA: La validación de "eliminado" se hace en el código, no en reglas
+      allow read: if request.auth != null;
+      
+      // Escribir: solo admins o superusers
+      allow write: if isAdminOrSuperuser();
+    }
+
+    // -----------------
+    // Grupos de Reservas (recurrentes)
+    // -----------------
+    match /gruposReservas/{grupoId} {
+      // Leer: cualquier usuario logueado (todos los roles pueden verlos)
+      allow read: if request.auth != null;
+
+      // Crear: solo admin/superuser
+      allow create: if isAdminOrSuperuser()
+                    && request.resource.data.sala is string
+                    && request.resource.data.motivo is string
+                    && request.resource.data.horaInicio is string
+                    && request.resource.data.horaFin is string
+                    && request.resource.data.diasSemana is list
+                    && request.resource.data.fechaInicio is string
+                    && request.resource.data.fechaFin is string
+                    && request.resource.data.activo is bool;
+
+      // Actualizar/eliminar: solo admin/superuser
+      allow update, delete: if isAdminOrSuperuser();
+    }
+    
+    // -----------------
+    // Reservas
+    // -----------------
+    match /reservas/{reservaId} {
+      // Leer: cualquier usuario logueado
+      // NOTA: La validación de "eliminado" se hace en el código, no en reglas
+      allow read: if request.auth != null;
+      
+      // Crear: usuario autenticado, solo sus propias reservas
+      allow create: if request.auth != null
+                    && request.resource.data.usuarioId == request.auth.uid
+                    && request.resource.data.sala is string
+                    && request.resource.data.fecha is string
+                    && request.resource.data.horaInicio is string
+                    && request.resource.data.horaFin is string
+                    && request.resource.data.motivo is string;
+      
+      // Actualizar: usuario autenticado, solo sus propias reservas
+      allow update: if request.auth != null
+                    && (request.auth.uid == resource.data.usuarioId
+                    || isAdminOrSuperuser());
+      
+      // Eliminar: usuario autenticado puede eliminar sus propias reservas
+      // O admins/superusers pueden eliminar cualquier reserva
+      allow delete: if request.auth != null
+                    && (request.auth.uid == resource.data.usuarioId 
+                        || isAdminOrSuperuser());
+    }
+  }
+}
