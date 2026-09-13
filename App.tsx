@@ -66,29 +66,7 @@ export default function App() {
 
     verificarAcceso();
   }, []);
-
-  useEffect(() => {
-  if (Platform.OS === 'web') {
-    const styleId = 'expo-web-scroll-fix';
-    
-    // Solo lo inyectamos si no existe para evitar duplicados
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.innerHTML = `
-        html, body, #root {
-          height: 100%;
-        }
-        body {
-          overflow-y: auto;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  }
-}, []);
   
-  console.log("✅ Auth importado en App:", auth);
   useEffect(() => {
   const setupSystemUI = async () => {
     // Configurar color de fondo raíz
@@ -179,11 +157,6 @@ export default function App() {
   // Detección de usuario eliminado O desactivado
   useEffect(() => {
     let unsubscribeFirestore: (() => void) | null = null;
-
-    console.log("========== TEST FIREBASE ==========");
-    console.log("AUTH:", auth);
-    console.log("TYPE AUTH:", typeof auth);
-    console.log("==================================");
     const unsub = onAuthStateChanged(auth, async (usuario) => {
       console.log("Auth state cambió:", usuario ? "Usuario logueado" : "Sin usuario");
       
@@ -341,14 +314,20 @@ export default function App() {
     </View>
   );
 
-  const shouldShowAuthScreens = !user || blockNavigation || !role;
+const shouldShowAuthScreens = !user || blockNavigation || !role;
+
+const initialRouteName = !shouldShowAuthScreens
+  ? "Home"
+  : hasAccess
+    ? "Login"
+    : "AccessScreen";
 
   return (
     <AuthProvider>
       <NavigationContainer>
         <Stack.Navigator 
           screenOptions={{ headerShown: false }}
-          initialRouteName={hasAccess ? "Login" : "AccessScreen"}>
+          initialRouteName={initialRouteName}>
 
           {shouldShowAuthScreens ? (
             <>
