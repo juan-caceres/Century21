@@ -1,6 +1,6 @@
 // app/sala.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, TouchableWithoutFeedback, KeyboardAvoidingView, ActivityIndicator, Alert, Keyboard } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, TouchableWithoutFeedback, KeyboardAvoidingView, ActivityIndicator, Alert, Keyboard, Pressable } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
@@ -14,6 +14,9 @@ import * as Notifications from "expo-notifications";
 import { RootStackParamList } from "../app/types/navigation";
 import { notifyReservaCreated, notifyReservaEdited, notifyReservaDeleted } from "./servicios/notificationService";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useAuth } from "./context/authContext";
+import { calcularFechaFin, generarOcurrenciasDeGrupos } from "./utils/recurrencia";
+import GestionGruposModal from "./componentes/gestionGruposModal";
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
 type SalaScreenRouteProp = RouteProp<RootStackParamList, "Sala">;
@@ -29,6 +32,24 @@ type Reserva = {
   usuarioId?: string | null;
   usuarioEmail?: string | null;
   creado?: any;
+  esGrupo?: boolean;
+};
+
+type GrupoReserva = {
+  id?: string;
+  sala: string;
+  motivo: string;
+  horaInicio: string;
+  horaFin: string;
+  diasSemana: number[];
+  fechaInicio: string;
+  fechaFin: string;
+  activo: boolean;
+  excepciones?: string[];
+  creadoPor: string;
+  creadoPorNombre?: string;
+  createdAt?: any;
+  updatedAt?: any;
 };
 
 const { width, height } = Dimensions.get("window");
@@ -55,7 +76,10 @@ export default function Sala({ navigation, route }: Props) {
 
   const [todasLasSalas, setTodasLasSalas] = useState<any[]>([]);
   const [indiceActual, setIndiceActual] = useState<number>(-1);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const { role: userRole } = useAuth();
+
+  const [gruposReservas, setGruposReservas] = useState<any[]>([]);
+  const [gruposModalVisible, setGruposModalVisible] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Bold.ttf"),
@@ -89,18 +113,8 @@ export default function Sala({ navigation, route }: Props) {
     cargarSalas();
   }, [numero]);
 
-  // Cargar rol del usuario actual
-  useEffect(() => {
-    const cargarRol = async () => {
-      const rol = await obtenerRolUsuario();
-      setRolUsuario(rol);
-    };
-    cargarRol();
-  }, []);
-
   useEffect(() => {
     fetchSalaInfo();
-    obtenerRolUsuario().then(role => setUserRole(role));
     const unsubscribe = suscribirReservasSemana();
     return () => { unsubscribe(); }
   }, [numero]);
@@ -113,6 +127,16 @@ export default function Sala({ navigation, route }: Props) {
     const unsubscribe = suscribirReservasDia(selectedDay);
     return () => unsubscribe();
   }, [selectedDay]);
+
+  useEffect(() => {
+    const gruposRef = collection(db, "gruposReservas");
+    const q = query(gruposRef, where("sala", "==", numero), where("activo", "==", true));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setGruposReservas(data);
+    });
+    return unsubscribe;
+  }, [numero]);
 
   //funcion para obtener username del usuario actual
   const obtenerUsernameActual = async (): Promise<string> => {
@@ -295,6 +319,21 @@ export default function Sala({ navigation, route }: Props) {
     return false;
   };
 
+  const existeSolapamientoConGrupos = (fecha: string, inicio: string, fin: string): boolean => {
+    const diaSemana = new Date(fecha + 'T00:00:00').getDay();
+    const sNew = timeToMinutes(normalizeTime(inicio));
+    const eNew = timeToMinutes(normalizeTime(fin));
+
+    return gruposReservas.some(grupo => {
+      if (!grupo.diasSemana.includes(diaSemana)) return false;
+      if (fecha < grupo.fechaInicio || fecha > grupo.fechaFin) return false;
+      if (grupo.excepciones?.includes(fecha)) return false;
+      const sExist = timeToMinutes(grupo.horaInicio);
+      const eExist = timeToMinutes(grupo.horaFin);
+      return sNew < eExist && sExist < eNew;
+    });
+  };
+
   //FUNCION PARA MOSTRAR MENSAJE DE EXITO O ERROR 
   const showMessage = (text: string, type: "success" | "error" = "success", duration = 2500) => {
     setFeedbackMessage({ text, type });
@@ -341,6 +380,11 @@ export default function Sala({ navigation, route }: Props) {
     );
     if (solapa) {
       showMessage("El horario seleccionado ya está ocupado.", "error");
+      return;
+    }
+    
+    if (existeSolapamientoConGrupos(selectedDay, horaInicio, horaFin)) {
+      showMessage("Ese horario está ocupado por una reserva recurrente.", "error");
       return;
     }
 
@@ -461,6 +505,8 @@ export default function Sala({ navigation, route }: Props) {
         // Buscar la notificación que corresponde a esta reserva
         const notificationToCancel = allScheduledNotifications.find(notification => {
           const data = notification.content.data;
+          if (!data) return false;
+
           return (
             data.fecha === reserva.fecha &&
             data.horaInicio === reserva.horaInicio &&
@@ -546,12 +592,19 @@ export default function Sala({ navigation, route }: Props) {
     setModalVisible(true);
   };
 
+  const ocurrenciasGrupoDelDia = selectedDay
+    ? generarOcurrenciasDeGrupos(gruposReservas, [new Date(selectedDay + 'T00:00:00')])
+    : [];
+  
+  const reservasDiaCompleto = [...ocurrenciasGrupoDelDia, ...reservasDia]
+    .sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
+
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       
         <KeyboardAvoidingView
           style={{ flex: 1}}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
           keyboardVerticalOffset={0} // Ajustá según tu header probando nueva rama
         > 
           <View style={styles.container}>
@@ -561,7 +614,13 @@ export default function Sala({ navigation, route }: Props) {
                   <Text style={styles.backButtonText}><FontAwesome name="arrow-left" size={15} color="white" /> Inicio</Text>
                 </TouchableOpacity>
 
-              
+                {/* BOTÓN NUEVO AQUÍ */}
+                {(userRole === 'admin' || userRole === 'superuser') && (
+                  <TouchableOpacity style={styles.botonGrupos} onPress={() => setGruposModalVisible(true)}>
+                    <Ionicons name="repeat" size={22} color="#252526" style={{ marginRight: 8 }} />
+                    <Text style={styles.botonGruposTexto}>Reservas Repetitivas</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -613,14 +672,14 @@ export default function Sala({ navigation, route }: Props) {
 
               <Calendario
                 reservas={convertirReservasParaCalendario()}
+                grupos={gruposReservas}
                 alSeleccionarHorario={handleSeleccionarHorario}
               />
             </View>
 
             <Modal visible={modalVisible} transparent animationType="slide">
-              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
+              <Pressable style={styles.modalContainer} onPress={Keyboard.dismiss}>
+                <Pressable onPress={() => {}} style={styles.modalContent}>
                   <Text style={styles.modalTitle}>Reservas {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
 
                   {feedbackMessage && (
@@ -712,15 +771,20 @@ export default function Sala({ navigation, route }: Props) {
                     <Text style={{ color: "#929292ff" }}>No hay reservas para este día.</Text>
                   ) : (
                     <FlatList
-                      data={reservasDia}
+                      data={reservasDiaCompleto}
                       keyExtractor={(item) => item.id ?? `${item.horaInicio}-${item.horaFin}`}
                       style={{ maxHeight: 140, marginBottom: 8 }}
                       renderItem={({ item }) => (
-                        <View style={[styles.reservaRow, { flexDirection: "row" }]}>
+                        <View style={[styles.reservaRow, item.esGrupo && styles.reservaGrupoRow]}>
+
                           <TouchableOpacity
                             style={{ flex: 1 }}
+                            disabled={item.esGrupo && userRole !== 'admin' && userRole !== 'superuser'}
                             onPress={() => {
-                              if (item.usuarioId === auth.currentUser?.uid || userRole === 'admin' || userRole === 'superuser') {
+                              if (item.esGrupo) {
+                                // admin/superuser: abrir gestión de ese grupo puntual
+                                setGruposModalVisible(true);
+                              } else if (item.usuarioId === auth.currentUser?.uid || userRole === 'admin' || userRole === 'superuser') {
                                 setHoraInicio(item.horaInicio);
                                 setHoraFin(item.horaFin);
                                 setMotivo(item.motivo);
@@ -729,14 +793,15 @@ export default function Sala({ navigation, route }: Props) {
                             }}
                           >
                             <Text style={styles.reservaText}>
-                              {item.horaInicio} - {item.horaFin}
+                              {item.esGrupo ? "🔁 " : ""}{item.horaInicio} - {item.horaFin}
                             </Text>
                             <Text style={styles.reservaMotivo}>{item.motivo}</Text>
-                            <Text style={styles.reservaUsuario}>
-                              {item.usuarioEmail ?? "Usuario"}
-                            </Text>
+                            {!item.esGrupo && (
+                              <Text style={styles.reservaUsuario}>{item.usuarioEmail ?? "Usuario"}</Text>
+                            )}
                           </TouchableOpacity>
 
+                          {/* Botón Cancelar - Oculto para Grupos para forzar que se borren desde GestionGruposModal */}
                           {(item.usuarioId === auth.currentUser?.uid || userRole === 'admin' || userRole === 'superuser') && (
                             <TouchableOpacity
                               style={{
@@ -876,22 +941,28 @@ export default function Sala({ navigation, route }: Props) {
                       </TouchableOpacity>
                     </View>
                   </View>
-                </View>
-              </View>
-                   </TouchableWithoutFeedback>
+              </Pressable>
+            </Pressable>
             </Modal>
           </View>
         </KeyboardAvoidingView>
-     
-    </View>
+        {/* MODAL NUEVO AQUÍ */}
+        <GestionGruposModal
+          visible={gruposModalVisible}
+          onClose={() => setGruposModalVisible(false)}
+          sala={numero}
+          salaNombre={salaInfo?.nombre || numero}
+          grupos={gruposReservas}
+        />
 
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffffff", padding: width > 600 ? 20 : isSmallDevice ? 8 : 12 },
   header: { height: isSmallDevice ? 70 : 80, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginBottom: isSmallDevice ? 4 : 8 },
-  superiorSalas: { height: 40, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent: "center", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginTop: height > 700 ? 40 : 15, marginBottom: 8 },
+  superiorSalas: { paddingHorizontal: isSmallDevice ? 6 : 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginTop: height > 700 ? 40 : 15, marginBottom: 8 },
   leftHeader: { flexDirection: "row", alignItems: "center" },
   rightHeader: { flexDirection: "row", alignItems: "center" },
   centerHeader: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -923,6 +994,9 @@ const styles = StyleSheet.create({
   salaDescripcionContainer: { flexDirection: "row", justifyContent: "center", marginTop: 4 },
   descripcionItem: { flexDirection: "row", alignItems: "center", marginHorizontal: 6 },
   salaDescripcion: { color: "#252526", fontSize: isSmallDevice ? 12 : 14 },
+  reservaGrupoRow: { backgroundColor: "#3a3320", borderLeftWidth: 3, borderLeftColor: "#BEAF87" },
+  botonGrupos: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#BEAF87", borderWidth: 1.5, borderColor: "#9A8F6A", paddingVertical: 12, borderRadius: 10, marginTop: 10 },
+botonGruposTexto: { color: "#252526", fontWeight: "700", fontSize: isSmallDevice ? 14 : 16 },
 });
 
 function setRolUsuario(rol: string | null) {

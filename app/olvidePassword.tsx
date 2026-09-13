@@ -56,7 +56,7 @@ export default function OlvidePassword({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
       >
         <View style={styles.container}>
@@ -74,6 +74,8 @@ export default function OlvidePassword({ navigation }: Props) {
               placeholderTextColor="#aaa"
               keyboardType="email-address"
               autoCapitalize="none"
+              returnKeyType="done"
+              onSubmitEditing={handleReset}
             />
           </View>
           {errorEmail ? <Text style={styles.errorText}>{errorEmail}</Text> : null}

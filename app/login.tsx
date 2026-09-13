@@ -1,5 +1,5 @@
 // app/login.tsx
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Text, StyleSheet, View, TextInput, ScrollView, TouchableOpacity, Image, ActivityIndicator,KeyboardAvoidingView, Platform ,Modal, Keyboard } from "react-native";
 import { useFonts } from "expo-font";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -26,6 +26,8 @@ export default function Login({ navigation, route }: Props) {
   const [showPassword, setShowPassword] = useState(false);
  
   const setSessionPending = route?.params?.setSessionPending || (() => {});
+
+  const passwordRef = useRef<TextInput>(null);
 
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Regular.ttf"),
@@ -194,7 +196,7 @@ export default function Login({ navigation, route }: Props) {
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView
         style={{ flex: 1}}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
         keyboardVerticalOffset={0} // Ajustá según tu header probando nueva rama
       > 
         <ScrollView
@@ -223,6 +225,9 @@ export default function Login({ navigation, route }: Props) {
                 style={[styles.input, styles.fontTypold]}
                 placeholderTextColor="#aaa"
                 autoCapitalize="none"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                submitBehavior="submit"
               />
             </View>
             {errorEmailOrUsername ? <Text style={styles.errorText}>{errorEmailOrUsername}</Text> : null}
@@ -231,12 +236,15 @@ export default function Login({ navigation, route }: Props) {
               <Icon name="lock-outline" size={20} color="#BEAF87" style={{ marginRight: 8 }} />
 
               <TextInput
+                ref={passwordRef}
                 placeholder="Contraseña"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 style={[styles.input, styles.fontTypold]}
                 placeholderTextColor="#aaa"
+                returnKeyType="done"
+                onSubmitEditing={logueo}
               />
 
               <TouchableOpacity
