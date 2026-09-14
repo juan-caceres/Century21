@@ -8,7 +8,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from "../firebase";
 
 
-export default function AccessScreen() {
+export default function AccessScreen({ onAccessGranted }: { onAccessGranted: () => void }) {
   const [clave, setClave] = useState('');
   const [cargando, setCargando] = useState(false);
   const [mensajeError, setMensajeError] = useState('');
@@ -48,6 +48,7 @@ export default function AccessScreen() {
         // 2. Comparamos la clave ingresada con la de Firebase
         if (clave === claveCorrecta) {
           await AsyncStorage.setItem('appAccessGranted', 'true');
+          onAccessGranted();
           // navigation.replace evita que el usuario vuelva a esta pantalla usando el botón "Atrás"
           navigation.replace('Login'); 
         } else {

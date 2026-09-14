@@ -300,7 +300,6 @@ export default function App() {
         setBlockNavigation(false);
         setSessionPending(false);
       }
-
       setLoading(false);
     });
 
@@ -310,7 +309,17 @@ export default function App() {
         unsubscribeFirestore();
       }
     };
-  }, [sessionPending]);
+  }, [sessionPending, hasAccess]);
+
+  useEffect(() => {
+    const shouldShowAuth = !user || blockNavigation || !role;
+    if (shouldShowAuth && navigationRef.isReady()) {
+      navigationRef.reset({
+        index: 0,
+        routes: [{ name: hasAccess ? "Login" : "AccessScreen" }],
+      });
+    }
+  }, [user, role, blockNavigation, hasAccess]);
 
   const handleAccountDeletedConfirm = async () => {
     console.log("Usuario confirmó eliminación permanente, cerrando sesión...");
@@ -380,7 +389,9 @@ const initialRouteName = !shouldShowAuthScreens
 
           {shouldShowAuthScreens ? (
             <>
-              <Stack.Screen name="AccessScreen" component={AccessScreen} />
+              <Stack.Screen name="AccessScreen">
+                {(props) => <AccessScreen {...props} onAccessGranted={() => setHasAccess(true)} />}
+              </Stack.Screen>
               <Stack.Screen name="Login" component={Login} />
               <Stack.Screen name="Registro" component={Registro} />
               <Stack.Screen name="OlvidePassword" component={olvidePassword} />
