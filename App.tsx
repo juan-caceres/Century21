@@ -1,6 +1,5 @@
 //App.tsx
 import { StatusBar } from "expo-status-bar";
-import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator,CardStyleInterpolators } from "@react-navigation/stack";
 import React, { useEffect, useState, createContext, useContext, useRef } from "react";
 import { ActivityIndicator, View, Platform, Modal, Text, TouchableOpacity, StyleSheet } from "react-native";
@@ -23,6 +22,10 @@ import { RootStackParamList } from "./app/types/navigation";
 import { AuthProvider, useAuth } from "./app/context/authContext";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AccessScreen from './app/pantallaAcceso'; 
+import UsuariosNuevos from "./app/usuariosNuevos";
+import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
+
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -49,6 +52,11 @@ export default function App() {
 
   const [hasAccess, setHasAccess] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
+
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showRejectedModal, setShowRejectedModal] = useState(false);
+
+  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
 
   useEffect(() => {
     const verificarAcceso = async () => {
@@ -186,17 +194,43 @@ export default function App() {
               console.log("❌ Usuario desactivado - Bloqueando acceso...");
               setRole(null);
               setBlockNavigation(true);
+              setShowDeactivatedModal(true);
               
               // Cerrar sesión automáticamente
               setTimeout(async () => {
                 try {
                   await signOut(auth);
-                  console.log("✅ Sesión cerrada - Usuario desactivado");
                 } catch (err) {
                   console.error("❌ Error cerrando sesión:", err);
                 }
               }, 100);
               
+              setLoading(false);
+              return;
+            }
+
+            const estadoUsuario = userData.estado ?? "aprobado"; // compatibilidad con cuentas viejas
+
+            if (estadoUsuario === "pendiente" || estadoUsuario === "rechazado") {
+              console.log(`❌ Usuario con estado "${estadoUsuario}" - Bloqueando acceso...`);
+              setRole(null);
+              setBlockNavigation(true);
+
+              setTimeout(async () => {
+                try {
+                  await signOut(auth);
+                  console.log("✅ Sesión cerrada - Usuario no aprobado");
+                } catch (err) {
+                  console.error("❌ Error cerrando sesión:", err);
+                }
+              }, 100);
+
+              if (estadoUsuario === "pendiente") {
+                setShowPendingModal(true);
+              } else {
+                setShowRejectedModal(true);
+              }
+
               setLoading(false);
               return;
             }
@@ -219,14 +253,29 @@ export default function App() {
                 } else {
                   const updatedData = docSnapshot.data();
                   const isNowEliminado = updatedData.eliminado ?? false;
-                  
+                  const estadoActual = updatedData.estado ?? "aprobado";
+
                   if (isNowEliminado) {
-                    console.log("❌ USUARIO DESACTIVADO EN TIEMPO REAL - Cerrando sesión...");
                     setBlockNavigation(true);
+                    setShowDeactivatedModal(true);
                     
                     try {
                       await signOut(auth);
-                      console.log("✅ Sesión cerrada - Usuario desactivado en tiempo real");
+                    } catch (err) {
+                      console.error("❌ Error cerrando sesión:", err);
+                    }
+                  } else if (estadoActual === "pendiente" || estadoActual === "rechazado") {
+                    console.log(`❌ Estado cambiado a "${estadoActual}" en tiempo real - Cerrando sesión...`);
+                    setBlockNavigation(true);
+
+                    if (estadoActual === "pendiente") {
+                      setShowPendingModal(true);
+                    } else {
+                      setShowRejectedModal(true);
+                    }
+
+                    try {
+                      await signOut(auth);
                     } catch (err) {
                       console.error("❌ Error cerrando sesión:", err);
                     }
@@ -324,7 +373,7 @@ const initialRouteName = !shouldShowAuthScreens
 
   return (
     <AuthProvider>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator 
           screenOptions={{ headerShown: false }}
           initialRouteName={initialRouteName}>
@@ -341,6 +390,7 @@ const initialRouteName = !shouldShowAuthScreens
               <Stack.Screen name="Home" component={Home} />
               <Stack.Screen name="GestionSalas" component={GestionSalas} />
               <Stack.Screen name="Usuarios" component={Usuarios} />
+              <Stack.Screen name="UsuariosNuevos" component={UsuariosNuevos} />
               <Stack.Screen name="Sala" component={Sala} options={{animation:'scale_from_center'}}/>
             </>
           )}
@@ -370,6 +420,97 @@ const initialRouteName = !shouldShowAuthScreens
             <TouchableOpacity
               style={styles.modalButton}
               onPress={handleAccountDeletedConfirm}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.modalButtonText, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+                Entendido
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={showPendingModal} animationType="fade" onRequestClose={() => setShowPendingModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.iconText}>⏳</Text>
+            </View>
+            <Text style={[styles.modalTitle, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+              Cuenta Pendiente
+            </Text>
+            <Text style={[styles.modalMessage, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+              Tu cuenta todavía no fue aprobada por un administrador.
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => {
+                setShowPendingModal(false);
+                if (navigationRef.isReady()) {
+                  navigationRef.reset({
+                    index: 0,
+                    routes: [{ name: hasAccess ? "Login" : "AccessScreen" }],
+                  });
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.modalButtonText, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+                Entendido
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={showRejectedModal} animationType="fade" onRequestClose={() => setShowRejectedModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.iconText}>🚫</Text>
+            </View>
+            <Text style={[styles.modalTitle, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+              Solicitud Rechazada
+            </Text>
+            <Text style={[styles.modalMessage, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+              Tu solicitud de registro fue rechazada. Contactá con el administrador si creés que es un error.
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setShowRejectedModal(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.modalButtonText, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+                Entendido
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={showDeactivatedModal} animationType="fade" onRequestClose={() => setShowDeactivatedModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.iconText}>🚫</Text>
+            </View>
+            <Text style={[styles.modalTitle, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+              Cuenta Desactivada
+            </Text>
+            <Text style={[styles.modalMessage, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+              Tu cuenta ha sido desactivada por un administrador. Contactá con el administrador si creés que esto es un error.
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => {
+                setShowDeactivatedModal(false);
+                if (navigationRef.isReady()) {
+                  navigationRef.reset({
+                    index: 0,
+                    routes: [{ name: hasAccess ? "Login" : "AccessScreen" }],
+                  });
+                }
+              }}
               activeOpacity={0.8}
             >
               <Text style={[styles.modalButtonText, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
@@ -433,7 +574,7 @@ const styles = StyleSheet.create({
   modalTitle: { color: "#BEAF87", fontSize: 24, fontWeight: "bold", marginBottom: 15, textAlign: "center",},
   modalMessage: { color: "#fff" ,fontSize: 16, textAlign: "center", marginBottom: 30, lineHeight: 24, paddingHorizontal: 10,},
   buttonContainer: { flexDirection: "row", gap: 12, width: "100%" },
-  modalButton: { paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10, flex: 1, alignItems: "center", shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5, },
+  modalButton: { backgroundColor: "#BEAF87", paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10, flex: 1, alignItems: "center", shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5, },
   confirmButton: { backgroundColor: "#BEAF87" },
   cancelButton: { backgroundColor: "#555", borderWidth: 1, borderColor: "#BEAF87" },
   modalButtonText: { color: "#252526", fontSize: 18, fontWeight: "bold",},
