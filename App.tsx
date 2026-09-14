@@ -1,9 +1,8 @@
 //App.tsx
 import { StatusBar } from "expo-status-bar";
-import { createStackNavigator,CardStyleInterpolators } from "@react-navigation/stack";
-import React, { useEffect, useState, createContext, useContext, useRef } from "react";
-import { ActivityIndicator, View, Platform, Modal, Text, TouchableOpacity, StyleSheet } from "react-native";
-import * as NavigationBar from 'expo-navigation-bar';
+import { createStackNavigator } from "@react-navigation/stack";
+import React, { useEffect, useState, useRef } from "react";
+import { ActivityIndicator, View, Modal, Text, TouchableOpacity, StyleSheet } from "react-native";
 import * as SystemUI from 'expo-system-ui';
 import Login from "./app/login";
 import Home from "./app/home";
@@ -11,17 +10,15 @@ import Registro from "./app/registro";
 import Sala from "./app/sala";
 import Usuarios from "./app/usuarios";
 import olvidePassword from "./app/olvidePassword";
-import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./firebase";
+import { signOut } from "firebase/auth";
 import { useFonts } from 'expo-font';
-import { getDoc, doc, onSnapshot } from "firebase/firestore";
-import { db } from "./firebase";
 import GestionSalas from "./app/gestionSalas";
 import * as Notifications from 'expo-notifications';
 import { RootStackParamList } from "./app/types/navigation";
 import { AuthProvider, useAuth } from "./app/context/authContext";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import AccessScreen from './app/pantallaAcceso'; 
+import AccessScreen from './app/pantallaAcceso';
 import UsuariosNuevos from "./app/usuariosNuevos";
 import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
 
@@ -38,25 +35,22 @@ Notifications.setNotificationHandler({
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-export default function App() {
-  const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [blockNavigation, setBlockNavigation] = useState(false);
-  const [showDeletedModal, setShowDeletedModal] = useState(false);
-  const [showSessionModal, setShowSessionModal] = useState(false);
-  const [sessionPending, setSessionPending] = useState(false);
-  const [fontsLoaded] = useFonts({Typold: require('./assets/Typold-Bold.ttf'),});
+function AppContent() {
+  const {
+    user, role, blockNavigation, sessionPending, setSessionPending, loadingAuth,
+    showDeletedModal, setShowDeletedModal,
+    showDeactivatedModal, setShowDeactivatedModal,
+    showPendingModal, setShowPendingModal,
+    showRejectedModal, setShowRejectedModal,
+    showSessionModal, setShowSessionModal,
+  } = useAuth();
+
+  const [fontsLoaded] = useFonts({ Typold: require('./assets/Typold-Bold.ttf') });
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   const [hasAccess, setHasAccess] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
-
-  const [showPendingModal, setShowPendingModal] = useState(false);
-  const [showRejectedModal, setShowRejectedModal] = useState(false);
-
-  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
 
   useEffect(() => {
     const verificarAcceso = async () => {
@@ -71,245 +65,77 @@ export default function App() {
         setCheckingAccess(false);
       }
     };
-
     verificarAcceso();
   }, []);
-  
+
   useEffect(() => {
-  const setupSystemUI = async () => {
-    // Configurar color de fondo raíz
-    try {
-      await SystemUI.setBackgroundColorAsync('#ffffff');
-    } catch (error) {
-      console.log('⚠️ Error configurando background color:', error);
-    }
-  };
-
-  setupSystemUI();
-}, []);
-  
-  useEffect(() => {
-  console.log('📱 Configurando listeners de notificaciones...');
-
-  // 🔹 Listener cuando se recibe una notificación (app en foreground)
-  notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-    const titulo = notification.request.content.title || "";
-    const cuerpo = notification.request.content.body || "";
-    const data = notification.request.content.data || {};
-    console.log("📩 Notificación recibida:", titulo, cuerpo, data);
-
-    // Enviar email si es de tipo "Reserva en Sala"
-    if (titulo.startsWith("Reserva en Sala")) {
-      (async () => {
-
-        try {
-          const userEmail = data.usuarioEmail || auth.currentUser?.email || "usuario@ejemplo.com";
-          const salaNumero = data.salaNumero || "desconocida";
-          const motivo = data.motivo || "Sin motivo especificado";
-          const horaInicio = data.horaInicio || "hora no especificada";
-          const fecha = data.fecha || "fecha no especificada";
-
-          console.log("Intentando enviar email de recordatorio a:", userEmail);
-
-          const BACKEND_URL = "https://century21-4et6.onrender.com/enviar-recordatorio";
-          const response = await fetch(BACKEND_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ usuarioEmail: userEmail, salaNumero, fecha, horaInicio, motivo }),
-          });
-
-          const result = await response.json();
-
-          if (response.ok && result.success) {
-            console.log("✅ Email de recordatorio enviado correctamente.");
-          } else {
-            console.error("❌ Error al enviar email:", result.error);
-          }
-        } catch (err) {
-          console.error("❌ Error al enviar email:", err);
-        }
-      })();
-    }
-  });
-
-  // 🔹 Listener cuando el usuario toca una notificación
-  responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-    console.log('👆 Usuario interactuó con la notificación:', response);
-    const data = response.notification.request.content.data;
-    if (!data) return;
-
-    if (data.type === 'reserva_created') {
-      console.log('Navegar a detalles de reserva:', data.reservaId);
-      // navigation.navigate('DetalleReserva', { id: data.reservaId });
-    } else if (data.type === 'reserva_edited') {
-      console.log('Navegar a detalles de reserva editada:', data.reservaId);
-    } else if (data.type === 'reserva_deleted') {
-      console.log('Reserva eliminada:', data.reservaId);
-    }
-  });
-
-  // 🔹 Limpieza segura al desmontar
-  return () => {
-    console.log("🧹 Limpiando listeners de notificaciones...");
-    if (notificationListener.current) {
-      notificationListener.current.remove();
-      notificationListener.current = null;
-    }
-    if (responseListener.current) {
-      responseListener.current.remove();
-      responseListener.current = null;
-    }
-  };
-}, []);
-
-  // Detección de usuario eliminado O desactivado
-  useEffect(() => {
-    let unsubscribeFirestore: (() => void) | null = null;
-    const unsub = onAuthStateChanged(auth, async (usuario) => {
-      console.log("Auth state cambió:", usuario ? "Usuario logueado" : "Sin usuario");
-      
-      if (unsubscribeFirestore) {
-        unsubscribeFirestore();
-        unsubscribeFirestore = null;
+    const setupSystemUI = async () => {
+      try {
+        await SystemUI.setBackgroundColorAsync('#ffffff');
+      } catch (error) {
+        console.log('⚠️ Error configurando background color:', error);
       }
+    };
+    setupSystemUI();
+  }, []);
 
-      setUser(usuario);
+  useEffect(() => {
+    console.log('📱 Configurando listeners de notificaciones...');
 
-      if (usuario) {
-        try {
-          const userDocRef = doc(db, "users", usuario.uid);
-          const userDoc = await getDoc(userDocRef);
-          
-          console.log("📄 Documento existe:", userDoc.exists());
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const userRole = userData.role?.toLowerCase()?.trim() ?? "user";
-            const isEliminado = userData.eliminado ?? false;
-            
-            console.log("Usuario válido - Rol:", userRole, "- Eliminado:", isEliminado);
-            
-            // Si el usuario está eliminado, bloquear acceso
-            if (isEliminado) {
-              console.log("❌ Usuario desactivado - Bloqueando acceso...");
-              setRole(null);
-              setBlockNavigation(true);
-              setShowDeactivatedModal(true);
-              
-              // Cerrar sesión automáticamente
-              setTimeout(async () => {
-                try {
-                  await signOut(auth);
-                } catch (err) {
-                  console.error("❌ Error cerrando sesión:", err);
-                }
-              }, 100);
-              
-              setLoading(false);
-              return;
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      const titulo = notification.request.content.title || "";
+      const data = notification.request.content.data || {};
+
+      if (titulo.startsWith("Reserva en Sala")) {
+        (async () => {
+          try {
+            const userEmail = data.usuarioEmail || auth.currentUser?.email || "usuario@ejemplo.com";
+            const salaNumero = data.salaNumero || "desconocida";
+            const motivo = data.motivo || "Sin motivo especificado";
+            const horaInicio = data.horaInicio || "hora no especificada";
+            const fecha = data.fecha || "fecha no especificada";
+
+            const BACKEND_URL = "https://century21-4et6.onrender.com/enviar-recordatorio";
+            const response = await fetch(BACKEND_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ usuarioEmail: userEmail, salaNumero, fecha, horaInicio, motivo }),
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+              console.error("❌ Error al enviar email:", result.error);
             }
-
-            const estadoUsuario = userData.estado ?? "aprobado"; // compatibilidad con cuentas viejas
-
-            if (estadoUsuario === "pendiente" || estadoUsuario === "rechazado") {
-              console.log(`❌ Usuario con estado "${estadoUsuario}" - Bloqueando acceso...`);
-              setRole(null);
-              setBlockNavigation(true);
-
-              setTimeout(async () => {
-                try {
-                  await signOut(auth);
-                  console.log("✅ Sesión cerrada - Usuario no aprobado");
-                } catch (err) {
-                  console.error("❌ Error cerrando sesión:", err);
-                }
-              }, 100);
-
-              if (estadoUsuario === "pendiente") {
-                setShowPendingModal(true);
-              } else {
-                setShowRejectedModal(true);
-              }
-
-              setLoading(false);
-              return;
-            }
-            
-            setRole(userRole);
-            setBlockNavigation(false);
-            
-            // Si hay sesión pendiente, mostrar modal
-            if (sessionPending) {
-              setShowSessionModal(true);
-            }
-
-            // Listener en tiempo real para detectar cambios en el documento
-            unsubscribeFirestore = onSnapshot(
-              userDocRef,
-              async (docSnapshot) => {
-                if (!docSnapshot.exists()) {
-                  console.log("❌ USUARIO ELIMINADO COMPLETAMENTE - Cerrando sesión...");
-                  setShowDeletedModal(true);
-                } else {
-                  const updatedData = docSnapshot.data();
-                  const isNowEliminado = updatedData.eliminado ?? false;
-                  const estadoActual = updatedData.estado ?? "aprobado";
-
-                  if (isNowEliminado) {
-                    setBlockNavigation(true);
-                    setShowDeactivatedModal(true);
-                    
-                    try {
-                      await signOut(auth);
-                    } catch (err) {
-                      console.error("❌ Error cerrando sesión:", err);
-                    }
-                  } else if (estadoActual === "pendiente" || estadoActual === "rechazado") {
-                    console.log(`❌ Estado cambiado a "${estadoActual}" en tiempo real - Cerrando sesión...`);
-                    setBlockNavigation(true);
-
-                    if (estadoActual === "pendiente") {
-                      setShowPendingModal(true);
-                    } else {
-                      setShowRejectedModal(true);
-                    }
-
-                    try {
-                      await signOut(auth);
-                    } catch (err) {
-                      console.error("❌ Error cerrando sesión:", err);
-                    }
-                  }
-                }
-              },
-              (error) => {
-                console.error("Error en listener de Firestore:", error);
-              }
-            );
-          } else {
-            console.log("Usuario no existe en Firestore - BLOQUEANDO NAVEGACIÓN");
-            setRole(null);
-            setBlockNavigation(true);
+          } catch (err) {
+            console.error("❌ Error al enviar email:", err);
           }
-        } catch (error) {
-          console.error("Error al obtener rol del usuario:", error);
-          setRole("user");
-        }
-      } else {
-        setRole(null);
-        setBlockNavigation(false);
-        setSessionPending(false);
+        })();
       }
-      setLoading(false);
+    });
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      if (!data) return;
+
+      if (data.type === 'reserva_created') {
+        console.log('Navegar a detalles de reserva:', data.reservaId);
+      } else if (data.type === 'reserva_edited') {
+        console.log('Navegar a detalles de reserva editada:', data.reservaId);
+      } else if (data.type === 'reserva_deleted') {
+        console.log('Reserva eliminada:', data.reservaId);
+      }
     });
 
     return () => {
-      unsub();
-      if (unsubscribeFirestore) {
-        unsubscribeFirestore();
+      if (notificationListener.current) {
+        notificationListener.current.remove();
+        notificationListener.current = null;
+      }
+      if (responseListener.current) {
+        responseListener.current.remove();
+        responseListener.current = null;
       }
     };
-  }, [sessionPending, hasAccess]);
+  }, []);
 
   useEffect(() => {
     const shouldShowAuth = !user || blockNavigation || !role;
@@ -322,42 +148,29 @@ export default function App() {
   }, [user, role, blockNavigation, hasAccess]);
 
   const handleAccountDeletedConfirm = async () => {
-    console.log("Usuario confirmó eliminación permanente, cerrando sesión...");
     setShowDeletedModal(false);
-    
     try {
       await signOut(auth);
-      setUser(null);
-      setRole(null);
-      setBlockNavigation(false);
-      console.log("Sesión cerrada correctamente");
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
     }
   };
 
   const handleKeepSession = () => {
-    console.log("✅ Usuario eligió mantener sesión");
     setShowSessionModal(false);
     setSessionPending(false);
   };
 
   const handleLogoutSession = async () => {
-    console.log("❌ Usuario eligió cerrar sesión");
     setShowSessionModal(false);
     setSessionPending(false);
-    
     try {
       await signOut(auth);
-      setUser(null);
-      setRole(null);
-      setBlockNavigation(false);
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
     }
   };
 
-   // Evita que la pantalla parpadee mientras lee la memoria
   if (checkingAccess) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -366,24 +179,24 @@ export default function App() {
     );
   }
 
-  if (loading || !fontsLoaded) return (
+  if (loadingAuth || !fontsLoaded) return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
       <ActivityIndicator size="large" color="#BEAF87" />
     </View>
   );
 
-const shouldShowAuthScreens = !user || blockNavigation || !role;
+  const shouldShowAuthScreens = !user || blockNavigation || !role;
 
-const initialRouteName = !shouldShowAuthScreens
-  ? "Home"
-  : hasAccess
-    ? "Login"
-    : "AccessScreen";
+  const initialRouteName = !shouldShowAuthScreens
+    ? "Home"
+    : hasAccess
+      ? "Login"
+      : "AccessScreen";
 
   return (
-    <AuthProvider>
+    <>
       <NavigationContainer ref={navigationRef}>
-        <Stack.Navigator 
+        <Stack.Navigator
           screenOptions={{ headerShown: false }}
           initialRouteName={initialRouteName}>
 
@@ -402,40 +215,25 @@ const initialRouteName = !shouldShowAuthScreens
               <Stack.Screen name="GestionSalas" component={GestionSalas} />
               <Stack.Screen name="Usuarios" component={Usuarios} />
               <Stack.Screen name="UsuariosNuevos" component={UsuariosNuevos} />
-              <Stack.Screen name="Sala" component={Sala} options={{animation:'scale_from_center'}}/>
+              <Stack.Screen name="Sala" component={Sala} options={{ animation: 'scale_from_center' }} />
             </>
           )}
         </Stack.Navigator>
-        {/* StatusBar con estilo oscuro para que se vea en fondo blanco */}
         <StatusBar style="dark" />
       </NavigationContainer>
 
-      {/* Modal de cuenta eliminada permanentemente */}
-      <Modal 
-        transparent 
-        visible={showDeletedModal} 
-        animationType="fade"
-        onRequestClose={handleAccountDeletedConfirm}
-      >
+      <Modal transparent visible={showDeletedModal} animationType="fade" onRequestClose={handleAccountDeletedConfirm}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.iconContainer}>
               <Text style={styles.iconText}>⚠️</Text>
             </View>
-            <Text style={[styles.modalTitle, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-              Cuenta Eliminada
-            </Text>
-            <Text style={[styles.modalMessage, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+            <Text style={styles.modalTitle}>Cuenta Eliminada</Text>
+            <Text style={styles.modalMessage}>
               Tu cuenta ha sido eliminada permanentemente por un administrador. Serás redirigido al inicio de sesión.
             </Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={handleAccountDeletedConfirm}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.modalButtonText, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-                Entendido
-              </Text>
+            <TouchableOpacity style={styles.modalButton} onPress={handleAccountDeletedConfirm} activeOpacity={0.8}>
+              <Text style={styles.modalButtonText}>Entendido</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -447,28 +245,10 @@ const initialRouteName = !shouldShowAuthScreens
             <View style={styles.iconContainer}>
               <Text style={styles.iconText}>⏳</Text>
             </View>
-            <Text style={[styles.modalTitle, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-              Cuenta Pendiente
-            </Text>
-            <Text style={[styles.modalMessage, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-              Tu cuenta todavía no fue aprobada por un administrador.
-            </Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => {
-                setShowPendingModal(false);
-                if (navigationRef.isReady()) {
-                  navigationRef.reset({
-                    index: 0,
-                    routes: [{ name: hasAccess ? "Login" : "AccessScreen" }],
-                  });
-                }
-              }}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.modalButtonText, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-                Entendido
-              </Text>
+            <Text style={styles.modalTitle}>Cuenta Pendiente</Text>
+            <Text style={styles.modalMessage}>Tu cuenta todavía no fue aprobada por un administrador.</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={() => setShowPendingModal(false)} activeOpacity={0.8}>
+              <Text style={styles.modalButtonText}>Entendido</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -480,20 +260,12 @@ const initialRouteName = !shouldShowAuthScreens
             <View style={styles.iconContainer}>
               <Text style={styles.iconText}>🚫</Text>
             </View>
-            <Text style={[styles.modalTitle, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-              Solicitud Rechazada
-            </Text>
-            <Text style={[styles.modalMessage, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+            <Text style={styles.modalTitle}>Solicitud Rechazada</Text>
+            <Text style={styles.modalMessage}>
               Tu solicitud de registro fue rechazada. Contactá con el administrador si creés que es un error.
             </Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setShowRejectedModal(false)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.modalButtonText, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-                Entendido
-              </Text>
+            <TouchableOpacity style={styles.modalButton} onPress={() => setShowRejectedModal(false)} activeOpacity={0.8}>
+              <Text style={styles.modalButtonText}>Entendido</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -505,88 +277,60 @@ const initialRouteName = !shouldShowAuthScreens
             <View style={styles.iconContainer}>
               <Text style={styles.iconText}>🚫</Text>
             </View>
-            <Text style={[styles.modalTitle, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-              Cuenta Desactivada
-            </Text>
-            <Text style={[styles.modalMessage, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+            <Text style={styles.modalTitle}>Cuenta Desactivada</Text>
+            <Text style={styles.modalMessage}>
               Tu cuenta ha sido desactivada por un administrador. Contactá con el administrador si creés que esto es un error.
             </Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => {
-                setShowDeactivatedModal(false);
-                if (navigationRef.isReady()) {
-                  navigationRef.reset({
-                    index: 0,
-                    routes: [{ name: hasAccess ? "Login" : "AccessScreen" }],
-                  });
-                }
-              }}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.modalButtonText, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-                Entendido
-              </Text>
+            <TouchableOpacity style={styles.modalButton} onPress={() => setShowDeactivatedModal(false)} activeOpacity={0.8}>
+              <Text style={styles.modalButtonText}>Entendido</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Modal de confirmación de sesión */}
-      <Modal 
-        transparent 
-        visible={showSessionModal} 
-        animationType="fade"
-        onRequestClose={() => {}}
-      >
+      <Modal transparent visible={showSessionModal} animationType="fade" onRequestClose={() => {}}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.iconContainer}>
               <Text style={styles.iconText}>📱</Text>
             </View>
-            <Text style={[styles.modalTitle, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-              Mantener Sesión
-            </Text>
-            <Text style={[styles.modalMessage, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
+            <Text style={styles.modalTitle}>Mantener Sesión</Text>
+            <Text style={styles.modalMessage}>
               ¿Deseas mantener tu sesión activa? Podrás acceder sin necesidad de volver a iniciar sesión.
             </Text>
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={handleLogoutSession}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.modalButtonText, { color: "#BEAF87" }]}>
-                  Cerrar Sesión
-                </Text>
+              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={handleLogoutSession} activeOpacity={0.8}>
+                <Text style={[styles.modalButtonText, { color: "#BEAF87" }]}>Cerrar Sesión</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={handleKeepSession}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.modalButtonText, { fontFamily: fontsLoaded ? 'Typold' : undefined }]}>
-                  Mantener
-                </Text>
+              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleKeepSession} activeOpacity={0.8}>
+                <Text style={styles.modalButtonText}>Mantener</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.85)", justifyContent: "center", alignItems: "center",},
-  modalContent: { backgroundColor: "#1c1c1c", padding: 30, borderRadius: 20, width: "85%", maxWidth: 400, alignItems: "center", borderWidth: 2, borderColor: "#BEAF87", shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 10,},
-  iconContainer: { width: 70, height: 70, borderRadius: 35, backgroundColor: "#ff6b6b", justifyContent: "center", alignItems: "center", marginBottom: 20,},
-  iconText: { fontSize: 40,},
-  modalTitle: { color: "#BEAF87", fontSize: 24, fontWeight: "bold", marginBottom: 15, textAlign: "center",},
-  modalMessage: { color: "#fff" ,fontSize: 16, textAlign: "center", marginBottom: 30, lineHeight: 24, paddingHorizontal: 10,},
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.85)", justifyContent: "center", alignItems: "center" },
+  modalContent: { backgroundColor: "#1c1c1c", padding: 30, borderRadius: 20, width: "85%", maxWidth: 400, alignItems: "center", borderWidth: 2, borderColor: "#BEAF87", shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 10 },
+  iconContainer: { width: 70, height: 70, borderRadius: 35, backgroundColor: "#ff6b6b", justifyContent: "center", alignItems: "center", marginBottom: 20 },
+  iconText: { fontSize: 40 },
+  modalTitle: { color: "#BEAF87", fontSize: 24, fontWeight: "bold", marginBottom: 15, textAlign: "center", fontFamily: "Typold" },
+  modalMessage: { color: "#fff", fontSize: 16, textAlign: "center", marginBottom: 30, lineHeight: 24, paddingHorizontal: 10, fontFamily: "Typold" },
   buttonContainer: { flexDirection: "row", gap: 12, width: "100%" },
-  modalButton: { backgroundColor: "#BEAF87", paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10, flex: 1, alignItems: "center", shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5, },
+  modalButton: { backgroundColor: "#BEAF87", paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10, flex: 1, alignItems: "center", shadowColor: "#BEAF87", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
   confirmButton: { backgroundColor: "#BEAF87" },
   cancelButton: { backgroundColor: "#555", borderWidth: 1, borderColor: "#BEAF87" },
-  modalButtonText: { color: "#252526", fontSize: 18, fontWeight: "bold",},
+  modalButtonText: { color: "#252526", fontSize: 18, fontWeight: "bold", fontFamily: "Typold" },
 });
