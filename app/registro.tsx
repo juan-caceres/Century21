@@ -7,7 +7,7 @@ import { auth, db } from "../firebase";
 import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../app/types/navigation";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import Icon from "@expo/vector-icons/MaterialCommunityIcons";
 import { registerForPushNotificationsAsync } from "./servicios/notifications";
 import { signOut } from 'firebase/auth';
 import { useAuth } from '../app/context/authContext';
