@@ -7,4 +7,5 @@ export type RootStackParamList = {
   Registro: undefined;
   Sala: { numero: string };
   Usuarios:undefined;
+  UsuariosNuevos: undefined;
 };

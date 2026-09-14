@@ -4,7 +4,7 @@ import { useFonts } from "expo-font";
 import React, { useEffect, useState } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { db } from "../firebase";
-import { collection,onSnapshot, QueryDocumentSnapshot, DocumentData, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, QueryDocumentSnapshot, DocumentData, query, orderBy, where } from "firebase/firestore";
 import BtnCerrarSesion from "./componentes/btnCerrarSesion";
 import * as Notifications from 'expo-notifications';
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -52,6 +52,19 @@ export default function Home({ navigation }: Props) {
     return unsubscribe;
   }, [user]);
 
+  const [pendientesCount, setPendientesCount] = useState(0);
+
+  useEffect(() => {
+    if (role !== "admin" && role !== "superuser") return;
+
+    const q = query(collection(db, "users"), where("estado", "==", "pendiente"));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setPendientesCount(snap.size);
+    });
+
+    return unsubscribe;
+  }, [role]);
+
   // Carga de fuente personalizada
   const [fontsLoaded] = useFonts({
     Typold: require("../assets/Typold-Bold.ttf"),
@@ -92,6 +105,17 @@ export default function Home({ navigation }: Props) {
 
       {/* Botones de gestión para superusuario y admin */}
       <View style={styles.adminButtons}>
+        {(role === "admin" || role === "superuser") && (
+          <TouchableOpacity
+            style={styles.adminButton}
+            onPress={() => navigation.navigate("UsuariosNuevos")}
+          >
+            <Text style={styles.adminButtonText}>
+              Usuarios Nuevos{pendientesCount > 0 ? ` (${pendientesCount})` : ""}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {role === "superuser" && (
           <TouchableOpacity
             style={styles.adminButton}

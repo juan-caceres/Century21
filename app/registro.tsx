@@ -111,48 +111,52 @@ export default function Registro({ navigation }: Props) {
 
 
   const handleRegister = async () => {
-    const isValid = await validarCampos();
- 
+  const isValid = await validarCampos();
+
+  if (!isValid) return;
   
-    if (!isValid) return;
-    
-    try {
-      // Crear usuario en Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      const user = userCredential.user;
+  try {
+    // Crear usuario en Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    const user = userCredential.user;
 
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        username: username.trim(),
-        role: "user",
-        eliminado: false,
-        notificationToken:'',
-        createdAt: new Date(),
-      });
+    await setDoc(doc(db, "users", user.uid), {
+      email: user.email,
+      username: username.trim(),
+      role: "user",
+      eliminado: false,
+      estado: "pendiente",
+      notificationToken:'',
+      createdAt: new Date(),
+    });
 
-      if (user) {
-            registerForPushNotificationsAsync(user.uid);
-      }
-
-      // Enviar correo de verificación
-      await sendEmailVerification(user);
-      
-      Alert.alert(
-        "✅ Cuenta creada",
-        "Revisa tu correo para verificar tu cuenta.\n\n⚠️ IMPORTANTE: Tu email es permanente y no se puede cambiar.\n\n✅ Podrás cambiar tu Nombre de Usuario cuando quieras.",
-        [
-          {text: "Entendido"}
-        ]
-      );
-
-    } catch (error: any) {
-      if (error.code === "auth/email-already-in-use") {
-        setErrorEmail("Este correo ya está registrado.");
-      } else {
-        setErrorEmail("Error al crear la cuenta.");
-      }
+    if (user) {
+          registerForPushNotificationsAsync(user.uid);
     }
-  };
+
+    // Enviar correo de verificación
+    await sendEmailVerification(user);
+
+    // Cerramos la sesión: createUserWithEmailAndPassword autologuea al usuario,
+    // pero no puede navegar a la app hasta que un admin/superuser lo apruebe.
+    await signOut(auth);
+    
+    Alert.alert(
+      "✅ Cuenta creada",
+      "Revisa tu correo para verificar tu cuenta.\n\n⏳ Tu cuenta quedó pendiente de aprobación por un administrador. Vas a poder iniciar sesión una vez que sea aprobada.\n\n⚠️ IMPORTANTE: Tu email es permanente y no se puede cambiar.\n\n✅ Podrás cambiar tu Nombre de Usuario cuando quieras.",
+      [
+        {text: "Entendido", onPress: () => navigation.navigate("Login")}
+      ]
+    );
+
+  } catch (error: any) {
+    if (error.code === "auth/email-already-in-use") {
+      setErrorEmail("Este correo ya está registrado.");
+    } else {
+      setErrorEmail("Error al crear la cuenta.");
+    }
+  }
+};
 
   // Interfaz usuario
   return (

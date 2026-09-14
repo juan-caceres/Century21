@@ -24,6 +24,8 @@ export default function Login({ navigation, route }: Props) {
   const [loading, setLoading] = useState(false);
   const { setBlockNavigation } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showRejectedModal, setShowRejectedModal] = useState(false);
  
   const setSessionPending = route?.params?.setSessionPending || (() => {});
 
@@ -133,14 +135,41 @@ export default function Login({ navigation, route }: Props) {
       if (isEliminado) {
         console.log("❌ Usuario desactivado - Bloqueando navegación...");
         
-        setBlockNavigation(true);  
+        const estadoUsuario = userData.estado ?? "aprobado"; // compatibilidad con cuentas viejas sin este campo
+
+        if (estadoUsuario === "pendiente") {
+          console.log("⏳ Usuario pendiente de aprobación - Bloqueando navegación...");
+          
+          setBlockNavigation(true);
+          await auth.signOut();
+          
+          setTimeout(() => {
+            setShowPendingModal(true);
+            setLoading(false);
+          }, 100);
+          
+          return;
+        }
+
+        if (estadoUsuario === "rechazado") {
+          console.log("❌ Usuario rechazado - Bloqueando navegación...");
+          
+          setBlockNavigation(true);
+          await auth.signOut();
+          
+          setTimeout(() => {
+            setShowRejectedModal(true);
+            setLoading(false);
+          }, 100);
+          
+          return;
+        }
+        setBlockNavigation(true);
         await auth.signOut();
-        
         setTimeout(() => {
           setShowDeactivatedModal(true);
           setLoading(false);
         }, 100);
-        
         return;
       }
 
@@ -187,6 +216,22 @@ export default function Login({ navigation, route }: Props) {
   const handleDeactivatedModalClose = () => {
     console.log("🚪 Cerrando modal de usuario desactivado...");
     setShowDeactivatedModal(false);
+    setBlockNavigation(false);
+    setEmailOrUsername("");
+    setPassword("");
+  };
+
+  const handlePendingModalClose = () => {
+    console.log("🚪 Cerrando modal de usuario pendiente...");
+    setShowPendingModal(false);
+    setBlockNavigation(false);
+    setEmailOrUsername("");
+    setPassword("");
+  };
+
+  const handleRejectedModalClose = () => {
+    console.log("🚪 Cerrando modal de usuario rechazado...");
+    setShowRejectedModal(false);
     setBlockNavigation(false);
     setEmailOrUsername("");
     setPassword("");
@@ -329,6 +374,62 @@ export default function Login({ navigation, route }: Props) {
                   <TouchableOpacity
                     style={styles.modalButton}
                     onPress={handleDeactivatedModalClose}
+                  >
+                    <Text style={[styles.fontTypold, styles.modalButtonText]}>Entendido</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
+            {/* Modal de usuario pendiente de aprobación */}
+            <Modal 
+              transparent 
+              visible={showPendingModal} 
+              animationType="fade"
+              onRequestClose={handlePendingModalClose}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.iconContainer}>
+                    <Icon name="clock-outline" size={48} color="#BEAF87" />
+                  </View>
+                  <Text style={[styles.fontTypold, styles.modalTitle]}>
+                    Cuenta Pendiente de Aprobación
+                  </Text>
+                  <Text style={[styles.fontTypold, styles.modalMessage]}>
+                    Tu cuenta todavía no fue aprobada por un administrador. Por favor esperá a que se apruebe tu acceso.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={handlePendingModalClose}
+                  >
+                    <Text style={[styles.fontTypold, styles.modalButtonText]}>Entendido</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
+            {/* Modal de usuario rechazado */}
+            <Modal 
+              transparent 
+              visible={showRejectedModal} 
+              animationType="fade"
+              onRequestClose={handleRejectedModalClose}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.iconContainer}>
+                    <Icon name="account-cancel-outline" size={48} color="#ff6b6b" />
+                  </View>
+                  <Text style={[styles.fontTypold, styles.modalTitle]}>
+                    Solicitud Rechazada
+                  </Text>
+                  <Text style={[styles.fontTypold, styles.modalMessage]}>
+                    Tu solicitud de registro fue rechazada. Contactá con el administrador si creés que esto es un error.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={handleRejectedModalClose}
                   >
                     <Text style={[styles.fontTypold, styles.modalButtonText]}>Entendido</Text>
                   </TouchableOpacity>
