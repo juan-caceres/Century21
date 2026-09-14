@@ -888,7 +888,7 @@ const styles = StyleSheet.create({
   editContainer: { width: "100%", marginBottom: 20, },
   inputContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#2e2e2e", borderRadius: 8, paddingHorizontal: 12, marginTop: 15, borderWidth: 1, borderColor: "#BEAF87", },
   input: { flex: 1, color: "#fff", paddingVertical: 12, fontSize: 16, },
-  helpText: { color: "#888", fontSize: 12, alignSelf: "flex-start", marginTop: -12, marginBottom: 15, },
+  helpText: { color: "#888", fontSize: 12, alignSelf: "flex-start", marginTop: 6, marginBottom: 15, },
   errorContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 10, paddingHorizontal: 10,},
   errorText: { color: "#ff6b6b", fontSize: 13, fontWeight: "600", flex: 1, },
   modalButtons: { flexDirection: "row", gap: 10, width: "100%", },

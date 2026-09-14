@@ -85,14 +85,6 @@ export default function Sala({ navigation, route }: Props) {
     Typold: require("../assets/Typold-Bold.ttf"),
   });
 
-  if (!fontsLoaded) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#BEAF87" />
-      </View>
-    );
-  }
-
   // Cargar todas las salas para la navegación
   useEffect(() => {
     const cargarSalas = async () => {
@@ -598,6 +590,14 @@ export default function Sala({ navigation, route }: Props) {
   
   const reservasDiaCompleto = [...ocurrenciasGrupoDelDia, ...reservasDia]
     .sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
+  
+    if (!fontsLoaded) {
+      return (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#BEAF87" />
+        </View>
+      );
+    }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
