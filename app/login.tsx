@@ -8,7 +8,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { StackNavigationProp } from "@react-navigation/stack";
 import { useAuth } from "../app/context/authContext";
 import { RootStackParamList } from "../app/types/navigation";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import Icon from "@expo/vector-icons/MaterialCommunityIcons";
 import { registerForPushNotificationsAsync } from "./servicios/notifications";
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login">;
