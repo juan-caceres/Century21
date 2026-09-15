@@ -1,5 +1,5 @@
 //app/home.tsx
-import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, Dimensions, Button, ActivityIndicator } from "react-native";
+import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, Dimensions, ActivityIndicator } from "react-native";
 import { useFonts } from "expo-font";
 import React, { useEffect, useState } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -74,17 +74,6 @@ export default function Home({ navigation }: Props) {
       </View>
     );
   }
-
-  // Funcion para enviar notificacion local
-  const sendNotification = async () => {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "Notificacion desde home",
-        body: "Esta es una notificacion de prueba",
-      },
-      trigger: null, // null se dispara inmediatamente
-    });
-  };
 
   const getRoleText = () => {
     if (role === "admin") return "Admin";

@@ -135,35 +135,6 @@ export default function Login({ navigation, route }: Props) {
       if (isEliminado) {
         console.log("❌ Usuario desactivado - Bloqueando navegación...");
         
-        const estadoUsuario = userData.estado ?? "aprobado"; // compatibilidad con cuentas viejas sin este campo
-
-        if (estadoUsuario === "pendiente") {
-          console.log("⏳ Usuario pendiente de aprobación - Bloqueando navegación...");
-          
-          setBlockNavigation(true);
-          await auth.signOut();
-          
-          setTimeout(() => {
-            setShowPendingModal(true);
-            setLoading(false);
-          }, 100);
-          
-          return;
-        }
-
-        if (estadoUsuario === "rechazado") {
-          console.log("❌ Usuario rechazado - Bloqueando navegación...");
-          
-          setBlockNavigation(true);
-          await auth.signOut();
-          
-          setTimeout(() => {
-            setShowRejectedModal(true);
-            setLoading(false);
-          }, 100);
-          
-          return;
-        }
         setBlockNavigation(true);
         await auth.signOut();
         setTimeout(() => {
