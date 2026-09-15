@@ -16,6 +16,7 @@ import { notifyReservaCreated, notifyReservaEdited, notifyReservaDeleted } from 
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useAuth } from "./context/authContext";
 import { calcularFechaFin, generarOcurrenciasDeGrupos } from "./utils/recurrencia";
+import { toLocalDateString } from "./utils/fechas";
 import GestionGruposModal from "./componentes/gestionGruposModal";
 
 type SalaScreenNavigationProp = StackNavigationProp<RootStackParamList, "Sala">;
@@ -146,20 +147,6 @@ export default function Sala({ navigation, route }: Props) {
     }
   };
 
-  const obtenerRolUsuario = async (): Promise<string | null> => {
-    try {
-      const usuarioId = auth.currentUser?.uid;
-      if (!usuarioId) return null;
-
-      const userDoc = await getDoc(doc(db, "users", usuarioId));
-      const userData = userDoc.data();
-      return userData?.role || null;
-    } catch (error) {
-      console.log("Error al obtener rol:", error);
-      return null;
-    }
-  };
-
   const fetchSalaInfo = async () => {
     try {
       const docRef = doc(db, "salas", numero);
@@ -200,7 +187,7 @@ export default function Sala({ navigation, route }: Props) {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     
-    const fechaMinima = hoy.toISOString().split('T')[0];
+    const fechaMinima = toLocalDateString(hoy);
     
     const reservasRef = collection(db, "reservas");
 
@@ -573,7 +560,7 @@ export default function Sala({ navigation, route }: Props) {
       return;
     }
 
-    const diaStr = fecha.toISOString().split('T')[0];
+    const diaStr = toLocalDateString(fecha);
     setSelectedDay(diaStr);
     
     setHoraInicio("");
@@ -731,7 +718,7 @@ export default function Sala({ navigation, route }: Props) {
                           }
                         }
                         
-                        const prevStr = prev.toISOString().split("T")[0];
+                        const prevStr = toLocalDateString(prev);
                         setSelectedDay(prevStr);
                         setEditingReservaId(null);
                         setHoraInicio("");
@@ -753,7 +740,7 @@ export default function Sala({ navigation, route }: Props) {
                           next.setDate(next.getDate() + 1);
                         }
                         
-                        const nextStr = next.toISOString().split("T")[0];
+                        const nextStr = toLocalDateString(next);
                         setSelectedDay(nextStr);
                         setEditingReservaId(null);
                         setHoraInicio("");
@@ -979,7 +966,7 @@ const styles = StyleSheet.create({
   backButtonText: { color: "#ffffffff", fontWeight: "bold", fontSize: 14, },
   cancelButton: { backgroundColor: '#252526', paddingVertical: isSmallDevice ? 8 : 10, paddingHorizontal: isSmallDevice ? 12 : 16, borderRadius: 8, borderWidth: 1, borderColor: "#BEAF87" },
   cancelText: { color: "#BEAF87", textAlign: "center", fontSize: isSmallDevice ? 13 : 14 },
-  reservaRow: { padding: isSmallDevice ? 6 : 8, marginBottom: 6, borderRadius: 6, backgroundColor: "#2e2e2e" },
+  reservaRow: { flexDirection: "row", alignItems: "center", padding: isSmallDevice ? 6 : 8, marginBottom: 6, borderRadius: 6, backgroundColor: "#2e2e2e" },
   reservaText: { color: "#BEAF87", fontWeight: "bold", fontSize: isSmallDevice ? 13 : 14 },
   reservaMotivo: { color: "#fff", fontSize: isSmallDevice ? 12 : 13 },
   reservaUsuario: { color: "#ccc", fontSize: isSmallDevice ? 11 : 12 },
@@ -995,7 +982,7 @@ const styles = StyleSheet.create({
   descripcionItem: { flexDirection: "row", alignItems: "center", marginHorizontal: 6 },
   salaDescripcion: { color: "#252526", fontSize: isSmallDevice ? 12 : 14 },
   reservaGrupoRow: { backgroundColor: "#3a3320", borderLeftWidth: 3, borderLeftColor: "#BEAF87" },
-  botonGrupos: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#BEAF87", borderWidth: 1.5, borderColor: "#9A8F6A", paddingVertical: 12, borderRadius: 10, marginTop: 10 },
+  botonGrupos: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#BEAF87", borderWidth: 1.5, borderColor: "#9A8F6A", paddingVertical: 12, paddingHorizontal: 20, borderRadius: 10, marginTop: 10 },
 botonGruposTexto: { color: "#252526", fontWeight: "700", fontSize: isSmallDevice ? 14 : 16 },
 });
 

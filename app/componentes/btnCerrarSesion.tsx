@@ -33,9 +33,9 @@ export default function BtnCerrarSesion() {
   const { setUser } = useAuth();
 
   const handleLogout = async () => {
-
-    clearPushToken(user.uid); // Limpiar el token de notificaciones antes de cerrar sesión
-
+    if (user) {
+      clearPushToken(user.uid);
+    }
     await signOut(auth);
     setUser(null);
     setModalVisible(false);

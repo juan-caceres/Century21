@@ -61,6 +61,11 @@ const Usuarios: React.FC<Props> = ({ navigation }) => {
       const lista: Usuario[] = [];
       querySnap.forEach((docu) => {
         const data = docu.data() as DocumentData;
+        const estado = data.estado ?? "aprobado";
+
+        // Los pendientes y rechazados se gestionan aparte, en "Usuarios Nuevos"
+        if (estado !== "aprobado") return;
+
         lista.push({ 
           id: docu.id, 
           email: data.email,

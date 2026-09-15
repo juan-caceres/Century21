@@ -1,4 +1,6 @@
-// app/utils/recurrencia.ts (archivo nuevo)
+// app/utils/recurrencia.ts
+import { toLocalDateString } from './fechas';
+
 export type TipoDuracion = 'fecha' | 'semanas' | 'meses' | 'finDeAnio';
 
 export function calcularFechaFin(
@@ -16,7 +18,7 @@ export function calcularFechaFin(
   if (tipoDuracion === 'semanas' && valor) fin.setDate(fin.getDate() + valor * 7);
   if (tipoDuracion === 'meses' && valor) fin.setMonth(fin.getMonth() + valor);
 
-  return fin.toISOString().split('T')[0];
+  return toLocalDateString(fin);
 }
 
 // Genera las ocurrencias "virtuales" de todos los grupos para un rango de días
@@ -34,7 +36,7 @@ export function generarOcurrenciasDeGrupos(
       const diaSemanaNum = dia.getDay();
       if (!grupo.diasSemana.includes(diaSemanaNum)) return;
 
-      const diaStr = dia.toISOString().split('T')[0];
+      const diaStr = toLocalDateString(dia);
       if (diaStr < grupo.fechaInicio || diaStr > grupo.fechaFin) return;
       if (grupo.excepciones?.includes(diaStr)) return;
 
