@@ -249,7 +249,9 @@ export default function Registro({ navigation }: Props) {
               />
               
               <TouchableOpacity
-                 onPress={() => setShowPassword(!showPassword)}
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Icon
                   name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -281,6 +283,8 @@ export default function Registro({ navigation }: Props) {
                   
                 <TouchableOpacity
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.eyeButton}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                 <Icon
                   name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
@@ -317,11 +321,12 @@ const styles = StyleSheet.create({
   warningContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff3cd", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, marginBottom: 15, width: "90%", borderWidth: 1, borderColor: "#ff9800", },
   warningText: { color: "#856404", fontSize: 13, fontWeight: "600", flex: 1, },
   inputContainer: { flexDirection: "row", alignItems: "center", width: "90%", borderWidth: 1, borderColor: "#BEAF87", backgroundColor: "#1a1a1a", borderRadius: 8, paddingHorizontal: 10, marginBottom: 10 },
-  input: { flex: 1, color: "#fff", height: 48, fontSize: 16 },
+  input: { flex: 1, color: "#fff", height: 48, fontSize: 16, minWidth: 0 },
   inputError: { borderColor: "red" },
   helpText: { color: "#888", fontSize: 12, alignSelf: "flex-start", marginLeft: "5%", marginTop: -5, marginBottom: 10, },
   errorText: { color: "red", alignSelf: "flex-start", marginLeft: "5%", marginBottom: 5, fontSize: 13 },
   button: { backgroundColor: "#BEAF87", padding: 15, borderRadius: 8, width: "90%", marginTop: 10 },
   buttonText: { color: "#252526", textAlign: "center", fontSize: 18, fontWeight: "bold" },
   link: { marginTop: 20, color: "#252526", fontSize: 16, fontWeight: "600" },
+  eyeButton: { height: 48, justifyContent: 'center', alignItems: 'center', paddingLeft: 8, flexShrink: 0,},
 });

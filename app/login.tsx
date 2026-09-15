@@ -293,7 +293,9 @@ export default function Login({ navigation, route }: Props) {
               />
 
               <TouchableOpacity
-                 onPress={() => setShowPassword(!showPassword)}
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Icon
                   name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -452,7 +454,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: "bold", color: "#BEAF87", marginBottom: 5 },
   subtitle: { fontSize: 16, color: "#252526", marginBottom: 25 },
   inputContainer: { flexDirection: "row", alignItems: "center", width: "90%", borderWidth: 1, borderColor: "#BEAF87", backgroundColor: "#252526", borderRadius: 8, paddingHorizontal: 10, marginBottom: 10 },
-  input: { flex: 1, color: "#fff", height: 48, fontSize: 16 },
+  input: { flex: 1, color: "#fff", height: 48, fontSize: 16, minWidth: 0 },
   inputError: { borderColor: "red" },
   errorText: { color: "red", alignSelf: "flex-start", marginLeft: "5%", marginBottom: 5 },
   button: { backgroundColor: "#BEAF87", padding: 15, borderRadius: 8, width: "90%", marginTop: 10, justifyContent: "center", alignItems: "center" },
@@ -465,4 +467,5 @@ const styles = StyleSheet.create({
   modalMessage: { fontSize: 16, textAlign: "center", marginBottom: 20, color: "#252526" },
   modalButton: { backgroundColor: "#BEAF87", paddingVertical: 10, paddingHorizontal: 25, borderRadius: 8 },
   modalButtonText: { color: "#252526", fontSize: 16, fontWeight: "bold" },
+  eyeButton: { height: 48, justifyContent: 'center', alignItems: 'center', paddingLeft: 8, flexShrink: 0, },
 });
