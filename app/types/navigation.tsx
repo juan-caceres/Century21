@@ -1,4 +1,5 @@
 export type RootStackParamList = {
+  CambiarClaveAcceso: undefined;
   AccessScreen: undefined;
   Login: undefined;
   Home: undefined;
