@@ -146,20 +146,6 @@ export default function Sala({ navigation, route }: Props) {
     }
   };
 
-  const obtenerRolUsuario = async (): Promise<string | null> => {
-    try {
-      const usuarioId = auth.currentUser?.uid;
-      if (!usuarioId) return null;
-
-      const userDoc = await getDoc(doc(db, "users", usuarioId));
-      const userData = userDoc.data();
-      return userData?.role || null;
-    } catch (error) {
-      console.log("Error al obtener rol:", error);
-      return null;
-    }
-  };
-
   const fetchSalaInfo = async () => {
     try {
       const docRef = doc(db, "salas", numero);

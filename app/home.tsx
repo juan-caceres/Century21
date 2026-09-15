@@ -20,9 +20,6 @@ type Props = { navigation: HomeScreenNavigationProp };
 export default function Home({ navigation }: Props) {
   const { role } = useAuth(); 
   const {user} = useAuth();
-  console.log("Role actual:", role);
-  console.log("Tipo de role:", typeof role);
-  console.log("Es superuser?", role === "superuser");
  
   const [salas, setSalas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
