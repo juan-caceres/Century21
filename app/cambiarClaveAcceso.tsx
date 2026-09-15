@@ -12,13 +12,46 @@ type Props = {
 
 export default function CambiarClaveAcceso({ navigation }: Props) {
   const [nuevaClave, setNuevaClave] = useState("");
+  const [confirmarClave, setConfirmarClave] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // Estado para el "ojito"
-  const [successModalVisible, setSuccessModalVisible] = useState(false); // Estado para la ventana de éxito
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Estados para los modales
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  
+  // Estado genérico y reutilizable para el modal de avisos (Éxito / Errores de validación)
+  const [modalConfig, setModalConfig] = useState<{
+    visible: boolean;
+    type: "success" | "error";
+    title: string;
+    message: string;
+    onCloseAction?: () => void;
+  }>({
+    visible: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
 
   const handleActualizarClave = async () => {
-    if (!nuevaClave.trim()) {
-      alert("Por favor ingresa una clave válida.");
+    if (!nuevaClave.trim() || !confirmarClave.trim()) {
+      setModalConfig({
+        visible: true,
+        type: "error",
+        title: "Campos incompletos",
+        message: "Por favor completa ambos campos para continuar.",
+      });
+      return;
+    }
+
+    if (nuevaClave !== confirmarClave) {
+      setModalConfig({
+        visible: true,
+        type: "error",
+        title: "Las claves no coinciden",
+        message: "Por favor verifica que ambas claves sean iguales.",
+      });
       return;
     }
 
@@ -31,35 +64,58 @@ export default function CambiarClaveAcceso({ navigation }: Props) {
         accesoID: nuevaClave.trim()
       });
 
-      // Mostramos la ventana de éxito en lugar de un alert nativo
-      setSuccessModalVisible(true);
+      // Mostrar modal reutilizable de éxito
+      setModalConfig({
+        visible: true,
+        type: "success",
+        title: "¡Éxito!",
+        message: "La clave de acceso ha sido actualizada correctamente.",
+        onCloseAction: () => navigation.goBack(),
+      });
     } catch (error) {
       console.error("Error al actualizar la clave:", error);
-      alert("No tienes permisos o ocurrió un error al actualizar la clave.");
+      setModalConfig({
+        visible: true,
+        type: "error",
+        title: "Error",
+        message: "No tienes permisos o ocurrió un error al actualizar la clave.",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCloseSuccess = () => {
-    setSuccessModalVisible(false);
-    navigation.goBack();
+  const handleCancelarPress = () => {
+    if (nuevaClave.trim().length > 0 || confirmarClave.trim().length > 0) {
+      setCancelModalVisible(true);
+    } else {
+      navigation.goBack();
+    }
+  };
+
+  const handleCloseModal = () => {
+    const action = modalConfig.onCloseAction;
+    setModalConfig((prev) => ({ ...prev, visible: false }));
+    if (action) {
+      action();
+    }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Cambiar Clave de Acceso</Text>
+      
+      <Text style={styles.title}>Cambiar Clave de Acceso <Ionicons name="key"size={20} color="#BEAF87" /></Text>
       <Text style={styles.subtitle}>
-        Introduce la nueva clave que se requerirá para ingresar a la aplicación web.
+        Introduce la nueva clave dos veces para confirmar el cambio.
       </Text>
 
-      {/* Contenedor del Input con el ícono del "ojito" */}
+      {/* Primer campo: Nueva clave */}
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           placeholder="Nueva clave de acceso"
           placeholderTextColor="#777"
-          secureTextEntry={!showPassword} // Cambia según el estado del ojito
+          secureTextEntry={!showPassword}
           value={nuevaClave}
           onChangeText={setNuevaClave}
         />
@@ -69,6 +125,28 @@ export default function CambiarClaveAcceso({ navigation }: Props) {
         >
           <Ionicons 
             name={showPassword ? "eye-off" : "eye"} 
+            size={22} 
+            color="#BEAF87" 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Segundo campo: Confirmar clave */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Confirmar nueva clave"
+          placeholderTextColor="#777"
+          secureTextEntry={!showConfirmPassword}
+          value={confirmarClave}
+          onChangeText={setConfirmarClave}
+        />
+        <TouchableOpacity 
+          style={styles.eyeIcon} 
+          onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+        >
+          <Ionicons 
+            name={showConfirmPassword ? "eye-off" : "eye"} 
             size={22} 
             color="#BEAF87" 
           />
@@ -89,27 +167,67 @@ export default function CambiarClaveAcceso({ navigation }: Props) {
 
       <TouchableOpacity 
         style={styles.cancelButton} 
-        onPress={() => navigation.goBack()}
+        onPress={handleCancelarPress}
       >
         <Text style={styles.cancelText}>Cancelar</Text>
       </TouchableOpacity>
 
-      {/* Ventana Modal de Éxito */}
+      {/* Ventana Modal Reutilizable (Éxito / Errores de validación) */}
       <Modal
         animationType="fade"
         transparent={true}
-        visible={successModalVisible}
-        onRequestClose={handleCloseSuccess}
+        visible={modalConfig.visible}
+        onRequestClose={handleCloseModal}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Ionicons name="checkmark-circle" size={60} color="#BEAF87" style={{ marginBottom: 15 }} />
-            <Text style={styles.modalTitle}>¡Éxito!</Text>
-            <Text style={styles.modalText}>La clave de acceso ha sido actualizada correctamente.</Text>
+            <Ionicons 
+              name={modalConfig.type === "success" ? "checkmark-circle" : "alert-circle"} 
+              size={60} 
+              color="#f78686" 
+              style={{ marginBottom: 15 }} 
+            />
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalText}>{modalConfig.message}</Text>
             
-            <TouchableOpacity style={styles.modalButton} onPress={handleCloseSuccess}>
+            <TouchableOpacity style={styles.modalButton} onPress={handleCloseModal}>
               <Text style={styles.modalButtonText}>Aceptar</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Ventana Modal de Advertencia al Cancelar */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={cancelModalVisible}
+        onRequestClose={() => setCancelModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Ionicons name="alert-circle" size={60} color="#BEAF87" style={{ marginBottom: 15 }} />
+            <Text style={styles.modalTitle}>¿Estás seguro?</Text>
+            <Text style={styles.modalText}>Tienes datos escritos que se perderán si sales.</Text>
+            
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity 
+                style={[styles.modalButtonHalf, { backgroundColor: "#444" }]} 
+                onPress={() => setCancelModalVisible(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: "#fff" }]}>Continuar editando</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalButtonHalf, { backgroundColor: "#BEAF87" }]} 
+                onPress={() => {
+                  setCancelModalVisible(false);
+                  navigation.goBack();
+                }}
+              >
+                <Text style={styles.modalButtonText}>Salir</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -128,7 +246,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, 
     borderColor: "#BEAF87", 
     borderRadius: 8, 
-    marginBottom: 20, 
+    marginBottom: 15, 
     backgroundColor: "#fff" 
   },
   input: { 
@@ -141,12 +259,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15 
   },
 
-  button: { backgroundColor: "#BEAF87", padding: 15, borderRadius: 8, alignItems: "center", marginBottom: 10 },
+  button: { backgroundColor: "#BEAF87", padding: 15, borderRadius: 8, alignItems: "center", marginBottom: 10, marginTop: 5 },
   buttonText: { color: "#000", fontWeight: "bold", fontSize: 16 },
   cancelButton: { padding: 15, alignItems: "center" },
   cancelText: { color: "#777", fontSize: 16 },
 
-  // Estilos del Modal de éxito
+  // Estilos de los Modales
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -173,7 +291,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     color: "#BEAF87",
-    marginBottom: 10
+    marginBottom: 10,
+    textAlign: "center"
   },
   modalText: {
     fontSize: 15,
@@ -192,6 +311,20 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: "#000",
     fontWeight: "bold",
-    fontSize: 16
+    fontSize: 15,
+    textAlign: "center"
+  },
+  modalButtonsRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%"
+  },
+  modalButtonHalf: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center"
   }
 });
