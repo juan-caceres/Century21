@@ -14,6 +14,7 @@ import { useAuth } from "./context/authContext";
 
 
 
+
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, "Home">;
 type Props = { navigation: HomeScreenNavigationProp };
 
@@ -113,6 +114,7 @@ export default function Home({ navigation }: Props) {
           </TouchableOpacity>
         )}
 
+        {/*BOTON PARA GESTIONAR USUARIOS*/}
         {role === "superuser" && (
           <TouchableOpacity
             style={styles.adminButton}
@@ -122,12 +124,23 @@ export default function Home({ navigation }: Props) {
           </TouchableOpacity>
         )}
 
+        {/*BOTON PARA GESTIONAR SALAS*/}
         {(role === "admin" || role === "superuser") && (
           <TouchableOpacity
             style={styles.adminButton}
             onPress={() => navigation.navigate("GestionSalas")}
           >
             <Text style={styles.adminButtonText}>Gestionar Salas</Text>
+          </TouchableOpacity>
+        )}
+
+        {/*BOTON PARA CAMBIAR CLAVE DE ACCESO*/}
+        {(role === "admin" || role === "superuser") && (
+          <TouchableOpacity
+            style={styles.adminButton}
+            onPress={() => navigation.navigate("CambiarClaveAcceso")}
+          >
+            <Text style={styles.adminButtonText}>Cambiar Clave de Acceso</Text>
           </TouchableOpacity>
         )}
       </View>
