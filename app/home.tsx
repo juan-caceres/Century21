@@ -1,5 +1,5 @@
 //app/home.tsx
-import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, Dimensions, Button, ActivityIndicator } from "react-native";
+import { View, StyleSheet, Text, FlatList, TouchableOpacity, Image, Dimensions, ActivityIndicator } from "react-native";
 import { useFonts } from "expo-font";
 import React, { useEffect, useState } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -11,6 +11,7 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { registerForPushNotificationsAsync } from "./servicios/notifications";
 import { RootStackParamList } from "../app/types/navigation";
 import { useAuth } from "./context/authContext";
+
 
 
 
@@ -75,17 +76,6 @@ export default function Home({ navigation }: Props) {
     );
   }
 
-  // Funcion para enviar notificacion local
-  const sendNotification = async () => {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "Notificacion desde home",
-        body: "Esta es una notificacion de prueba",
-      },
-      trigger: null, // null se dispara inmediatamente
-    });
-  };
-
   const getRoleText = () => {
     if (role === "admin") return "Admin";
     if (role === "superuser") return "Superusuario";
@@ -113,6 +103,7 @@ export default function Home({ navigation }: Props) {
           </TouchableOpacity>
         )}
 
+        {/*BOTON PARA GESTIONAR USUARIOS*/}
         {role === "superuser" && (
           <TouchableOpacity
             style={styles.adminButton}
@@ -122,12 +113,23 @@ export default function Home({ navigation }: Props) {
           </TouchableOpacity>
         )}
 
+        {/*BOTON PARA GESTIONAR SALAS*/}
         {(role === "admin" || role === "superuser") && (
           <TouchableOpacity
             style={styles.adminButton}
             onPress={() => navigation.navigate("GestionSalas")}
           >
             <Text style={styles.adminButtonText}>Gestionar Salas</Text>
+          </TouchableOpacity>
+        )}
+
+        {/*BOTON PARA CAMBIAR CLAVE DE ACCESO*/}
+        {(role === "admin" || role === "superuser") && (
+          <TouchableOpacity
+            style={styles.adminButton}
+            onPress={() => navigation.navigate("CambiarClaveAcceso")}
+          >
+            <Text style={styles.adminButtonText}>Cambiar Clave de Acceso</Text>
           </TouchableOpacity>
         )}
       </View>

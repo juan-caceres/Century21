@@ -6,7 +6,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../app/types/navigation";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../firebase";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import Icon from "@expo/vector-icons/MaterialCommunityIcons";
 
 type OlvidePasswordScreenNavigationProp = StackNavigationProp<RootStackParamList, "OlvidePassword">;
 type Props = { navigation: OlvidePasswordScreenNavigationProp };
