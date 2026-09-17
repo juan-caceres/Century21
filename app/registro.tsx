@@ -2,14 +2,13 @@
 import React, { useState, useRef } from "react";
 import { View, Text, TextInput ,TouchableOpacity, StyleSheet, Image, ActivityIndicator,KeyboardAvoidingView,ScrollView, Platform , Alert } from "react-native";
 import { useFonts } from "expo-font";
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../app/types/navigation";
 import Icon from "@expo/vector-icons/MaterialCommunityIcons";
 import { registerForPushNotificationsAsync } from "./servicios/notifications";
-import { signOut } from 'firebase/auth';
 import { useAuth } from '../app/context/authContext';
 
 type RegistroScreenNavigationProp = StackNavigationProp<RootStackParamList, "Registro">;
@@ -17,7 +16,6 @@ type Props = { navigation: RegistroScreenNavigationProp };
 
 export default function Registro({ navigation }: Props) {
   
-  const { setUser } = useAuth();
   // Estados para inputs
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");

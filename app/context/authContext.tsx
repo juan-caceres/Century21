@@ -109,19 +109,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setRole(null);
               setBlockNavigation(true);
 
-              setTimeout(async () => {
-                try {
-                  await signOut(auth);
-                } catch (err) {
-                  console.error("❌ Error cerrando sesión:", err);
-                }
-              }, 100);
-
               if (estadoUsuario === "pendiente") {
                 setShowPendingModal(true);
               } else {
                 setShowRejectedModal(true);
               }
+
+              // No lo desconectamos: en vez de eso, escuchamos su documento en
+              // tiempo real. Así, si un admin lo aprueba mientras sigue en esta
+              // pantalla, se destraba automáticamente sin necesidad de F5.
+              unsubscribeFirestore = onSnapshot(
+                userDocRef,
+                async (docSnapshot) => {
+                  if (!docSnapshot.exists()) {
+                    console.log("❌ USUARIO ELIMINADO COMPLETAMENTE - Cerrando sesión...");
+                    setShowPendingModal(false);
+                    setShowRejectedModal(false);
+                    setShowDeletedModal(true);
+                    try {
+                      await signOut(auth);
+                    } catch (err) {
+                      console.error("❌ Error cerrando sesión:", err);
+                    }
+                    return;
+                  }
+
+                  const updatedData = docSnapshot.data();
+                  const isNowEliminado = updatedData.eliminado ?? false;
+                  const estadoActual = updatedData.estado ?? "aprobado";
+
+                  if (isNowEliminado) {
+                    setBlockNavigation(true);
+                    setShowPendingModal(false);
+                    setShowRejectedModal(false);
+                    setShowDeactivatedModal(true);
+                    try {
+                      await signOut(auth);
+                    } catch (err) {
+                      console.error("❌ Error cerrando sesión:", err);
+                    }
+                    return;
+                  }
+
+                  if (estadoActual === "pendiente") {
+                    setShowPendingModal(true);
+                    setShowRejectedModal(false);
+                    return;
+                  }
+
+                  if (estadoActual === "rechazado") {
+                    setShowRejectedModal(true);
+                    setShowPendingModal(false);
+                    return;
+                  }
+
+                  // estadoActual === "aprobado": lo aprobaron en tiempo real
+                  console.log("✅ Cuenta aprobada en tiempo real - Desbloqueando acceso...");
+                  const nuevoRol = updatedData.role?.toLowerCase()?.trim() ?? "user";
+                  setShowPendingModal(false);
+                  setShowRejectedModal(false);
+                  setRole(nuevoRol);
+                  setBlockNavigation(false);
+
+                  if (sessionPending) {
+                    setShowSessionModal(true);
+                  }
+                },
+                (error) => {
+                  console.error("Error en listener de Firestore (pendiente/rechazado):", error);
+                }
+              );
 
               setLoadingAuth(false);
               return;

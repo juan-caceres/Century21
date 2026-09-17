@@ -20,6 +20,7 @@ import { AuthProvider, useAuth } from "./app/context/authContext";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AccessScreen from './app/pantallaAcceso';
 import UsuariosNuevos from "./app/usuariosNuevos";
+import CambiarClaveAcceso from "./app/cambiarClaveAcceso";
 import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
 
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -216,6 +217,7 @@ function AppContent() {
               <Stack.Screen name="Usuarios" component={Usuarios} />
               <Stack.Screen name="UsuariosNuevos" component={UsuariosNuevos} />
               <Stack.Screen name="Sala" component={Sala} options={{ animation: 'scale_from_center' }} />
+              <Stack.Screen name="CambiarClaveAcceso" component={CambiarClaveAcceso} options={{title: "Cambiar Clave de Acceso"}} />
             </>
           )}
         </Stack.Navigator>

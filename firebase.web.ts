@@ -3,6 +3,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { firebaseConfig } from "./firebase.config";
+import { getStorage } from "firebase/storage";
 
 const appFirebase = getApps().length === 0
   ? initializeApp(firebaseConfig)
@@ -17,4 +18,5 @@ setPersistence(auth, browserLocalPersistence).catch((err) => {
 });
 
 export const db = getFirestore(appFirebase);
+export const storage = getStorage(appFirebase);
 export default appFirebase;

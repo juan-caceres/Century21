@@ -1,18 +1,17 @@
 // app/sala.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Modal, TextInput, FlatList, TouchableWithoutFeedback, KeyboardAvoidingView, ActivityIndicator, Alert, Keyboard, Pressable, Image, StyleSheet, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, Modal, TextInput, FlatList, TouchableWithoutFeedback, KeyboardAvoidingView, ActivityIndicator, Alert, Keyboard, Pressable, Image, StyleSheet, ScrollView, Dimensions, Platform } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
 import Calendario from "./componentes/calendario";
 import { auth, db } from "../firebase";
 import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc, updateDoc, getDoc, orderBy, onSnapshot } from "firebase/firestore";
-import { Dimensions, Platform } from "react-native";
 import TimePicker from "./componentes/TimePicker";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Notifications from "expo-notifications";
 import { RootStackParamList } from "../app/types/navigation";
-import { notifyReservaCreated, notifyReservaEdited, notifyReservaDeleted } from "./servicios/notificationService";
+import { notifyReservaEdited, notifyReservaDeleted } from "./servicios/notificationService";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useAuth } from "./context/authContext";
 import { calcularFechaFin, generarOcurrenciasDeGrupos } from "./utils/recurrencia";
