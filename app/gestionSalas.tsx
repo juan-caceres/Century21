@@ -1,16 +1,20 @@
 //app/gestionSalas.tsx
-import { db } from "../firebase";
-import React, {useEffect,useState} from "react";
-import { View, Text, TextInput,Dimensions ,TouchableOpacity, FlatList, StyleSheet, Alert, KeyboardAvoidingView, Platform, Modal, ScrollView, Keyboard } from "react-native";
+import { db, storage} from "../firebase.web";
+import React, {useEffect,useState, useRef} from "react";
+import { View, Text, TextInput,Dimensions ,TouchableOpacity, FlatList, StyleSheet, Alert, KeyboardAvoidingView, Platform, Modal, ScrollView, Keyboard, Image, ActivityIndicator } from "react-native";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from '@react-navigation/stack';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Ionicons } from "@expo/vector-icons";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import * as ImagePicker from "expo-image-picker";
 
 type RootStackParamList = {
     Home: undefined;
 };
+
+type PosicionImagen = 'banner' | 'fondo' | 'pie';
 
 export default function GestionSalas(){
 
@@ -21,10 +25,17 @@ export default function GestionSalas(){
     const [tv, setTv] = useState(false);
     const [editId, setEditId] = useState<string | null>(null);
     
+    //Estados de Imagen
+    const [imagenUrl, setImagenUrl] = useState<string | null>(null);
+    const [posicionImagen, setPosicionImagen] = useState<PosicionImagen>('banner');
+    const [uploading, setUploading] = useState(false);
+
     // Estados originales para comparar
     const [nombreOriginal, setNombreOriginal] = useState("");
     const [capacidadOriginal, setCapacidadOriginal] = useState("");
     const [tvOriginal, setTvOriginal] = useState(false);
+    const [imagenUrlOriginal, setImagenUrlOriginal] = useState<string | null>(null);
+    const [posicionOriginal, setPosicionOriginal] = useState<PosicionImagen>('banner');
     
     const [modalVisible, setModalVisible] = useState(false);
     const [modalType, setModalType] = useState<'edit' | 'delete' | 'cancelEdit' | null>(null);
@@ -49,6 +60,64 @@ export default function GestionSalas(){
         return unsubscribe;
     },[]);
 
+    // 1. Selector de imágenes desde el dispositivo / PC
+    const seleccionarImagen = async () => {
+        if (Platform.OS !== 'web') {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                showMessage("Se requieren permisos para acceder a las fotos.", "error");
+                return;
+            }
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [16, 9],
+            quality: 0.6,
+        });
+
+        if (!result.canceled && result.assets[0].uri) {
+            await subirAFirebaseStorage(result.assets[0].uri);
+        }
+    };
+
+    // 2. Subida universal a Firebase Storage
+    const subirAFirebaseStorage = async (fileUri: string) => {
+    setUploading(true);
+    try {
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        
+        // Convertimos el blob a un buffer de bytes para saltar la restricción CORS de fetch directo en web
+        const arrayBuffer = await new Response(blob).arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+
+        const filename = `sala_${Date.now()}.jpg`;
+        const storageRef = ref(storage, `salas/${filename}`);
+
+        // Subimos los bytes directamente
+        await uploadBytes(storageRef, bytes, { contentType: 'image/jpeg' });
+        
+        const downloadURL = await getDownloadURL(storageRef);
+
+        setImagenUrl(downloadURL);
+        showMessage("Imagen cargada con éxito.", "success");
+
+    } catch (error: any) {
+        console.error("Error al subir a Firebase Storage:", error);
+        showMessage("Error al subir la imagen.", "error");
+    } finally {
+        setUploading(false);
+    }
+    };
+
+    // 3. Quitar la imagen personalizada
+    const eliminarImagen = () => {
+        setImagenUrl(null);
+        showMessage("Imagen removida. Se usará el logo por defecto.", "success");
+    }
+
     // Agregar sala
     const agregarSala = async () => {
         if (!nombre || !capacidad) {
@@ -60,6 +129,8 @@ export default function GestionSalas(){
                 nombre,
                 capacidad: parseInt(capacidad),
                 tv,
+                imagenUrl: imagenUrl || null,
+                posicionImagen: posicionImagen || 'banner',
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             });
@@ -84,7 +155,9 @@ export default function GestionSalas(){
         const hayCambios = 
             nombre !== nombreOriginal || 
             capacidad !== capacidadOriginal || 
-            tv !== tvOriginal;
+            tv !== tvOriginal ||
+            imagenUrl !== imagenUrlOriginal ||
+            posicionImagen !== posicionOriginal;
         
         if (!hayCambios) {
             showMessage("❌ No se realizaron cambios en la sala", "error");
@@ -105,6 +178,8 @@ export default function GestionSalas(){
                 nombre,
                 capacidad: parseInt(capacidad),
                 tv,
+                imagenUrl: imagenUrl || null,
+                posicionImagen: posicionImagen || 'banner',
                 updatedAt: serverTimestamp(),
             });
             showMessage("Sala editada correctamente.", "success");
@@ -116,6 +191,8 @@ export default function GestionSalas(){
             setNombreOriginal("");
             setCapacidadOriginal("");
             setTvOriginal(false);
+            setImagenUrlOriginal(null);
+            setPosicionOriginal('banner');
             setModalVisible(false);
         } catch (error) {
             showMessage("No se pudo editar la sala.", "error");
@@ -154,10 +231,27 @@ export default function GestionSalas(){
         setNombre(sala.nombre);
         setCapacidad(sala.capacidad.toString());
         setTv(sala.tv);
+        setImagenUrl(sala.imagenUrl || null);
+        setPosicionImagen(sala.posicionImagen || 'banner');
         // Guardar valores originales
         setNombreOriginal(sala.nombre);
         setCapacidadOriginal(sala.capacidad.toString());
         setTvOriginal(sala.tv);
+        setImagenUrlOriginal(sala.imagenUrl || null);
+        setPosicionOriginal(sala.posicionImagen || 'banner');
+        setTimeout(() => {
+        // 1. Intenta scroll a través de la referencia del ScrollView de React Native
+        if (scrollViewRef.current) {
+            scrollViewRef.current.scrollTo({ y: 0, animated: true });
+        }
+        
+        // 2. Si es navegador (PC o Celular), fuerza también el scroll del DOM
+        if (Platform.OS === 'web') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        }
+    }, 100);    
     };
 
     // Función para manejar el intento de cancelar
@@ -166,7 +260,9 @@ export default function GestionSalas(){
         const hayCambios = 
             nombre !== nombreOriginal || 
             capacidad !== capacidadOriginal || 
-            tv !== tvOriginal;
+            tv !== tvOriginal ||
+            imagenUrl !== imagenUrlOriginal ||
+            posicionImagen !== posicionOriginal;
         
         if (hayCambios) {
             // Si hay cambios, mostrar modal de confirmación
@@ -196,11 +292,17 @@ export default function GestionSalas(){
         setNombre("");
         setCapacidad("");
         setTv(false);
+        setImagenUrl(null);
+        setPosicionImagen('banner');
         // Limpiar valores originales
         setNombreOriginal("");
         setCapacidadOriginal("");
         setTvOriginal(false);
+        setImagenUrlOriginal(null);
+        setPosicionOriginal('banner');
     };
+
+    const scrollViewRef = useRef<ScrollView>(null);
 
     return (             
         <KeyboardAvoidingView
@@ -209,6 +311,7 @@ export default function GestionSalas(){
             keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
 
             <ScrollView 
+                ref={scrollViewRef}
                 style={{ flex: 1 }}
                 contentContainerStyle={{ flexGrow: 1 }}
                 keyboardShouldPersistTaps="handled"
@@ -267,6 +370,32 @@ export default function GestionSalas(){
                 <Text style={styles.tvText}>{tv ? "Con TV 📺" : "Sin TV ❌"}</Text>
             </TouchableOpacity>
 
+            <View style={styles.imageSection}>
+                <Text style={styles.imageLabel}>Imagen de la Sala:</Text>
+                <View style={styles.imagePreviewContainer}>
+                    <Image 
+                        source={imagenUrl ? { uri: imagenUrl } : require("../assets/LogoGrey.png")} 
+                        style={styles.previewImage}
+                        resizeMode="cover"
+                    />
+                    {uploading && (
+                        <View style={styles.loadingOverlay}>
+                            <ActivityIndicator size="large" color="#BEAF87" />
+                        </View>
+                    )}
+                </View>
+                <View style={styles.imageActionsRow}>
+                    <TouchableOpacity style={styles.imageBtn} onPress={seleccionarImagen} disabled={uploading}>
+                        <Text style={styles.imageBtnText}>📷 {imagenUrl ? "Cambiar Imagen" : "Cargar Imagen"}</Text>
+                    </TouchableOpacity>
+                    {imagenUrl && (
+                        <TouchableOpacity style={[styles.imageBtn, styles.deleteImgBtn]} onPress={eliminarImagen} disabled={uploading}>
+                            <Text style={styles.deleteImgBtnText}>🗑️ Usar Logo Default</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </View>
+
             <View style={styles.buttonRow}>
                 <TouchableOpacity
                     style={styles.addButton}
@@ -294,6 +423,11 @@ export default function GestionSalas(){
             {salas.map((item, index) => (
                 <View key={item.id || index.toString()} 
                 style={styles.salaItem}>
+                    <Image 
+                            source={item.imagenUrl ? { uri: item.imagenUrl } : require("../assets/LogoGrey.png")} 
+                            style={styles.itemListThumb} 
+                            resizeMode="cover" 
+                        />
                         <View style={styles.salaInfo}>
                             <Text style={styles.salaText}>{item.nombre}</Text>
                             <Text style={styles.salaSubtext}>
@@ -377,30 +511,33 @@ export default function GestionSalas(){
                         {/* Modal de confirmación de cancelación */}
                         {modalType === 'cancelEdit' && (
                             <>
-                                <View style={styles.iconContainer}>
-                                    <Ionicons name="warning" size={48} color="#ff9800" />
-                                </View>
-                                <Text style={styles.modalTitle}>¿Cancelar edición?</Text>
-                                <Text style={styles.modalMessage}>
-                                    Si cancelas ahora, <Text style={{ fontWeight: 'bold', color: '#ff9800' }}>se perderán los cambios</Text> que realizaste en la sala.
-                                </Text>
-                                <Text style={styles.modalMessage}>
-                                    ¿Estás seguro de que deseas cancelar?
-                                </Text>
-                                <View style={styles.modalButtons}>
-                                    <TouchableOpacity
-                                        style={[styles.modalButton, styles.deleteModalButton]}
-                                        onPress={confirmarCancelacion}
-                                    >
-                                        <Text style={styles.modalButtonText}>Sí, cancelar</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.modalButton, styles.confirmButton]}
-                                        onPress={rechazarCancelacion}
-                                    >
-                                        <Text style={styles.modalButtonText}>No, continuar editando</Text>
-                                    </TouchableOpacity>
-                                </View>
+                               <View style={styles.iconContainer}>
+            <Ionicons name="warning" size={48} color="#BEAF87" />
+        </View>
+        <Text style={styles.modalTitle}>¿Cancelar edición?</Text>
+        <Text style={styles.modalMessage}>
+            Si cancelas ahora, <Text style={{ fontWeight: 'bold', color: '#BEAF87' }}>se perderán los cambios</Text> que realizaste en la sala.
+        </Text>
+        <Text style={[styles.modalMessage, { marginBottom: 20 }]}>
+            ¿Estás seguro de que deseas cancelar?
+        </Text>
+        
+        {/* Usamos el mismo contenedor y clases de botones de Confirmar Edición */}
+        <View style={styles.modalButtons}>
+            <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={confirmarCancelacion}
+            >
+                <Text style={styles.modalButtonText}>Sí, cancelar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                style={[styles.modalButton, styles.cancelModalButton]}
+                onPress={rechazarCancelacion}
+            >
+                <Text style={styles.cancelModalText}>Continuar editando</Text>
+            </TouchableOpacity>
+        </View>
                             </>
                         )}
                     </View>
@@ -424,13 +561,36 @@ const styles = StyleSheet.create({
     tvButton: { padding: 10, borderRadius: 8, backgroundColor: "#333", marginBottom: 10, alignItems: "center", },
     tvButtonActive: { backgroundColor: "#BEAF87" },
     tvText: { color: "#fff", fontWeight: "600" },
+
+    // UI de Imágenes y Posicionamiento
+    imageSection: { marginBottom: 15, padding: 12, backgroundColor: "#252526", borderRadius: 8, borderWidth: 1, borderColor: "#333" },
+    imageLabel: { color: "#BEAF87", fontWeight: "bold", marginBottom: 8 },
+    imagePreviewContainer: { width: "100%", height: 140, borderRadius: 6, overflow: "hidden", backgroundColor: "#1c1c1c", justifyContent: "center", alignItems: "center" },
+    previewImage: { width: "100%", height: "100%" },
+    loadingOverlay: { position: "absolute", backgroundColor: "rgba(0,0,0,0.6)", width: "100%", height: "100%", justifyContent: "center", alignItems: "center" },
+    imageActionsRow: { flexDirection: "row", gap: 10, marginTop: 10 },
+    imageBtn: { flex: 1, backgroundColor: "#333", padding: 10, borderRadius: 6, alignItems: "center", borderWidth: 1, borderColor: "#BEAF87" },
+    imageBtnText: { color: "#BEAF87", fontSize: 13, fontWeight: "600" },
+    deleteImgBtn: { borderColor: "#ff6961" },
+    deleteImgBtnText: { color: "#ff6961", fontSize: 13, fontWeight: "600" },
+
+    positionSelectorContainer: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#333" },
+    positionLabel: { color: "#aaa", fontSize: 13, marginBottom: 8 },
+    positionButtonsRow: { flexDirection: "row", gap: 8 },
+    posBtn: { flex: 1, paddingVertical: 8, borderRadius: 6, backgroundColor: "#1c1c1c", borderWidth: 1, borderColor: "#555", alignItems: "center" },
+    posBtnActive: { backgroundColor: "#BEAF87", borderColor: "#BEAF87" },
+    posBtnText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
+    posBtnTextActive: { color: "#000" },
+
     buttonRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
     addButton: { flex: 1, backgroundColor: "#BEAF87", padding: 12, borderRadius: 8, alignItems: "center" },
     addButtonText: { color: "#000000ff", fontWeight: "bold" },
     cancelButton: { flex: 1, backgroundColor: "transparent", padding: 12, borderRadius: 8, alignItems: "center", borderWidth: 1, borderColor: "#d4af37" },
     cancelButtonText: { color: "#BEAF87", fontWeight: "bold" },
     salaItem: { backgroundColor: "#1a1a1a", padding: 12, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: "#333", },
-    salaInfo: { marginBottom: 10 },
+    salaItemContent: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 },
+    itemListThumb: { width: 50, height: 50, borderRadius: 6, backgroundColor: "#333" },
+    salaInfo: { flex: 1 },
     placeholder: { width: 80, },
     backButton: { backgroundColor: "#BEAF87", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, },
     backButtonText: { color: "#ffffffff", fontWeight: "bold", fontSize: 14, },

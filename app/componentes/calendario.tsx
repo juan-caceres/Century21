@@ -347,7 +347,7 @@ const obtenerReservasDelDia = (fecha: Date) => {
 }
 
 const styles = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: '#ffffff', width: '100%' },
+  contenedor: { flex: 1, backgroundColor: 'transparent', width: '100%', },
   headerNavegacion: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: isSmallDevice ? 6 : isMediumDevice ? 8 : 10, paddingVertical: isSmallDevice ? 6 : 8, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#e0e0e0', },
   botonNavegacion: { backgroundColor: '#BEAF87', borderRadius: 20, alignItems: 'center', justifyContent: 'center', },
   textoNavegacion: { color: '#ffffff', fontWeight: 'bold', },
