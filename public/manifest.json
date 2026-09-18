@@ -2,10 +2,11 @@
   "short_name": "C21 Salas",
   "name": "C21 Salas - Reservas",
   "icons": [
-    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192" },
-    { "src": "icon-512.png", "type": "image/png", "sizes": "400x400" }
+    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any maskable" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
   ],
   "start_url": ".",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#BEAF87",
