@@ -60,7 +60,7 @@ export default function OlvidePassword({ navigation }: Props) {
         keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
       >
         <View style={styles.container}>
-          <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
+          <Image source={require("../assets/LogoBlack.png")} style={styles.logo} resizeMode="contain" />
           <Text style={[styles.title, styles.fontTypold]}>Recuperar Contraseña</Text>
           <Text style={[styles.subtitle, styles.fontTypold]}>Ingresa tu correo para recibir el enlace</Text>
 

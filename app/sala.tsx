@@ -1,6 +1,6 @@
 // app/sala.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, FlatList, KeyboardAvoidingView, ActivityIndicator, Alert, Keyboard, Pressable, Dimensions, Platform } from "react-native";
+import { View, Text, TouchableOpacity, Modal, TextInput, FlatList, TouchableWithoutFeedback, KeyboardAvoidingView, ActivityIndicator, Alert, Keyboard, Pressable, Image, StyleSheet, ScrollView, Dimensions, Platform } from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
@@ -85,7 +85,6 @@ export default function Sala({ navigation, route }: Props) {
     Typold: require("../assets/Typold-Bold.ttf"),
   });
 
-  // Cargar todas las salas para la navegación
   useEffect(() => {
     const cargarSalas = async () => {
       try {
@@ -130,7 +129,6 @@ export default function Sala({ navigation, route }: Props) {
     return unsubscribe;
   }, [numero]);
 
-  //funcion para obtener username del usuario actual
   const obtenerUsernameActual = async (): Promise<string> => {
     try {
       const usuarioId = auth.currentUser?.uid;
@@ -187,10 +185,8 @@ export default function Sala({ navigation, route }: Props) {
     hoy.setHours(0, 0, 0, 0);
     
     const fechaMinima = toLocalDateString(hoy);
-    
     const reservasRef = collection(db, "reservas");
 
-    // Query que trae TODAS las reservas desde hoy en adelante
     const q = query(
       reservasRef,
       where("sala", "==", numero),
@@ -209,7 +205,6 @@ export default function Sala({ navigation, route }: Props) {
         };
       });
 
-      // Ordenar por fecha y hora
       todasLasReservas.sort((a, b) => {
         if (a.fecha !== b.fecha) {
           return a.fecha.localeCompare(b.fecha);
@@ -241,7 +236,6 @@ export default function Sala({ navigation, route }: Props) {
     });
   };
 
-  // Función para convertir reservas al formato del calendario
   const convertirReservasParaCalendario = () => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -272,7 +266,6 @@ export default function Sala({ navigation, route }: Props) {
     return reservasConvertidas;
   };
 
-  // Chequeo de que no haya reservas a la misma hora
   const existeSolapamientoEnFirestore = async (
     fecha: string,
     sala: string | number,
@@ -312,13 +305,11 @@ export default function Sala({ navigation, route }: Props) {
     });
   };
 
-  //FUNCION PARA MOSTRAR MENSAJE DE EXITO O ERROR 
   const showMessage = (text: string, type: "success" | "error" = "success", duration = 2500) => {
     setFeedbackMessage({ text, type });
     setTimeout(() => setFeedbackMessage(null), duration);
   };
 
-  //FUNCION PARA CREAR O ACTUALIZAR RESERVA
   const handleCreateOrUpdateReserva = async () => {
     if (!horaInicio || !horaFin || !motivo.trim()) {
       showMessage("Completa todos los campos antes de guardar.", "error");
@@ -342,7 +333,6 @@ export default function Sala({ navigation, route }: Props) {
     }
     if (!selectedDay) return;
 
-    // Verificar si el horario ya pasó
     const [anio, mes, dia] = selectedDay.split('-').map(Number);
     const [hora, minuto] = horaInicio.split(':').map(Number);
     const fechaHoraReserva = new Date(anio, mes - 1, dia, hora, minuto);
@@ -369,7 +359,6 @@ export default function Sala({ navigation, route }: Props) {
     try {
       const usuarioEmail = auth.currentUser?.email ?? null;
       const usuarioId = auth.currentUser?.uid ?? null;
-      //obtengo datos para la notificacion
       const userName = await obtenerUsernameActual();
       const salaName = salaInfo?.nombre || numero;
 
@@ -385,81 +374,64 @@ export default function Sala({ navigation, route }: Props) {
         });
         showMessage("Reserva actualizada correctamente.", "success");
 
-        //notificar a admins/superusers de la edicion de la reserva
         try {
           await notifyReservaEdited(userName, salaName, selectedDay, normalizeTime(horaInicio), normalizeTime(horaFin), usuarioId);
-          console.log("✅ Notificación de edición enviada exitosamente");
         } catch (notiError) {
           console.log("Error enviando notificacion de reserva editada:", notiError);
         }
 
       } else {
-  // Solo crear reserva - Firebase Functions automáticamente programa el email
-  await addDoc(collection(db, "reservas"), {
-    sala: numero,
-    fecha: selectedDay,
-    horaInicio: normalizeTime(horaInicio),
-    horaFin: normalizeTime(horaFin),
-    motivo: motivo.trim(),
-    usuarioId,
-    usuarioEmail,
-    creado: serverTimestamp(),
-  });
-  
-  showMessage("Reserva creada correctamente.", "success");
-  
-  // Programar notificación local
-  try {
-    const [anio, mes, dia] = selectedDay.split('-').map(Number);
-    const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
+        await addDoc(collection(db, "reservas"), {
+          sala: numero,
+          fecha: selectedDay,
+          horaInicio: normalizeTime(horaInicio),
+          horaFin: normalizeTime(horaFin),
+          motivo: motivo.trim(),
+          usuarioId,
+          usuarioEmail,
+          creado: serverTimestamp(),
+        });
+        
+        showMessage("Reserva creada correctamente.", "success");
+        
+        try {
+          const [anio, mes, dia] = selectedDay.split('-').map(Number);
+          const [hora, minuto] = normalizeTime(horaInicio).split(':').map(Number);
 
-    // 🔧 CORRECCIÓN: La hora ingresada es hora local de Argentina
-    // Crear fecha en hora local primero
-    const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
-    
-    // Calcular notificación 1 hora antes (en hora local)
-    const fechaNotificacionLocal = new Date(fechaReservaLocal);
-    fechaNotificacionLocal.setMinutes(fechaNotificacionLocal.getMinutes() - 60);
+          const fechaReservaLocal = new Date(anio, mes - 1, dia, hora, minuto);
+          const fechaNotificacionLocal = new Date(fechaReservaLocal);
+          fechaNotificacionLocal.setMinutes(fechaNotificacionLocal.getMinutes() - 60);
 
-    console.log("Fecha reserva local:", fechaReservaLocal.toString());
-    console.log("Fecha notificación local:", fechaNotificacionLocal.toString());
-    console.log("Ahora:", new Date().toString());
-
-    if (fechaNotificacionLocal > new Date()) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
-          body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
-          sound: true,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-          data: {
-            usuarioEmail,
-            salaNumero: salaInfo?.nombre || numero,
-            motivo: motivo.trim(),
-            horaInicio: normalizeTime(horaInicio),
-            fecha: selectedDay,
-          },
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: fechaNotificacionLocal,
-        } as Notifications.DateTriggerInput,
-      });
-
-      console.log("✅ Notificación local programada para:", fechaNotificacionLocal.toLocaleString());
-    } else {
-      console.log("⚠️ La hora de notificación ya pasó. No se programó.");
-    }
-  } catch (notifErr) {
-    console.log("❌ Error al programar notificación local:", notifErr);
-  }
-}
+          if (fechaNotificacionLocal > new Date()) {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: `Reserva en Sala ${salaInfo?.nombre || numero}`,
+                body: `Tu reserva por "${motivo.trim()}" es a las ${normalizeTime(horaInicio)}.`,
+                sound: true,
+                priority: Notifications.AndroidNotificationPriority.HIGH,
+                data: {
+                  usuarioEmail,
+                  salaNumero: salaInfo?.nombre || numero,
+                  motivo: motivo.trim(),
+                  horaInicio: normalizeTime(horaInicio),
+                  fecha: selectedDay,
+                },
+              },
+              trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DATE,
+                date: fechaNotificacionLocal,
+              } as Notifications.DateTriggerInput,
+            });
+          }
+        } catch (notifErr) {
+          console.log("❌ Error al programar notificación local:", notifErr);
+        }
+      }
 
       setHoraInicio("");
       setHoraFin("");
       setMotivo("");
       setEditingReservaId(null);
-      
       setModalVisible(false);
 
     } catch (err: any) {
@@ -476,11 +448,8 @@ export default function Sala({ navigation, route }: Props) {
       const userName = await obtenerUsernameActual();
       const salaName = salaInfo?.nombre || numero;
       
-      // Cancelar notificación local programada ANTES de eliminar
       try {
         const allScheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-        
-        // Buscar la notificación que corresponde a esta reserva
         const notificationToCancel = allScheduledNotifications.find(notification => {
           const data = notification.content.data;
           if (!data) return false;
@@ -495,20 +464,14 @@ export default function Sala({ navigation, route }: Props) {
 
         if (notificationToCancel) {
           await Notifications.cancelScheduledNotificationAsync(notificationToCancel.identifier);
-          console.log("✅ Notificación local cancelada:", notificationToCancel.identifier);
-        } else {
-          console.log("⚠️ No se encontró notificación local para cancelar");
         }
       } catch (notifErr) {
         console.log("❌ Error al cancelar notificación local:", notifErr);
       }
       
-      // Eliminar la reserva de Firestore
       await deleteDoc(doc(db, "reservas", reserva.id));
-            
       showMessage("Reserva cancelada correctamente.", "success");
 
-      console.log("enviando notificacion de reserva eliminada ...");
       try {
         await notifyReservaDeleted(userName, salaName, reserva.fecha, normalizeTime(reserva.horaInicio), normalizeTime(reserva.horaFin), auth.currentUser?.uid);
       } catch (notiError) {
@@ -577,392 +540,399 @@ export default function Sala({ navigation, route }: Props) {
   const reservasDiaCompleto = [...ocurrenciasGrupoDelDia, ...reservasDia]
     .sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
   
-    if (!fontsLoaded) {
-      return (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <ActivityIndicator size="large" color="#BEAF87" />
-        </View>
-      );
-    }
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#BEAF87" />
+      </View>
+    );
+  }
+
+  const tieneImagen = Boolean(salaInfo?.imagenUrl);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      
-        <KeyboardAvoidingView
-          style={{ flex: 1}}
-          behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
-          keyboardVerticalOffset={0} // Ajustá según tu header probando nueva rama
-        > 
-          <View style={styles.container}>
-            <View style={styles.superiorSalas}>
-              <View style={styles.headerRow}>
-                <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
-                  <Text style={styles.backButtonText}><FontAwesome name="arrow-left" size={15} color="white" /> Inicio</Text>
-                </TouchableOpacity>
-
-                {/* BOTÓN NUEVO AQUÍ */}
-                {(userRole === 'admin' || userRole === 'superuser') && (
-                  <TouchableOpacity style={styles.botonGrupos} onPress={() => setGruposModalVisible(true)}>
-                    <Ionicons name="repeat" size={22} color="#252526" style={{ marginRight: 8 }} />
-                    <Text style={styles.botonGruposTexto}>Reservas Repetitivas</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.content}>
-              <View style={styles.header}>
-                <View style={styles.leftHeader}>
-                  <TouchableOpacity
-                    onPress={() => goToSala('prev')}
-                    style={[styles.navButton, indiceActual <= 0 && styles.disabledButton]}
-                    disabled={indiceActual <= 0}>
-                    <Text style={styles.navButtonText}>◀</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.centerHeader}>
-                  <Text style={styles.headerTitle}>{salaInfo?.nombre ?? "Cargando..."}</Text>
-                  {salaInfo && (
-                    <View style={styles.salaDescripcionContainer}>
-                      <View style={styles.descripcionItem}>
-                        <Ionicons name="people" size={14} color="#252526" style={{ marginRight: 4 }} />
-                        <Text style={styles.salaDescripcion}>
-                          {salaInfo.capacidad ?? "-"} personas
-                        </Text>
-                      </View>
-                      <View style={styles.descripcionItem}>
-                        <Ionicons 
-                          name={salaInfo.tv ? "tv" : "tv-outline"} 
-                          size={14} 
-                          color="#252526" 
-                          style={{ marginRight: 4 }} 
-                        />
-                        <Text style={styles.salaDescripcion}>
-                          {salaInfo.tv ? "Con tele" : "Sin tele"}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.rightHeader}>
-                  <TouchableOpacity
-                    onPress={() => goToSala('next')}
-                    style={[styles.navButton, indiceActual >= todasLasSalas.length - 1 && styles.disabledButton]}
-                    disabled={indiceActual >= todasLasSalas.length - 1}>
-                    <Text style={styles.navButtonText}>▶</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <Calendario
-                reservas={convertirReservasParaCalendario()}
-                grupos={gruposReservas}
-                alSeleccionarHorario={handleSeleccionarHorario}
+  <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
+      keyboardVerticalOffset={0}
+    > 
+      {/* ScrollView principal para asegurar que en web móvil todo fluya junto y sin separaciones */}
+      <ScrollView 
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.scrollContentContainer}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <View style={[styles.header, !tieneImagen && styles.headerSinImagen]}>
+          {/* Solo renderizamos imagen de fondo y sombra si la sala tiene imagen cargada */}
+          {tieneImagen && (
+            <>
+              <Image 
+                source={{ uri: salaInfo.imagenUrl }} 
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
               />
+              <View style={styles.headerOverlay} />
+            </>
+          )}
+
+          {/* Fila 1: Botones de navegación */}
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
+              <Text style={styles.backButtonText}>
+                <FontAwesome name="arrow-left" size={15} color="white" /> Inicio
+              </Text>
+            </TouchableOpacity>
+
+            {(userRole === 'admin' || userRole === 'superuser') && (
+              <TouchableOpacity style={styles.botonGrupos} onPress={() => setGruposModalVisible(true)}>
+                <Ionicons name="repeat" size={22} color="#ffff" style={{ marginRight: 8 }} />
+                <Text style={styles.botonGruposTexto}>Reservas Repetitivas</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Fila 2: Flechas y Datos de la Sala */}
+          <View style={styles.headerInfoRow}>
+            <TouchableOpacity
+              onPress={() => goToSala('prev')}
+              style={[styles.navButton, indiceActual <= 0 && styles.disabledButton]}
+              disabled={indiceActual <= 0}>
+              <Text style={styles.navButtonText}>◀</Text>
+            </TouchableOpacity>
+
+            <View style={styles.centerHeader}>
+              <Text style={[styles.headerTitle, !tieneImagen && styles.textoOscuro]}>
+                {salaInfo?.nombre ?? "Cargando..."}
+              </Text>
+              {salaInfo && (
+                <View style={styles.salaDescripcionContainer}>
+                  <View style={styles.descripcionItem}>
+                    <Ionicons name="people" size={14} color={tieneImagen ? "#BEAF87" : "#555"} style={{ marginRight: 4 }} />
+                    <Text style={[styles.salaDescripcion, !tieneImagen && styles.textoOscuroSub]}>
+                      {salaInfo.capacidad ?? "-"} personas
+                    </Text>
+                  </View>
+                  <View style={styles.descripcionItem}>
+                   <Ionicons 
+                      name={salaInfo.tv ? "tv" : "tv-outline"} 
+                      size={14} 
+                      color={tieneImagen ? "#BEAF87" : "#555"} 
+                      style={{ marginRight: 4 }} 
+                    />
+                    <Text style={[styles.salaDescripcion, !tieneImagen && styles.textoOscuroSub]}>
+                      {salaInfo.tv ? "Con tele" : "Sin tele"}
+                    </Text>
+                 </View>
+               </View>
+              )}
             </View>
 
-            <Modal visible={modalVisible} transparent animationType="slide">
-              <Pressable style={styles.modalContainer} onPress={Keyboard.dismiss}>
-                <Pressable onPress={() => {}} style={styles.modalContent}>
-                  <Text style={styles.modalTitle}>Reservas {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
+    <TouchableOpacity
+      onPress={() => goToSala('next')}
+      style={[styles.navButton, indiceActual >= todasLasSalas.length - 1 && styles.disabledButton]}
+      disabled={indiceActual >= todasLasSalas.length - 1}>
+      <Text style={styles.navButtonText}>▶</Text>
+    </TouchableOpacity>
+          </View>
+        </View>
 
-                  {feedbackMessage && (
-                    <View style={[
-                      styles.feedbackContainer,
-                      { backgroundColor: feedbackMessage.type === "success" ? "#BEAF87" : "#ff6961" }
-                    ]}>
-                      <Text style={{ color: feedbackMessage.type === "success" ? "#ffffffff" : "#252526", textAlign: "center" }}>
-                        {feedbackMessage.text}
-                      </Text>
-                    </View>
-                  )}
+          {/* CONTENIDO Y CALENDARIO (Ahora integrado en la misma columna) */}
+          <View style={styles.content}>
+            <Image 
+    source={require("../assets/rinocerontesdibujo.png")} 
+    style={styles.backgroundImage} 
+    resizeMode="contain" // o "cover" según prefieras la cobertura
+  />
+            <Calendario
+              reservas={convertirReservasParaCalendario()}
+              grupos={gruposReservas}
+              alSeleccionarHorario={handleSeleccionarHorario}
+            />
+          </View>
+      </ScrollView>
 
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-                    <TouchableOpacity
-                      style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8,
-                        opacity: (() => {
-                          if (!selectedDay) return 1;
-                          const prev = new Date(selectedDay + 'T00:00:00');
-                          prev.setDate(prev.getDate() - 1);
-                          const hoy = new Date();
-                          hoy.setHours(0, 0, 0, 0);
-                          prev.setHours(0, 0, 0, 0);
-                          return prev < hoy ? 0.3 : 1;
-                        })()
-                      }]}
-                      onPress={() => {
-                        if (!selectedDay) return;
-                        
+        {/* Modal de Reservas del Día */}
+          <Modal visible={modalVisible} transparent animationType="slide">
+            <Pressable style={styles.modalContainer} onPress={Keyboard.dismiss}>
+              <Pressable onPress={() => {}} style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Reservas {selectedDay ? convertirAFormatoDDMMYYYY(selectedDay) : ''}</Text>
+
+                {feedbackMessage && (
+                  <View style={[
+                    styles.feedbackContainer,
+                    { backgroundColor: feedbackMessage.type === "success" ? "#BEAF87" : "#ff6961" }
+                  ]}>
+                    <Text style={{ color: feedbackMessage.type === "success" ? "#ffffffff" : "#252526", textAlign: "center" }}>
+                      {feedbackMessage.text}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8,
+                      opacity: (() => {
+                        if (!selectedDay) return 1;
                         const prev = new Date(selectedDay + 'T00:00:00');
                         prev.setDate(prev.getDate() - 1);
-                        
                         const hoy = new Date();
                         hoy.setHours(0, 0, 0, 0);
                         prev.setHours(0, 0, 0, 0);
-                        
+                        return prev < hoy ? 0.3 : 1;
+                      })()
+                    }]}
+                    onPress={() => {
+                      if (!selectedDay) return;
+                      const prev = new Date(selectedDay + 'T00:00:00');
+                      prev.setDate(prev.getDate() - 1);
+                      const hoy = new Date();
+                      hoy.setHours(0, 0, 0, 0);
+                      prev.setHours(0, 0, 0, 0);
+                      
+                      if (prev < hoy) {
+                        showMessage("No se pueden seleccionar días anteriores a hoy.", "error");
+                        return;
+                      }
+                      
+                      if (prev.getDay() === 0) {
+                        prev.setDate(prev.getDate() - 1);
+                        prev.setHours(0, 0, 0, 0);
                         if (prev < hoy) {
                           showMessage("No se pueden seleccionar días anteriores a hoy.", "error");
                           return;
                         }
-                        
-                        if (prev.getDay() === 0) {
-                          prev.setDate(prev.getDate() - 1);
-                          prev.setHours(0, 0, 0, 0);
-                          
-                          if (prev < hoy) {
-                            showMessage("No se pueden seleccionar días anteriores a hoy.", "error");
-                            return;
-                          }
-                        }
-                        
-                        const prevStr = toLocalDateString(prev);
-                        setSelectedDay(prevStr);
-                        setEditingReservaId(null);
-                        setHoraInicio("");
-                        setHoraFin("");
-                        setMotivo("");
-                      }}
-                    >
-                      <Text style={styles.navButtonText}>◀ Día anterior</Text>
-                    </TouchableOpacity>
+                      }
+                      
+                      const prevStr = toLocalDateString(prev);
+                      setSelectedDay(prevStr);
+                      setEditingReservaId(null);
+                      setHoraInicio("");
+                      setHoraFin("");
+                      setMotivo("");
+                    }}
+                  >
+                    <Text style={styles.navButtonText}>◀ Día anterior</Text>
+                  </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8 }]}
-                      onPress={() => {
-                        if (!selectedDay) return;
-                        const next = new Date(selectedDay + 'T00:00:00');
+                  <TouchableOpacity
+                    style={[styles.navButton, { paddingVertical: 4, paddingHorizontal: 8 }]}
+                    onPress={() => {
+                      if (!selectedDay) return;
+                      const next = new Date(selectedDay + 'T00:00:00');
+                      next.setDate(next.getDate() + 1);
+                      if (next.getDay() === 0) {
                         next.setDate(next.getDate() + 1);
-                        
-                        if (next.getDay() === 0) {
-                          next.setDate(next.getDate() + 1);
-                        }
-                        
-                        const nextStr = toLocalDateString(next);
-                        setSelectedDay(nextStr);
-                        setEditingReservaId(null);
-                        setHoraInicio("");
-                        setHoraFin("");
-                        setMotivo("");
-                      }}
-                    >
-                      <Text style={styles.navButtonText}>Día siguiente ▶</Text>
-                    </TouchableOpacity>
-                  </View>
+                      }
+                      const nextStr = toLocalDateString(next);
+                      setSelectedDay(nextStr);
+                      setEditingReservaId(null);
+                      setHoraInicio("");
+                      setHoraFin("");
+                      setMotivo("");
+                    }}
+                  >
+                    <Text style={styles.navButtonText}>Día siguiente ▶</Text>
+                  </TouchableOpacity>
+                </View>
 
-                  {loadingReservas ? (
-                    <Text style={{ color: "#252526" }}>Cargando...</Text>
-                  ) : reservasDia.length === 0 ? (
-                    <Text style={{ color: "#929292ff" }}>No hay reservas para este día.</Text>
-                  ) : (
-                    <FlatList
-                      data={reservasDiaCompleto}
-                      keyExtractor={(item) => item.id ?? `${item.horaInicio}-${item.horaFin}`}
-                      style={{ maxHeight: 140, marginBottom: 8 }}
-                      renderItem={({ item }) => (
-                        <View style={[styles.reservaRow, item.esGrupo && styles.reservaGrupoRow]}>
-
-                          <TouchableOpacity
-                            style={{ flex: 1 }}
-                            disabled={item.esGrupo && userRole !== 'admin' && userRole !== 'superuser'}
-                            onPress={() => {
-                              if (item.esGrupo) {
-                                // admin/superuser: abrir gestión de ese grupo puntual
-                                setGruposModalVisible(true);
-                              } else if (item.usuarioId === auth.currentUser?.uid || userRole === 'admin' || userRole === 'superuser') {
-                                setHoraInicio(item.horaInicio);
-                                setHoraFin(item.horaFin);
-                                setMotivo(item.motivo);
-                                setEditingReservaId(item.id ?? null);
-                              }
-                            }}
-                          >
-                            <Text style={styles.reservaText}>
-                              {item.esGrupo ? "🔁 " : ""}{item.horaInicio} - {item.horaFin}
-                            </Text>
-                            <Text style={styles.reservaMotivo}>{item.motivo}</Text>
-                            {!item.esGrupo && (
-                              <Text style={styles.reservaUsuario}>{item.usuarioEmail ?? "Usuario"}</Text>
-                            )}
-                          </TouchableOpacity>
-
-                          {/* Botón Cancelar - Oculto para Grupos para forzar que se borren desde GestionGruposModal */}
-                          {(item.usuarioId === auth.currentUser?.uid || userRole === 'admin' || userRole === 'superuser') && (
-                            <TouchableOpacity
-                              style={{
-                                paddingHorizontal: 10,
-                                paddingVertical: 4,
-                                flexShrink: 0,
-                                marginLeft: 8,
-                                borderRadius: 6,
-                                borderWidth: 1,
-                                borderColor: "#ff6961",
-                              }}
-                              onPress={() => setReservaParaEliminar(item)}
-                            >
-                              <Text style={styles.eliminarText}>Cancelar</Text>
-                            </TouchableOpacity>
+                {loadingReservas ? (
+                  <Text style={{ color: "#252526" }}>Cargando...</Text>
+                ) : reservasDia.length === 0 ? (
+                  <Text style={{ color: "#929292ff" }}>No hay reservas para este día.</Text>
+                ) : (
+                  <FlatList
+                    data={reservasDiaCompleto}
+                    keyExtractor={(item) => item.id ?? `${item.horaInicio}-${item.horaFin}`}
+                    style={{ maxHeight: 140, marginBottom: 8 }}
+                    renderItem={({ item }) => (
+                      <View style={[styles.reservaRow, item.esGrupo && styles.reservaGrupoRow]}>
+                        <TouchableOpacity
+                          style={{ flex: 1 }}
+                          disabled={item.esGrupo && userRole !== 'admin' && userRole !== 'superuser'}
+                          onPress={() => {
+                            if (item.esGrupo) {
+                              setGruposModalVisible(true);
+                            } else if (item.usuarioId === auth.currentUser?.uid || userRole === 'admin' || userRole === 'superuser') {
+                              setHoraInicio(item.horaInicio);
+                              setHoraFin(item.horaFin);
+                              setMotivo(item.motivo);
+                              setEditingReservaId(item.id ?? null);
+                            }
+                          }}
+                        >
+                          <Text style={styles.reservaText}>
+                            {item.esGrupo ? "🔁 " : ""}{item.horaInicio} - {item.horaFin}
+                          </Text>
+                          <Text style={styles.reservaMotivo}>{item.motivo}</Text>
+                          {!item.esGrupo && (
+                            <Text style={styles.reservaUsuario}>{item.usuarioEmail ?? "Usuario"}</Text>
                           )}
-                        </View>
-                      )}
-                    />
-                  )}
+                        </TouchableOpacity>
 
-                  <Modal visible={!!reservaParaEliminar} transparent animationType="fade">
-                    <View style={styles.modalContainer}>
-                      <View style={[styles.modalContent, { alignItems: "center" }]}>
-                        <Text style={[styles.modalTitle, { marginBottom: 12 }]}>
-                          ¿Cancelar esta reserva?
-                        </Text>
-                        <Text style={{ color: "#fff", marginBottom: 16, textAlign: "center" }}>
-                          {reservaParaEliminar?.horaInicio} - {reservaParaEliminar?.horaFin}{"\n"}
-                          {reservaParaEliminar?.motivo}
-                        </Text>
-                        <View style={{ flexDirection: "row" }}>
+                        {(item.usuarioId === auth.currentUser?.uid || userRole === 'admin' || userRole === 'superuser') && (
                           <TouchableOpacity
-                            style={[styles.cancelButton, { marginRight: 10 }]}
-                            onPress={() => setReservaParaEliminar(null)}
-                          >
-                            <Text style={styles.cancelText}>No</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={styles.saveButton}
-                            onPress={async () => {
-                              if (reservaParaEliminar) {
-                                await handleEliminarReserva(reservaParaEliminar);
-                                setReservaParaEliminar(null);
-                              }
+                            style={{
+                              paddingHorizontal: 10,
+                              paddingVertical: 4,
+                              flexShrink: 0,
+                              marginLeft: 8,
+                              borderRadius: 6,
+                              borderWidth: 1,
+                              borderColor: "#ff6961",
                             }}
+                            onPress={() => setReservaParaEliminar(item)}
                           >
-                            <Text style={styles.saveText}>Sí, cancelar</Text>
+                            <Text style={styles.eliminarText}>Cancelar</Text>
                           </TouchableOpacity>
-                        </View>
+                        )}
+                      </View>
+                    )}
+                  />
+                )}
+
+                <Modal visible={!!reservaParaEliminar} transparent animationType="fade">
+                  <View style={styles.modalContainer}>
+                    <View style={[styles.modalContent, { alignItems: "center" }]}>
+                      <Text style={[styles.modalTitle, { marginBottom: 12 }]}>
+                        ¿Cancelar esta reserva?
+                      </Text>
+                      <Text style={{ color: "#fff", marginBottom: 16, textAlign: "center" }}>
+                        {reservaParaEliminar?.horaInicio} - {reservaParaEliminar?.horaFin}{"\n"}
+                        {reservaParaEliminar?.motivo}
+                      </Text>
+                      <View style={{ flexDirection: "row" }}>
+                        <TouchableOpacity
+                          style={[styles.cancelButton, { marginRight: 10 }]}
+                          onPress={() => setReservaParaEliminar(null)}
+                        >
+                          <Text style={styles.cancelText}>No</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.saveButton}
+                          onPress={async () => {
+                            if (reservaParaEliminar) {
+                              await handleEliminarReserva(reservaParaEliminar);
+                              setReservaParaEliminar(null);
+                            }
+                          }}
+                        >
+                          <Text style={styles.saveText}>Sí, cancelar</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
-                  </Modal>
-
-                  <View style={styles.formSection}>
-                    <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
-                      *tocar reserva para editar
-                    </Text>
-                    <Text style={styles.formSectionTitle}>
-                      {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
-                    </Text>
-
-                    <Text style={styles.formLabel}>Motivo</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Motivo de la reserva"
-                      placeholderTextColor="#888"
-                      value={motivo}
-                      onChangeText={setMotivo}
-                      multiline={true}
-                      numberOfLines={2}
-                    />
-                    
-                    <TimePicker
-                      label="Hora de inicio"
-                      value={horaInicio}
-                      onChange={setHoraInicio}
-                      placeholder="Seleccionar hora de inicio"
-                    />
-                    
-                    <TimePicker
-                      label="Hora de fin"
-                      value={horaFin}
-                      onChange={setHoraFin}
-                      placeholder="Seleccionar hora de fin"
-                    />
-
-                      {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después */}
-                    {/* <Text style={styles.formLabel}>Hora de inicio</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="HH:MM (ej: 14:30)"
-                      placeholderTextColor="#888"
-                      value={horaInicio}
-                      onChangeText={setHoraInicio}
-                      keyboardType="default"
-                    />*/}
-
-                    {/* INPUT TEMPORAL PARA PRUEBAS EN DESKTOP - Borrar después*/}
-                    {/*<Text style={styles.formLabel}>Hora de fin</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="HH:MM (ej: 16:00)"
-                      placeholderTextColor="#888"
-                      value={horaFin}
-                      onChangeText={setHoraFin}
-                      keyboardType="default"
-                    /> */}
-
-                    
-
-                    <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
-                      *recibirá un email 60 minutos antes de la reserva
-                    </Text>
-
-                    <View style={styles.buttonContainer}>
-                      <TouchableOpacity 
-                        style={styles.saveButton} 
-                        onPress={handleCreateOrUpdateReserva}
-                      >
-                        <Text style={styles.saveText}>
-                          {editingReservaId ? "Actualizar" : "Guardar Reserva"}
-                        </Text>
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity
-                        style={[styles.cancelButton, { marginTop: 8 }]}
-                        onPress={() => {
-                          setModalVisible(false);
-                          setHoraInicio("");
-                          setHoraFin("");
-                          setMotivo("");
-                          setEditingReservaId(null);
-                        }}
-                      >
-                        <Text style={styles.cancelText}>Cerrar</Text>
-                      </TouchableOpacity>
-                    </View>
                   </View>
+                </Modal>
+
+                <View style={styles.formSection}>
+                  <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
+                    *tocar reserva para editar
+                  </Text>
+                  <Text style={styles.formSectionTitle}>
+                    {editingReservaId ? "Editar Reserva" : "Nueva Reserva"}
+                  </Text>
+
+                  <Text style={styles.formLabel}>Motivo</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Motivo de la reserva"
+                    placeholderTextColor="#888"
+                    value={motivo}
+                    onChangeText={setMotivo}
+                    multiline={true}
+                    numberOfLines={2}
+                  />
+                  
+                  <TimePicker
+                    label="Hora de inicio"
+                    value={horaInicio}
+                    onChange={setHoraInicio}
+                    placeholder="Seleccionar hora de inicio"
+                  />
+                  
+                  <TimePicker
+                    label="Hora de fin"
+                    value={horaFin}
+                    onChange={setHoraFin}
+                    placeholder="Seleccionar hora de fin"
+                  />
+
+                  <Text style={{ color: "#929292ff", fontSize: isSmallDevice ? 11 : 12, marginBottom: 10 }}>
+                    *recibirá un email 60 minutos antes de la reserva
+                  </Text>
+
+                  <View style={styles.buttonContainer}>
+                    <TouchableOpacity 
+                      style={styles.saveButton} 
+                      onPress={handleCreateOrUpdateReserva}
+                    >
+                      <Text style={styles.saveText}>
+                        {editingReservaId ? "Actualizar" : "Guardar Reserva"}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[styles.cancelButton, { marginTop: 8 }]}
+                      onPress={() => {
+                        setModalVisible(false);
+                        setHoraInicio("");
+                        setHoraFin("");
+                        setMotivo("");
+                        setEditingReservaId(null);
+                      }}
+                    >
+                      <Text style={styles.cancelText}>Cerrar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </Pressable>
             </Pressable>
-            </Modal>
-          </View>
-        </KeyboardAvoidingView>
-        {/* MODAL NUEVO AQUÍ */}
-        <GestionGruposModal
-          visible={gruposModalVisible}
-          onClose={() => setGruposModalVisible(false)}
-          sala={numero}
-          salaNombre={salaInfo?.nombre || numero}
-          grupos={gruposReservas}
-        />
+          </Modal>
 
-    </View>
-  );
+      <GestionGruposModal
+        visible={gruposModalVisible}
+        onClose={() => setGruposModalVisible(false)}
+        sala={numero}
+        salaNombre={salaInfo?.nombre || numero}
+        grupos={gruposReservas}
+      />
+    </KeyboardAvoidingView>
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffffff", padding: width > 600 ? 20 : isSmallDevice ? 8 : 12 },
-  header: { height: isSmallDevice ? 70 : 80, paddingHorizontal: isSmallDevice ? 6 : 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginBottom: isSmallDevice ? 4 : 8 },
-  superiorSalas: { paddingHorizontal: isSmallDevice ? 6 : 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#ffffffff", backgroundColor: "#ffffffff", marginTop: height > 700 ? 40 : 15, marginBottom: 8 },
+  container: { width: "100%", maxWidth: 800, backgroundColor: "#ffffff", padding: width > 600 ? 20 : isSmallDevice ? 8 : 12, justifyContent: "flex-start" },
+  backgroundOverlay: { 
+    ...StyleSheet.absoluteFill, 
+    backgroundColor: "rgba(0,0,0,0.65)" 
+  },
+  
+  // 📍 CONTENEDOR UNIFICADO DEL BANNER
+  header: { width: "100%", paddingHorizontal: isSmallDevice ? 6 : 10, paddingVertical: isSmallDevice ? 6 : 12, marginBottom: 8, borderRadius: 12, overflow: "hidden", position: "relative"},
+  headerOverlay: { 
+    ...StyleSheet.absoluteFill, 
+    backgroundColor: "rgba(0,0,0,0.55)" // Sombra para mantener contraste de botones y textos
+  },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: 12,zIndex: 2},
+  headerSinImagen: {backgroundColor: '#ffffff',borderWidth: 0,},
+  headerInfoRow: {flexDirection: "row",alignItems: "center",justifyContent: "space-between",width: "100%",zIndex: 2},
   leftHeader: { flexDirection: "row", alignItems: "center" },
+  textoOscuro: { color: "#252526" },
+  textoOscuroSub: {color: '#666666',},
   rightHeader: { flexDirection: "row", alignItems: "center" },
   centerHeader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  headerTitle: { color: "#252526", fontSize: isSmallDevice ? 16 : isMediumDevice ? 17 : 18, fontWeight: "700", textAlign: "center" },
+  headerTitle: { color: "#BEAF87", fontSize: isSmallDevice ? 16 : isMediumDevice ? 17 : 18, fontWeight: "700", textAlign: "center" },
   disabledButton: { opacity: 0.4 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", paddingHorizontal: isSmallDevice ? 6 : 10 },
-  content: { flex: 1, padding: isSmallDevice ? 4 : 8, alignItems: "center" },
-  modalContainer: { flex: 1,justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
-  modalContent: { backgroundColor: "#1c1c1c", padding: isSmallDevice ? 16 : 20, borderRadius: 10, width: "90%", maxWidth: 500, position: "relative", bottom: 60 },
+  content: { width: "100%", padding: isSmallDevice ? 0 : 8, marginTop:0, alignItems: "center", position: "relative", backgroundColor: "transparent", borderRadius: 12, overflow: "hidden" },
+  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
+  modalContent: { backgroundColor: "#1c1c1c", padding: isSmallDevice ? 16 : 20, borderRadius: 10, width: "90%", maxWidth: 500, position: "relative"},
   modalTitle: { color: "#BEAF87", fontSize: isSmallDevice ? 16 : 18, marginBottom: 10, textAlign: "center" },
   input: { backgroundColor: "#1e1e1e", borderColor: "#BEAF87", borderWidth: 1, borderRadius: 8, color: "#fff", padding: isSmallDevice ? 8 : 10, marginBottom: 10, fontSize: isSmallDevice ? 13 : 14 },
   saveButton: { backgroundColor: "#BEAF87", paddingVertical: isSmallDevice ? 8 : 10, paddingHorizontal: isSmallDevice ? 12 : 16, borderRadius: 8, alignItems: "center" },
   saveText: { color: "#252526", fontWeight: "bold", fontSize: isSmallDevice ? 13 : 14 },
-  backButtonText: { color: "#ffffffff", fontWeight: "bold", fontSize: 14, },
+  backButtonText: { color: "#ffffff", fontWeight: "bold", fontSize: 14 },
   cancelButton: { backgroundColor: '#252526', paddingVertical: isSmallDevice ? 8 : 10, paddingHorizontal: isSmallDevice ? 12 : 16, borderRadius: 8, borderWidth: 1, borderColor: "#BEAF87" },
   cancelText: { color: "#BEAF87", textAlign: "center", fontSize: isSmallDevice ? 13 : 14 },
   reservaRow: { flexDirection: "row", alignItems: "center", padding: isSmallDevice ? 6 : 8, marginBottom: 6, borderRadius: 6, backgroundColor: "#2e2e2e" },
@@ -971,7 +941,7 @@ const styles = StyleSheet.create({
   reservaUsuario: { color: "#ccc", fontSize: isSmallDevice ? 11 : 12 },
   eliminarText: { color: "#ff6961", fontWeight: "700", fontSize: isSmallDevice ? 12 : 13 },
   navButton: { backgroundColor: "#BEAF87", paddingVertical: isSmallDevice ? 6 : 8, paddingHorizontal: isSmallDevice ? 10 : 14, borderRadius: 8, marginHorizontal: isSmallDevice ? 4 : 6 },
-  navButtonText: { color: "#ffffffff", fontWeight: "700", fontSize: isSmallDevice ? 12 : 14 },
+  navButtonText: { color: "#ffffff", fontWeight: "700", fontSize: isSmallDevice ? 12 : 14 },
   feedbackContainer: { padding: isSmallDevice ? 6 : 8, borderRadius: 6, marginBottom: 8 },
   formSection: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#333' },
   formSectionTitle: { color: '#BEAF87', fontSize: isSmallDevice ? 14 : 16, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
@@ -979,8 +949,10 @@ const styles = StyleSheet.create({
   buttonContainer: { marginTop: 10 },
   salaDescripcionContainer: { flexDirection: "row", justifyContent: "center", marginTop: 4 },
   descripcionItem: { flexDirection: "row", alignItems: "center", marginHorizontal: 6 },
-  salaDescripcion: { color: "#252526", fontSize: isSmallDevice ? 12 : 14 },
+  salaDescripcion: { color: "#BEAF87", fontSize: isSmallDevice ? 12 : 14 },
   reservaGrupoRow: { backgroundColor: "#3a3320", borderLeftWidth: 3, borderLeftColor: "#BEAF87" },
-  botonGrupos: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#BEAF87", borderWidth: 1.5, borderColor: "#9A8F6A", paddingVertical: 12, paddingHorizontal: 20, borderRadius: 10, marginTop: 10 },
-botonGruposTexto: { color: "#252526", fontWeight: "700", fontSize: isSmallDevice ? 14 : 16 },
+  botonGrupos: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#BEAF87", borderWidth: 1.5, borderColor: "#9A8F6A", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },
+  botonGruposTexto: { color: "#fff", fontWeight: "700", fontSize: isSmallDevice ? 13 : 14 },
+  scrollContentContainer: {flexGrow: 1,alignItems: 'center',paddingBottom: 20,},
+  backgroundImage: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.45,  zIndex: 0, width: "100%", height: "100%",},
 });

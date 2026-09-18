@@ -172,7 +172,7 @@ export default function Registro({ navigation }: Props) {
         >
 
           <View style={styles.container}>
-            <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
+            <Image source={require("../assets/LogoBlack.png")} style={styles.logo} resizeMode="contain" />
             <Text style={styles.title}>Crear Cuenta</Text>
 
             {/* Correo con advertencia */}
