@@ -72,7 +72,7 @@ export default function AccessScreen({ onAccessGranted }: { onAccessGranted: () 
     >
       <View style={styles.container}>
         <Image
-          source={require("../assets/LogoGrey.png")}
+          source={require("../assets/LogoBlack.png")}
           style={styles.logo}
           resizeMode="contain"
         />

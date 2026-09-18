@@ -85,7 +85,7 @@ export default function Home({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Image source={require("../assets/LogoGrey.png")} style={styles.logo} resizeMode="contain" />
+        <Image source={require("../assets/LogoBlack.png")} style={styles.logo} resizeMode="contain" />
 
         <BtnCerrarSesion />
       </View>
@@ -154,20 +154,29 @@ export default function Home({ navigation }: Props) {
               style={[styles.salaButton]}
               onPress={() => navigation.navigate("Sala", { numero: item.id })} 
               activeOpacity={0.7}>
-              <View style={styles.salaInfo}>
-                <Text style={[styles.salaText, styles.fontTypold]}>{item.nombre}</Text>
+              <View style={styles.salaRowContainer}>
+        {/* 📷 Miniatura de la imagen o Logo por defecto */}
+        <Image 
+          source={item.imagenUrl ? { uri: item.imagenUrl } : require("../assets/LogoGrey.png")} 
+          style={styles.salaImageThumb}
+          resizeMode="cover"
+        />
+        
+        <View style={styles.salaInfo}>
+          <Text style={[styles.salaText, styles.fontTypold]}>{item.nombre}</Text>
 
-                <View style={styles.iconContainer}> 
-                  <View style={styles.iconGroup}> 
-                    <Ionicons name="person" size={20} color="#BEAF87" />
-                    <Text style={styles.iconText}>{item.capacidad}</Text>
-                  </View>
-                    <MaterialIcons 
-                      name={item.tv ? "tv" : "tv-off"} 
-                      size={22} 
-                      color={item.tv ? "#BEAF87" : "#777"} /> 
-                </View> 
-              </View>
+          <View style={styles.iconContainer}> 
+            <View style={styles.iconGroup}> 
+              <Ionicons name="person" size={20} color="#BEAF87" />
+              <Text style={styles.iconText}>{item.capacidad}</Text>
+            </View>
+            <MaterialIcons 
+              name={item.tv ? "tv" : "tv-off"} 
+              size={22} 
+              color={item.tv ? "#BEAF87" : "#777"} /> 
+          </View> 
+        </View>
+      </View>
             </TouchableOpacity>
           )}
         />
@@ -195,5 +204,6 @@ const styles = StyleSheet.create({
   iconContainer: { flexDirection: "row", alignItems: "center", gap: 12 }, 
   iconGroup: { flexDirection: "row", alignItems: "center", gap: 4 }, 
   iconText: { color: "#BEAF87", fontSize: 16, fontWeight: "bold" },
-  salaInfo: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-});
+  salaRowContainer: { flexDirection: "row", alignItems: "center", gap: 12 },
+  salaImageThumb: { width: 45, height: 45, borderRadius: 8, backgroundColor: "#333" },
+  salaInfo: { flex: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },});
