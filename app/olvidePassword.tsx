@@ -1,6 +1,6 @@
 //app/olvidePassword.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Modal,Keyboard,TouchableWithoutFeedback ,ActivityIndicator  } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Modal, Keyboard, TouchableWithoutFeedback, ActivityIndicator} from "react-native";
 import { useFonts } from "expo-font";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../app/types/navigation";
@@ -23,7 +23,7 @@ export default function OlvidePassword({ navigation }: Props) {
   if (!fontsLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <ActivityIndicator size="large" color="#BEAF87" />
+        <ActivityIndicator size="large" color="#BEAF87" />
       </View>
     );
   }
@@ -51,13 +51,13 @@ export default function OlvidePassword({ navigation }: Props) {
     }
   };
 
-  return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+  // Contenido principal de la pantalla
+  const mainContent = (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // Ajustá según tu header
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
       >
         <View style={styles.container}>
           <Image source={require("../assets/LogoBlack.png")} style={styles.logo} resizeMode="contain" />
@@ -74,6 +74,7 @@ export default function OlvidePassword({ navigation }: Props) {
               placeholderTextColor="#aaa"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               returnKeyType="done"
               onSubmitEditing={handleReset}
             />
@@ -111,11 +112,21 @@ export default function OlvidePassword({ navigation }: Props) {
         </View>
       </KeyboardAvoidingView>
     </View>
+  );
+
+  // En la Web devolvemos la vista directa sin el TouchableWithoutFeedback que bloquea los clics
+  if (Platform.OS === "web") {
+    return mainContent;
+  }
+
+  // En iOS/Android lo mantenemos para poder ocultar el teclado al tocar fuera
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      {mainContent}
     </TouchableWithoutFeedback>
   );
 }
 
-// Estilos (siguiendo logo c21)
 const styles = StyleSheet.create({
   fontTypold: { fontFamily: 'Typold' },
   container: { flex: 1, backgroundColor: "#fff", justifyContent: "center", alignItems: "center", padding: 20 },
